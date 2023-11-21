@@ -1,0 +1,7 @@
+
+DEBUG: bool
+
+SERVER_IP: str
+SERVER_PORT: int
+
+DATABASE_URL: str
