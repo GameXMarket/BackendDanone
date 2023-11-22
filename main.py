@@ -3,11 +3,13 @@ import json
 import uvicorn
 from fastapi import FastAPI
 
+from database import Base, engine
 import configuration as conf
 
 
 ROUTETRS = []
 
+Base.metadata.create_all(bind=engine)
 openapi_tags = json.loads(open("_locales/tags_metadata.json", "r").read())
 app = FastAPI(
     debug=conf.DEBUG,
