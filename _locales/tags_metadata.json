@@ -1,6 +1,6 @@
 [
     {
-        "name": "root",
-        "description": "Example of tags..."
+        "name": "users",
+        "description": "Various actions on the user profile"
     }
 ]
