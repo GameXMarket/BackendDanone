@@ -6,7 +6,7 @@ from dto.users import UserNoSecret as UserNoSecretDTO
 from dto.users import UserInDBase as UserInDBaseDTO
 from dto.users import UserError as UserErrorDTO
 from services import users as UsersService
-from database import get_session
+from core.database import get_session
 
 
 router = APIRouter(

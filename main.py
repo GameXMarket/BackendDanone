@@ -5,8 +5,8 @@ import uvicorn
 from fastapi import FastAPI
 
 from routers import users
-from database import init_models
-import configuration as conf
+from core.database import init_models
+import core.configuration as conf
 
 
 ROUTETRS = [users]

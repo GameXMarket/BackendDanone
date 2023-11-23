@@ -3,14 +3,14 @@ import re
 from pydantic import BaseModel, EmailStr, field_validator
 
 try:
-    import configuration as conf
+    import core.configuration as conf
 except ImportError:
     import os
     import sys
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-    import configuration as conf
+    import core.configuration as conf
 
 
 class BaseUser(BaseModel):
@@ -94,3 +94,4 @@ class UserError(BaseModel):
 if __name__ == "__main__":
     user = {"username": "qwe", "email": "qwe@qwe.qwe", "password": "qweqweqweqwe"}
     user_model = BaseUser(**user)
+    print(user_model)
