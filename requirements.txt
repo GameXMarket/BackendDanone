@@ -1,6 +1,11 @@
-SQLAlchemy
+asyncpg
+sqlalchemy[asyncio]
+alembic
 uvicorn[standard]
 fastapi
+httpx
 python-multipart
 python-jose[cryptography]
 passlib[bcrypt]
+email-validator
+pytest
