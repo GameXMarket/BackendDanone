@@ -14,7 +14,7 @@ except ImportError:
 
 
 class BaseUser(BaseModel):
-    """Используется при регистрации нового пользователя
+    """Базовая модель пользователя
 
     Arguments:
         BaseModel - Базовая модель данных pydantic
@@ -59,11 +59,37 @@ class BaseUser(BaseModel):
         return value
 
 
+class UserSignup(BaseUser):
+    """Почти полноценная модель User'а, используется дли регистрации
+
+    Arguments:
+        BaseUser - Базовая модель пользователя
+    """
+    
+    password: str
+    
+    @field_validator("password")
+    @classmethod  # ! Дописать валидацию пароля 
+    def validate_email(cls, value: EmailStr):
+        ...
+        return value
+
+
+class UserLogin(BaseUser):
+    """Почти полноценная модель User'а, используется для ответа в авторизации
+
+    Arguments:
+        BaseUser - Базовая модель пользователя
+    """
+    
+    token: str
+
+
 class UserNoSecret(BaseUser):
     """Почти полноценная модель User'а, без некоторых приватных полей из БД
 
     Arguments:
-        BaseUser - Используется при регистрации нового пользователя
+        BaseUser - Базовая модель пользователя
     """
 
     is_verified: bool = False
@@ -82,7 +108,7 @@ class UserInDBase(UserNoSecret):
 
 
 class UserError(BaseModel):
-    """Модель, отражающая информацию о возможных, обработанных ошибках едпоинтов /users
+    """Модель, отражающая информацию о возможных, обработанных ошибках эдпоинтов /users
 
     Arguments:
         BaseModel -- _description_
@@ -92,6 +118,4 @@ class UserError(BaseModel):
 
 
 if __name__ == "__main__":
-    user = {"username": "qwe", "email": "qwe@qwe.qwe", "password": "qweqweqweqwe"}
-    user_model = BaseUser(**user)
-    print(user_model)
+    pass
