@@ -4,12 +4,10 @@ import asyncio
 import uvicorn
 from fastapi import FastAPI
 
-from routers import users
-from core.database import init_models
 import core.configuration as conf
+from core.database import init_models
+from api import api_router
 
-
-ROUTETRS = [users]
 
 openapi_tags = json.loads(open("_locales/tags_metadata.json", "r").read())
 app = FastAPI(
@@ -24,8 +22,7 @@ app = FastAPI(
     redoc_url=None,
 )
 
-for part in ROUTETRS:
-    app.include_router(part.router)
+app.include_router(api_router)
 
 if __name__ == "__main__":
     asyncio.run(init_models(drop_all=False))
