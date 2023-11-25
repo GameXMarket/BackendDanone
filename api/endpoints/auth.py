@@ -10,7 +10,6 @@ from api import deps
 from core import security
 from core import configuration
 from core.database import get_session
-from core.security import get_password_hash
 
 
 router = APIRouter()
@@ -40,7 +39,7 @@ async def set_token(
         user.email, expires_delta=access_token_expires
     )
     
-    response = JSONResponse(content=True)
+    response = JSONResponse(content={"detail": "added"})
     response.set_cookie(key="token", value=token)
     
     return response
@@ -51,7 +50,8 @@ async def set_token(
 )
 async def delete_token():
     # TODO Автоматически инвалидировать токен, путём созданя чёрного списка.
-    response = JSONResponse(content=True)
+    
+    response = JSONResponse(content={"detail": "deleted"})
     response.delete_cookie("token")
     
     return response
