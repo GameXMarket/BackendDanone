@@ -95,7 +95,7 @@ class UserPreDB(BaseUser):
     """Содержит поля, без секретов, но данные поля заполняются только через бекенд"""
 
     is_verified: bool = False
-    is_superuser: bool = False
+    role_id: int = 0
     created_at: int  # Unix - time
 
 

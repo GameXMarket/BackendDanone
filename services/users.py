@@ -89,5 +89,5 @@ def is_active(user: models.User):
     return user.is_verified
 
 
-def is_superuser(user: models.User):
-    return user.is_superuser
+async def get_role_id(user: models.User):
+    return user.role_id
