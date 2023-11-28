@@ -169,4 +169,5 @@ cython_debug/
 configuration.py
 
 # Other files
+.examples/
 test.py

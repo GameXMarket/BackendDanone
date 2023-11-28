@@ -5,7 +5,7 @@
     },
     {
         "name": "auth",
-        "description": "Users and admins Authentication, tokens ivalidation"
+        "description": "Users Authentication"
 
     }
 ]
