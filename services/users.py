@@ -1,5 +1,6 @@
 import time
 
+from fastapi import Depends
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, exists, delete, and_
@@ -43,10 +44,12 @@ async def update_(
         update_data = obj_in
     else:
         update_data = obj_in.model_dump(exclude_unset=True)
+
     if update_data.get("password"):
         hashed_password = get_password_hash(update_data["password"])
         del update_data["password"]
         update_data["hashed_password"] = hashed_password
+
     for field in obj_data:
         if field in update_data:
             setattr(db_obj, field, update_data[field])
@@ -69,13 +72,11 @@ async def delete_(db_session: AsyncSession, *, email: str):
     return current_user
 
 
-async def authenticate(
-    db_session: AsyncSession, *, email: str, password: str, username: str
-):
-    if username:
-        user = await get_by_username(db_session, username=username)
-    else:
-        user = await get_by_email(db_session, email=email)
+async def authenticate(db_session: AsyncSession, *, email: str, password: str):
+    if not email:
+        return None
+
+    user = await get_by_email(db_session, email=email)
 
     if not user:
         return None
@@ -89,5 +90,5 @@ def is_active(user: models.User):
     return user.is_verified
 
 
-async def get_role_id(user: models.User):
+def get_role_id(user: models.User):
     return user.role_id
