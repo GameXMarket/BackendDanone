@@ -5,14 +5,10 @@ Local installation && Startup
 
 Required:
 
+* PostgreSQL, Tested on version 16
 * PowerShell, Tested on version 5.1, 7.3
-* Python 3.11 and pip in PATH
-* FastApi - 3.8+ python
-* uvicorn[standard] - 3.8+ python, (this will install uvicorn with "Cython-based" dependencies (where possible) and other ["optional extras"](https://www.uvicorn.org/#:~:text=This%20will%20install%20uvicorn%20with%20%22Cython%2Dbased%22%20dependencies%20(where%20possible)%20and%20other%20%22optional%20extras%22))
-* SQLAlchemy - Python3 compatible versions of PyPy
-* python-multipart - ...
-* python-jose[cryptography] - ...
-* passlib[bcrypt] - ...
+* Python and pip in PATH, Tested on 3.11.4, pip 23.3.1
+* Packages in the requirements.txt file
 
 Installation:
 
