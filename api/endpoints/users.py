@@ -20,7 +20,6 @@ async def sign_up(
     """
     Используется для регистрации новых пользователей, возвращает
     """
-    # TODO Вероятно не лучшее решение с проверкой
     if await UserService.get_by_email(db_session, email=data.email):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -61,36 +60,49 @@ async def update_user(
         )
 
     update_data = form_data.model_dump(exclude_unset=True)
+    del update_data["auth"]
+
     if update_data.get("username") == user.username:
         del update_data["username"]
 
     if update_data.get("password") == form_data.auth.password:
         del update_data["password"]
 
-    print(update_data)
+    if update_data.get("is_verified") == form_data.is_verified:
+        del update_data["is_verified"]
+
     if not update_data:
         raise HTTPException(
-            status_code=status.HTTP_304_NOT_MODIFIED,
-            detail="User and password not modified",
+            status_code=status.HTTP_418_IM_A_TEAPOT,
+            detail="User not modified",
         )
 
-    # TODO Вероятно не лучшее решение с проверкой
-    if await UserService.get_by_username(db_session, username=form_data.data.username):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="The user with this username already exists in the system.",
-        )
+    if update_data.get("usename"):
+        if await UserService.get_by_username(db_session, username=form_data.username):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="The user with this username already exists in the system.",
+            )
 
-    new_user = await UserService.update_(db_session, db_obj=user, obj_in=form_data.data)
+    new_user = await UserService.update_(db_session, db_obj=user, obj_in=form_data)
 
     return UserPreDB(**new_user.to_dict())
 
 
 @router.delete(path="/me")
 async def remove_user(
+    old_password: PasswordField,
     user: models.User = Depends(deps.get_current_user_user),
     db_session: AsyncSession = Depends(get_session),
 ):
+    if not await UserService.authenticate(
+        db_session, email=user.email, password=old_password.password
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+        )
+
     deleted_user = await UserService.delete_(db_session, email=user.email)
 
     return UserPreDB(**deleted_user.to_dict())
