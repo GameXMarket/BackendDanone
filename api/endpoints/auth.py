@@ -1,17 +1,15 @@
-from datetime import timedelta
-
 from fastapi import Depends, APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 import schemas, models
-import core.configuration as conf
 from core.security import tokens as TokenSecurity
 from core.database import get_session
-from services import users as UserService
+import services.users as UserService
+import services.banned_tokens as BannedTokensService
 from api import deps
 
-from core import configuration as conf
+import core.configuration as conf
 
 
 router = APIRouter()
@@ -26,7 +24,6 @@ async def token_set(
     db_session: Session = Depends(get_session),
 ):
     """Возвращает два токена (refresh и access), запрашивает почту и пароль"""
-    # ! TODO Когда ставим токен, если есть старый и он действителен мы его инвалидируем.
 
     user: models.User = await UserService.authenticate(
         db_session=db_session,
@@ -41,25 +38,16 @@ async def token_set(
     elif not UserService.is_active(user):
         raise HTTPException(status_code=400, detail="Inactive user")
 
-    access = TokenSecurity.create_jwt_token(
-        type_=schemas.TokenType.access,
-        email=form_data.email,
-        secret=conf.ACCESS_SECRET_KEY,
-        expires_delta=timedelta(minutes=conf.ACCESS_TOKEN_EXPIRE_MINUTES),
-    )
-    refresh = TokenSecurity.create_jwt_token(
-        type_=schemas.TokenType.refresh,
-        email=form_data.email,
-        secret=conf.ACCESS_SECRET_KEY,
-        expires_delta=timedelta(minutes=conf.REFRESH_TOKEN_EXPIRE_MINUTES),
-    )
+    access, refresh = TokenSecurity.create_new_token_set(form_data.email)
+    
+    if conf.DEBUG:
+        response = JSONResponse(content={"detail": "tokens_added"})
+        response.set_cookie(key="session", value=access)
+        response.set_cookie(key="refresh", value=refresh)
 
-    response = JSONResponse(content={"detail": "tokens_added"})
-    # TODO Защита от xss, csrf (проверить аргументы по умолчанию)
-    response.set_cookie(key="session", value=access)
-    response.set_cookie(key="refresh", value=refresh)
-
-    return response
+        return response
+    
+    return schemas.TokenSet(access, refresh)
 
 
 @router.post("/update-tokens")
@@ -67,22 +55,33 @@ def token_update(token_data: schemas.JwtPayload = Depends(deps.get_refresh)):
     """
     Данный метод принимает refresh токен, возвращает новую пару ключей
     """
+    
+    access, refresh = TokenSecurity.create_new_token_set(token_data.sub)
 
-    access = TokenSecurity.create_jwt_token(
-        type_=schemas.TokenType.access,
-        email=token_data.sub,
-        secret=conf.ACCESS_SECRET_KEY,
-        expires_delta=timedelta(minutes=conf.ACCESS_TOKEN_EXPIRE_MINUTES),
-    )
-    refresh = TokenSecurity.create_jwt_token(
-        type_=schemas.TokenType.refresh,
-        email=token_data.sub,
-        secret=conf.ACCESS_SECRET_KEY,
-        expires_delta=timedelta(minutes=conf.REFRESH_TOKEN_EXPIRE_MINUTES),
-    )
+    if conf.DEBUG:
+        response = JSONResponse(content={"detail": "tokens_updated"})
+        response.set_cookie(key="session", value=access)
+        response.set_cookie(key="refresh", value=refresh)
 
-    response = JSONResponse(content={"detail": "tokens_updated"})
-    # TODO Защита от xss, csrf (проверить аргументы по умолчанию)
+        return response
+
+    return schemas.TokenSet(access, refresh)
+
+
+@router.post(
+    "/test-test-tokens",
+    include_in_schema=conf.DEBUG
+)
+async def test_tokens(access: str, refresh: str):
+    """Эндпоинт исключительно для тестирования!"""
+    
+    if not conf.DEBUG:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Not Found"
+        )
+    
+    response = JSONResponse(content={"detail": "tokens_added"})
     response.set_cookie(key="session", value=access)
     response.set_cookie(key="refresh", value=refresh)
 
@@ -90,32 +89,24 @@ def token_update(token_data: schemas.JwtPayload = Depends(deps.get_refresh)):
 
 
 @router.post(
-    "/test-test-tokens",
-)
-async def set_tokens(access: str, refresh: str):
-
-    response = JSONResponse(content={"detail": None})
-    # response.set_cookie(key="session", value=access)
-    # response.set_cookie(key="refresh", value=refresh)
-
-    return response
-
-
-@router.post(
     "/delete-tokens",
 )
-async def token_delete():
+async def token_delete(banned: None = Depends(deps.auto_token_ban)):
     """
     Данный метод используются когда человек выходит из аккаунта\n
     Я не до конца уверен в их актуальности, также возможно стоит
      поместить данные методы в один путь /delete-tokens, который
      запрашивает сразу оба токена.
     """
-    # ! TODO Автоматически инвалидировать токен, путём созданя чёрного списка.
-
+    
     response = JSONResponse(content={"detail": "deleted"})
-    response.delete_cookie("token")
+    
+    if conf.DEBUG:
+        response.delete_cookie("token")
+        response.delete_cookie("refresh")
 
+        return response
+    
     return response
 
 
