@@ -1,6 +1,3 @@
-import re
-from typing import Optional
-
 from pydantic import (
     BaseModel,
     EmailStr,
@@ -74,7 +71,7 @@ class UserLogin(EmailField, PasswordField):
 class UserUpdate(UsernameField, PasswordField):
     """Используется для изменения имени и пароля"""
 
-    unverify_user: bool = False
+    is_verified: bool = True
     auth: PasswordField
 
 
@@ -88,6 +85,7 @@ class UserPreDB(BaseUser):
     is_verified: bool = False
     role_id: int = 0
     created_at: int  # Unix - time
+    updated_at: int
 
 
 class UserInDB(UserPreDB):

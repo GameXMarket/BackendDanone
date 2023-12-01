@@ -27,6 +27,7 @@ async def create_(db_session: AsyncSession, *, obj_in: schemas.UserSignUp):
         email=obj_in.email,
         hashed_password=get_password_hash(obj_in.password),
         created_at=int(time.time()),
+        updated_at=int(time.time()),
     )
 
     db_session.add(db_obj)
@@ -39,6 +40,7 @@ async def update_(
     db_session: AsyncSession, *, db_obj: models.User, obj_in: schemas.UserInDB
 ):
     """UserInDB - Максимальное кол-во полей, доступное тут, настоящий тип может быть и другим"""
+    db_obj.updated_at = int(time.time())
     obj_data = jsonable_encoder(db_obj)
     if isinstance(obj_in, dict):
         update_data = obj_in
