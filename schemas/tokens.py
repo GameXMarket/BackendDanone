@@ -19,8 +19,12 @@ class JwtPayload(BaseModel):
     sub: EmailStr
 
 
+class TokenSet(BaseModel):
+    access: str
+    refresh: str
+
+
 class BannedTokenInDB(BaseModel):
     id: int
     session_id: str
-    hashed_token: str
     expired_at: int

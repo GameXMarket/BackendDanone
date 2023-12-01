@@ -1,6 +1,6 @@
-import random, string, json, base64, uuid
+import uuid
 from datetime import datetime, timedelta
-from typing import List
+from typing import Tuple, Dict, Any
 
 from jose import jwt, JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,6 +28,23 @@ def create_jwt_token(
     return encoded_jwt
 
 
+def create_new_token_set(email: str) -> Tuple[str, str]:
+    access = create_jwt_token(
+        type_=schemas.TokenType.access,
+        email=email,
+        secret=conf.ACCESS_SECRET_KEY,
+        expires_delta=timedelta(minutes=conf.ACCESS_TOKEN_EXPIRE_MINUTES),
+    )
+    refresh = create_jwt_token(
+        type_=schemas.TokenType.refresh,
+        email=email,
+        secret=conf.REFRESH_SECRET_KEY,
+        expires_delta=timedelta(minutes=conf.REFRESH_TOKEN_EXPIRE_MINUTES),
+    )
+    
+    return access, refresh
+
+
 async def verify_jwt_token(
     token: str, secret: str, db_session: AsyncSession
 ) -> schemas.JwtPayload | None:
@@ -35,6 +52,7 @@ async def verify_jwt_token(
     Верифицирует исключительно логику обычного JWT + забанен ли токен!!
     В случае, если всё окей, возвращает token_data, иначе None
     """
+    
     try:
         payload = jwt.decode(token, secret, algorithms=[conf.ALGORITHM])
     except JWTError:
