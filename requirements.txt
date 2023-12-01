@@ -11,3 +11,4 @@ passlib[bcrypt]
 pyotp
 email-validator
 pytest
+aiosmtplib
