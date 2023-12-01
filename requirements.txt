@@ -3,9 +3,11 @@ sqlalchemy[asyncio]
 alembic
 uvicorn[standard]
 fastapi
+websockets
 httpx
 python-multipart
 python-jose[cryptography]
 passlib[bcrypt]
+pyotp
 email-validator
 pytest

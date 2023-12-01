@@ -2,5 +2,10 @@
     {
         "name": "users",
         "description": "Various actions on the user profile"
+    },
+    {
+        "name": "auth",
+        "description": "Users Authentication"
+
     }
 ]
