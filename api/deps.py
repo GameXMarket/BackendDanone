@@ -10,7 +10,7 @@ from core.database import get_session
 
 from core import configuration as conf
 
-
+# ! В случае надобности, просто меняем схему получения токенов
 access_cookie_scheme = APIKeyCookie(
     name="session",
     scheme_name="Cookie session token",
@@ -62,6 +62,31 @@ async def get_access(
     return token_data
 
 
+async def auto_token_ban(
+    refresh_t=Depends(refresh__cookie_scheme),
+    access_t=Depends(access_cookie_scheme),
+    db_session: AsyncSession = Depends(get_session),
+) -> None:
+    refresh_data = await TokenSecurity.verify_jwt_token(
+        refresh_t, secret=conf.REFRESH_SECRET_KEY, db_session=db_session
+    )
+    if refresh_data:
+        await BannedTokensService.create_(
+            db_session=db_session,
+            token=refresh_t,
+            payload=schemas.JwtPayload(**refresh_data),
+        )
+    access_data = await TokenSecurity.verify_jwt_token(
+        access_t, secret=conf.ACCESS_SECRET_KEY, db_session=db_session
+    )
+    if access_data:
+        await BannedTokensService.create_(
+            db_session=db_session,
+            token=access_data,
+            payload=schemas.JwtPayload(**access_data),
+        )
+
+
 async def get_current_user(
     token_data: schemas.JwtPayload = Depends(get_access),
     db_session: AsyncSession = Depends(get_session),
@@ -85,7 +110,7 @@ async def get_current_active_user(
     is_active = UserService.is_active(current_user)
 
     if not is_active:
-        return HTTPException(
+        raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User is not active"
         )
 
