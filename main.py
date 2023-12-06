@@ -11,7 +11,6 @@ from fastapi.openapi.utils import get_openapi
 
 import core.configuration as conf
 from core.database import init_models
-from api import api_router
 
 
 conf.DEBUG = True

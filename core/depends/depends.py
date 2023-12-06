@@ -10,6 +10,8 @@ from core.database import get_session
 
 from core import configuration as conf
 
+# TODO BASE
+
 # ! В случае надобности, просто меняем схему получения токенов
 access_cookie_scheme = APIKeyCookie(
     name="session",
@@ -61,6 +63,7 @@ async def get_access(
 
     return token_data
 
+# TODO Others
 
 async def auto_token_ban(
     refresh_t=Depends(refresh__cookie_scheme),
