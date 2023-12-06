@@ -13,3 +13,4 @@ email-validator
 pytest
 aiosmtplib
 Jinja2
+python-dotenv
