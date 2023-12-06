@@ -12,3 +12,4 @@ pyotp
 email-validator
 pytest
 aiosmtplib
+Jinja2
