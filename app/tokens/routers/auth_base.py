@@ -2,14 +2,16 @@ from fastapi import Depends, APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-import schemas, models
 from core.security import tokens as TokenSecurity
 from core.database import get_session
-import services.users as UserService
-import services.banned_tokens as BannedTokensService
-from api import deps
-
+import core.depends.depends as deps
 import core.configuration as conf
+import app.users.schemas as schemas_u
+import app.users.models as models_u
+import app.users.services as UserService
+import app.tokens.schemas as schemas_t
+import app.tokens.models as models_t
+import app.tokens.services as BannedTokensService
 
 
 router = APIRouter()
@@ -20,12 +22,12 @@ router = APIRouter()
     "/get-tokens",
 )
 async def token_set(
-    form_data: schemas.UserLogin,
+    form_data: schemas_u.UserLogin,
     db_session: Session = Depends(get_session),
 ):
     """Возвращает два токена (refresh и access), запрашивает почту и пароль"""
 
-    user: models.User = await UserService.authenticate(
+    user: models_u.User = await UserService.authenticate(
         db_session=db_session,
         email=form_data.email,
         password=form_data.password,
@@ -47,11 +49,11 @@ async def token_set(
 
         return response
     
-    return schemas.TokenSet(access, refresh)
+    return schemas_t.TokenSet(access, refresh)
 
 
 @router.post("/update-tokens")
-def token_update(token_data: schemas.JwtPayload = Depends(deps.get_refresh)):
+def token_update(token_data: schemas_t.JwtPayload = Depends(deps.get_refresh)):
     """
     Данный метод принимает refresh токен, возвращает новую пару ключей
     """
@@ -65,7 +67,7 @@ def token_update(token_data: schemas.JwtPayload = Depends(deps.get_refresh)):
 
         return response
 
-    return schemas.TokenSet(access, refresh)
+    return schemas_t.TokenSet(access, refresh)
 
 
 @router.post(
@@ -99,6 +101,7 @@ async def token_delete(banned: None = Depends(deps.auto_token_ban)):
      запрашивает сразу оба токена.
     """
     
+    # TODO Доделать нормальное переключение между дебагом и продом
     response = JSONResponse(content={"detail": "deleted"})
     
     if conf.DEBUG:
@@ -133,11 +136,11 @@ async def verify_user_email(token: str, db_session: Session = Depends(get_sessio
             status_code=status.HTTP_409_CONFLICT, detail="User already active"
         )
 
-    user = await UserService.update_(
+    user = await UserService.update_user(
         db_session, db_obj=user, obj_in={"is_verified": True}
     )
 
-    return schemas.UserPreDB(**user.to_dict())
+    return schemas_u.UserPreDB(**user.to_dict())
 
 
 @router.post(

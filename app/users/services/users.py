@@ -5,8 +5,14 @@ from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, exists, delete, and_
 
-import models, schemas
+from .. import models, schemas
 from core.security import get_password_hash, verify_password
+
+
+async def get_by_id(db_session: AsyncSession, *, id: str):
+    user_stmt = select(models.User).where(models.User.id == id)
+    user: models.User | None = (await db_session.execute(user_stmt)).scalar()
+    return user
 
 
 async def get_by_email(db_session: AsyncSession, *, email: str):
@@ -21,7 +27,7 @@ async def get_by_username(db_session: AsyncSession, *, username: str):
     return user
 
 
-async def create_(db_session: AsyncSession, *, obj_in: schemas.UserSignUp):
+async def create_user(db_session: AsyncSession, *, obj_in: schemas.UserSignUp):
     db_obj = models.User(
         username=obj_in.username,
         email=obj_in.email,
@@ -36,7 +42,7 @@ async def create_(db_session: AsyncSession, *, obj_in: schemas.UserSignUp):
     return db_obj
 
 
-async def update_(
+async def update_user(
     db_session: AsyncSession, *, db_obj: models.User, obj_in: schemas.UserInDB
 ):
     """UserInDB - Максимальное кол-во полей, доступное тут, настоящий тип может быть и другим"""
@@ -62,7 +68,7 @@ async def update_(
     return db_obj
 
 
-async def delete_(db_session: AsyncSession, *, email: str):
+async def delete_user(db_session: AsyncSession, *, email: str):
     current_user_stmt = select(models.User).where(models.User.email == email)
     current_user = (await db_session.execute(current_user_stmt)).scalar()
     if not current_user:

@@ -11,7 +11,8 @@ from fastapi.openapi.utils import get_openapi
 
 import core.configuration as conf
 from core.database import init_models
-from api import api_router
+from app.users import users_routers
+from app.tokens import tokens_routers
 
 
 conf.DEBUG = True
@@ -28,6 +29,9 @@ app = FastAPI(
     docs_url="/docs" if conf.DEBUG else None,
     redoc_url=None,
 )
+
+app.include_router(users_routers)
+app.include_router(tokens_routers)
 
 
 def __temp_get_current_username(
@@ -67,9 +71,6 @@ async def get_redoc_documentation(username: str = Depends(__temp_get_current_use
 @app.get("/openapi.json", include_in_schema=False)
 async def openapi(username: str = Depends(__temp_get_current_username)):
     return get_openapi(title=conf.TITLE, version=conf.VERSION, routes=app.routes)
-
-
-app.include_router(api_router)
 
 
 if __name__ == "__main__":

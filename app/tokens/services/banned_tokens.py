@@ -3,7 +3,7 @@ import time
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, exists, delete, and_
 
-import models, schemas
+from .. import models, schemas
 
 
 async def get_by_payload(
@@ -16,7 +16,7 @@ async def get_by_payload(
     return banned_token
 
 
-async def create_(
+async def ban_token(
     db_session: AsyncSession, *, token: str, payload: schemas.JwtPayload
 ) -> models.BannedToken | None:
     """
