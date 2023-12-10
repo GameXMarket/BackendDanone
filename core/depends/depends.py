@@ -2,9 +2,10 @@ from fastapi.security import APIKeyCookie
 from fastapi import Request, HTTPException, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import models, schemas
-from services import users as UserService
-from services import banned_tokens as BannedTokensService
+from app.tokens import models as models_t, schemas as schemas_t
+from app.tokens import services as TokensService
+from app.users import models as models_u, schemas as schemas_u
+from app.users import services as UserService
 from core.security import tokens as TokenSecurity
 from core.database import get_session
 
@@ -29,8 +30,8 @@ refresh__cookie_scheme = APIKeyCookie(
 async def get_refresh(
     refresh_t=Depends(refresh__cookie_scheme),
     db_session: AsyncSession = Depends(get_session),
-) -> schemas.JwtPayload:
-    token_data: schemas.JwtPayload = await TokenSecurity.verify_jwt_token(
+) -> schemas_t.JwtPayload:
+    token_data: schemas_t.JwtPayload = await TokenSecurity.verify_jwt_token(
         token=refresh_t, secret=conf.ACCESS_SECRET_KEY, db_session=db_session
     )
 
@@ -40,7 +41,7 @@ async def get_refresh(
             detail="Could not validate credentials",
         )
 
-    banned_token = await BannedTokensService.create_(
+    banned_token = await TokensService.ban_token(
         db_session=db_session, token=refresh_t, payload=token_data
     )
 
@@ -50,7 +51,7 @@ async def get_refresh(
 async def get_access(
     access_t=Depends(access_cookie_scheme),
     db_session: AsyncSession = Depends(get_session),
-) -> schemas.JwtPayload:
+) -> schemas_t.JwtPayload:
     token_data = await TokenSecurity.verify_jwt_token(
         token=access_t, secret=conf.ACCESS_SECRET_KEY, db_session=db_session
     )
@@ -74,24 +75,24 @@ async def auto_token_ban(
         refresh_t, secret=conf.REFRESH_SECRET_KEY, db_session=db_session
     )
     if refresh_data:
-        await BannedTokensService.create_(
+        await TokensService.ban_token(
             db_session=db_session,
             token=refresh_t,
-            payload=schemas.JwtPayload(**refresh_data),
+            payload=schemas_t.JwtPayload(**refresh_data),
         )
     access_data = await TokenSecurity.verify_jwt_token(
         access_t, secret=conf.ACCESS_SECRET_KEY, db_session=db_session
     )
     if access_data:
-        await BannedTokensService.create_(
+        await TokensService.ban_token(
             db_session=db_session,
             token=access_data,
-            payload=schemas.JwtPayload(**access_data),
+            payload=schemas_t.JwtPayload(**access_data),
         )
 
 
 async def get_current_user(
-    token_data: schemas.JwtPayload = Depends(get_access),
+    token_data: schemas_t.JwtPayload = Depends(get_access),
     db_session: AsyncSession = Depends(get_session),
 ):
     user = await UserService.get_by_email(db_session, email=token_data.sub)
@@ -108,7 +109,7 @@ async def get_current_user(
 
 
 async def get_current_active_user(
-    current_user: models.User = Depends(get_current_user),
+    current_user: models_u.User = Depends(get_current_user),
 ):
     is_active = UserService.is_active(current_user)
 
@@ -120,7 +121,7 @@ async def get_current_active_user(
     return current_user
 
 
-def __check_user_role(check_role_id: int, active_user: models.User):
+def __check_user_role(check_role_id: int, active_user: models_u.User):
     user_role_id = UserService.get_role_id(active_user)
 
     if check_role_id != user_role_id:
@@ -134,24 +135,24 @@ def __check_user_role(check_role_id: int, active_user: models.User):
 
 # Будет не особо актуально в скором времени
 def get_current_user_user(
-    current_active_user: models.User = Depends(get_current_active_user),
+    current_active_user: models_u.User = Depends(get_current_active_user),
 ):
     return __check_user_role(0, current_active_user)
 
 
 def get_current_mod_user(
-    current_active_user: models.User = Depends(get_current_active_user),
+    current_active_user: models_u.User = Depends(get_current_active_user),
 ):
     return __check_user_role(1, current_active_user)
 
 
 def get_current_arbit_user(
-    current_active_user: models.User = Depends(get_current_active_user),
+    current_active_user: models_u.User = Depends(get_current_active_user),
 ):
     return __check_user_role(2, current_active_user)
 
 
 def get_current_admin_user(
-    current_active_user: models.User = Depends(get_current_active_user),
+    current_active_user: models_u.User = Depends(get_current_active_user),
 ):
     return __check_user_role(3, current_active_user)

@@ -5,9 +5,8 @@ from typing import Tuple, Dict, Any
 from jose import jwt, JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import schemas
 import core.configuration as conf
-from services import banned_tokens as BannedTokensService
+from app.tokens import schemas, services
 
 
 def create_jwt_token(
@@ -58,7 +57,7 @@ async def verify_jwt_token(
     except JWTError:
         return None
 
-    if await BannedTokensService.get_by_payload(
+    if await services.get_by_payload(
         db_session, payload=schemas.JwtPayload(**payload)
     ):
         return None

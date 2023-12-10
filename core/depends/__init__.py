@@ -1,1 +1,1 @@
-from depends import *
+from .depends import *
