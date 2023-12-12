@@ -5,7 +5,7 @@ from pydantic import (
     field_validator,
 )
 
-import core.configuration as conf
+import core.settings as conf
 
 
 class UsernameField(BaseModel):
