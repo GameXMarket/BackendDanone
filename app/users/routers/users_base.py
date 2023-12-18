@@ -42,7 +42,7 @@ async def get_user(user: User = Depends(deps.get_current_user_user)):
     return UserPreDB(**user.to_dict())
 
 
-@router.put(path="/me")
+@router.patch(path="/me")
 async def update_user(
     form_data: UserUpdate,
     user: User = Depends(deps.get_current_user_user),

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from core.security import tokens as TokenSecurity
 from core.database import get_session
-import core.depends.depends as deps
+import core.depends as deps
 import core.settings as conf
 import app.users.schemas as schemas_u
 import app.users.models as models_u
@@ -19,7 +19,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/get-tokens",
+    "/login",
 )
 async def token_set(
     form_data: schemas_u.UserLogin,
@@ -52,7 +52,7 @@ async def token_set(
     return schemas_t.TokenSet(access, refresh)
 
 
-@router.post("/update-tokens")
+@router.post("/refresh")
 def token_update(token_data: schemas_t.JwtPayload = Depends(deps.get_refresh)):
     """
     Данный метод принимает refresh токен, возвращает новую пару ключей
@@ -71,27 +71,7 @@ def token_update(token_data: schemas_t.JwtPayload = Depends(deps.get_refresh)):
 
 
 @router.post(
-    "/test-test-tokens",
-    include_in_schema=conf.DEBUG
-)
-async def test_tokens(access: str, refresh: str):
-    """Эндпоинт исключительно для тестирования!"""
-    
-    if not conf.DEBUG:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Not Found"
-        )
-    
-    response = JSONResponse(content={"detail": "tokens_added"})
-    response.set_cookie(key="session", value=access)
-    response.set_cookie(key="refresh", value=refresh)
-
-    return response
-
-
-@router.post(
-    "/delete-tokens",
+    "/logout",
 )
 async def token_delete(banned: None = Depends(deps.auto_token_ban)):
     """
@@ -144,7 +124,7 @@ async def verify_user_email(token: str, db_session: Session = Depends(get_sessio
 
 
 @router.post(
-    "/reset-password",
+    "/password-reset",
 )
 async def verify_password_reset(token: str, db_session: Session = Depends(get_session)):
     """
