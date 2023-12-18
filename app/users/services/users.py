@@ -9,7 +9,7 @@ from .. import models, schemas
 from core.security import get_password_hash, verify_password
 
 
-async def get_by_id(db_session: AsyncSession, *, id: str):
+async def get_by_id(db_session: AsyncSession, *, id: int):
     user_stmt = select(models.User).where(models.User.id == id)
     user: models.User | None = (await db_session.execute(user_stmt)).scalar()
     return user

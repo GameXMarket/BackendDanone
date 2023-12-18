@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import (
     BaseModel,
     EmailStr,
@@ -5,17 +7,25 @@ from pydantic import (
     field_validator,
 )
 
-import core.configuration as conf
+import core.settings as conf
 
+_u = Field(
+    examples=["username"],
+    max_length=conf.MAX_LENGTH_USERNAME,
+    min_length=conf.MIN_LENGTH_USERNAME,
+    pattern=conf.USERNAME_REGEX,
+    strip_whitespace=True,
+)
+_p = Field(
+    examples=["password"],
+    max_length=conf.MAX_LENGTH_PASSWORD,
+    min_length=conf.MIN_LENGTH_PASSWORD,
+    pattern=conf.PASSWORD_REGEX,
+    strip_whitespace=True,
+)
 
 class UsernameField(BaseModel):
-    username: str = Field(
-        examples=["username"],
-        max_length=conf.MAX_LENGTH_USERNAME,
-        min_length=conf.MIN_LENGTH_USERNAME,
-        pattern=conf.USERNAME_REGEX,
-        strip_whitespace=True,
-    )
+    username: str = _u
 
     @field_validator("username")
     @classmethod  # Дописать валидацию никнейма если требуется
@@ -35,13 +45,7 @@ class EmailField(BaseModel):
 
 
 class PasswordField(BaseModel):
-    password: str = Field(
-        examples=["password"],
-        max_length=conf.MAX_LENGTH_PASSWORD,
-        min_length=conf.MIN_LENGTH_PASSWORD,
-        pattern=conf.PASSWORD_REGEX,
-        strip_whitespace=True,
-    )
+    password: str = _p
 
     @field_validator("password")
     @classmethod
@@ -56,7 +60,7 @@ class BaseUser(UsernameField, EmailField):
     pass
 
 
-class UserSignUp(UsernameField, EmailField, PasswordField):
+class UserSignUp(BaseUser, PasswordField):
     """Модель User'а, используется там, где требуется пароль и никнейм и почта"""
 
     pass
@@ -70,7 +74,8 @@ class UserLogin(EmailField, PasswordField):
 
 class UserUpdate(UsernameField, PasswordField):
     """Используется для изменения имени и пароля"""
-
+    username: Optional[str] = _u
+    password: Optional[str] = _p
     is_verified: bool = True
     auth: PasswordField
 
@@ -95,7 +100,7 @@ class UserInDB(UserPreDB):
 
 
 class UserInfo(BaseModel):
-    """Модель, отражающая информацию"""
+    """Модель, отражающая какую-либо информацию """
 
     detail: str
 

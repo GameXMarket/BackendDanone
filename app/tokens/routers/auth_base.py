@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from core.security import tokens as TokenSecurity
 from core.database import get_session
 import core.depends.depends as deps
-import core.configuration as conf
+import core.settings as conf
 import app.users.schemas as schemas_u
 import app.users.models as models_u
 import app.users.services as UserService
