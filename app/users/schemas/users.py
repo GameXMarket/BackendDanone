@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import (
     BaseModel,
     EmailStr,
@@ -7,15 +9,23 @@ from pydantic import (
 
 import core.settings as conf
 
+_u = Field(
+    examples=["username"],
+    max_length=conf.MAX_LENGTH_USERNAME,
+    min_length=conf.MIN_LENGTH_USERNAME,
+    pattern=conf.USERNAME_REGEX,
+    strip_whitespace=True,
+)
+_p = Field(
+    examples=["password"],
+    max_length=conf.MAX_LENGTH_PASSWORD,
+    min_length=conf.MIN_LENGTH_PASSWORD,
+    pattern=conf.PASSWORD_REGEX,
+    strip_whitespace=True,
+)
 
 class UsernameField(BaseModel):
-    username: str = Field(
-        examples=["username"],
-        max_length=conf.MAX_LENGTH_USERNAME,
-        min_length=conf.MIN_LENGTH_USERNAME,
-        pattern=conf.USERNAME_REGEX,
-        strip_whitespace=True,
-    )
+    username: str = _u
 
     @field_validator("username")
     @classmethod  # Дописать валидацию никнейма если требуется
@@ -35,13 +45,7 @@ class EmailField(BaseModel):
 
 
 class PasswordField(BaseModel):
-    password: str = Field(
-        examples=["password"],
-        max_length=conf.MAX_LENGTH_PASSWORD,
-        min_length=conf.MIN_LENGTH_PASSWORD,
-        pattern=conf.PASSWORD_REGEX,
-        strip_whitespace=True,
-    )
+    password: str = _p
 
     @field_validator("password")
     @classmethod
@@ -70,7 +74,8 @@ class UserLogin(EmailField, PasswordField):
 
 class UserUpdate(UsernameField, PasswordField):
     """Используется для изменения имени и пароля"""
-
+    username: Optional[str] = _u
+    password: Optional[str] = _p
     is_verified: bool = True
     auth: PasswordField
 
