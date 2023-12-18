@@ -1,6 +1,4 @@
 from enum import Enum
-from typing import Final
-
 
 from pydantic import BaseModel, EmailStr
 

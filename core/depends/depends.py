@@ -9,7 +9,7 @@ from app.users import services as UserService
 from core.security import tokens as TokenSecurity
 from core.database import get_session
 
-from core import configuration as conf
+from core import settings as conf
 
 # TODO BASE
 

@@ -5,7 +5,7 @@ from typing import Tuple, Dict, Any
 from jose import jwt, JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import core.configuration as conf
+import core.settings as conf
 from app.tokens import schemas, services
 
 
