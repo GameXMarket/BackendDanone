@@ -60,7 +60,7 @@ class BaseUser(UsernameField, EmailField):
     pass
 
 
-class UserSignUp(UsernameField, EmailField, PasswordField):
+class UserSignUp(BaseUser, PasswordField):
     """Модель User'а, используется там, где требуется пароль и никнейм и почта"""
 
     pass
@@ -100,7 +100,7 @@ class UserInDB(UserPreDB):
 
 
 class UserInfo(BaseModel):
-    """Модель, отражающая информацию"""
+    """Модель, отражающая какую-либо информацию """
 
     detail: str
 
