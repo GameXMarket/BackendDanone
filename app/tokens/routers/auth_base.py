@@ -49,7 +49,7 @@ async def token_set(
 
         return response
     
-    return schemas_t.TokenSet(access, refresh)
+    return schemas_t.TokenSet(access=access, refresh=refresh)
 
 
 @router.post("/refresh")
@@ -67,7 +67,7 @@ def token_update(token_data: schemas_t.JwtPayload = Depends(deps.get_refresh)):
 
         return response
 
-    return schemas_t.TokenSet(access, refresh)
+    return schemas_t.TokenSet(access=access, refresh=refresh)
 
 
 @router.post(
