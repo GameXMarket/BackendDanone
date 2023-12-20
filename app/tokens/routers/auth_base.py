@@ -129,7 +129,7 @@ async def verify_user_email(token: str, db_session: Session = Depends(get_sessio
         db_session, db_obj=user, obj_in={"is_verified": True}
     )
     
-    banned_token = await BannedTokensService.ban_token(db_session, token=token)
+    banned_token = await BannedTokensService.ban_token(db_session, token=token, payload=token_data)
 
     return schemas_u.UserPreDB(**user.to_dict())
 
