@@ -1,7 +1,8 @@
+import os
 import json
 import secrets
-import asyncio
 from typing import Annotated
+from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, status
@@ -11,23 +12,41 @@ from fastapi.openapi.utils import get_openapi
 
 import core.settings as conf
 from core.database import init_models
+from core.mail_sender import user_auth_sender
+from core.mail_sender import password_reset_sender
 from app.users import users_routers
 from app.tokens import tokens_routers
 
 
-conf.DEBUG = True
+current_file_path = os.path.abspath(__file__)
+locales_path = os.path.join(os.path.dirname(current_file_path), "_locales")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_models(drop_all=conf.DEBUG)
+    
+    await user_auth_sender.connect()
+    await password_reset_sender.connect()
+    
+    yield
+    
+    await user_auth_sender.disconnect()
+    await password_reset_sender.disconnect()
+
+
 security = HTTPBasic()
-openapi_tags = json.loads(open("_locales/tags_metadata.json", "r").read())
+openapi_tags = json.loads(open(f"{locales_path}/tags_metadata.json", "r").read())
 app = FastAPI(
     debug=conf.DEBUG,
-    root_path="" if conf.DEBUG else "/api",
-    version=conf.VERSION if conf.DEBUG else None,
-    title=conf.TITLE if conf.DEBUG else None,
-    summary=conf.SUMMARY if conf.DEBUG else None,
-    openapi_tags=openapi_tags if conf.DEBUG else None,
+    version=conf.VERSION,
+    title=conf.TITLE,
+    summary=conf.SUMMARY,
+    openapi_tags=openapi_tags,
     openapi_url="/openapi.json" if conf.DEBUG else None,
     docs_url="/docs" if conf.DEBUG else None,
     redoc_url=None,
+    lifespan=lifespan
 )
 
 app.include_router(users_routers)
@@ -38,7 +57,7 @@ def __temp_get_current_username(
     credentials: Annotated[HTTPBasicCredentials, Depends(security)]
 ):
     current_username_bytes = credentials.username.encode("utf8")
-    correct_username_bytes = b"user"
+    correct_username_bytes = b"danone_test"
     is_correct_username = secrets.compare_digest(
         current_username_bytes, correct_username_bytes
     )
@@ -63,16 +82,15 @@ async def get_swagger_documentation(
     return get_swagger_ui_html(openapi_url="/openapi.json", title="docs")
 
 
-@app.get("/redoc", include_in_schema=False)
-async def get_redoc_documentation(username: str = Depends(__temp_get_current_username)):
-    return get_redoc_html(openapi_url="/openapi.json", title="docs")
-
-
 @app.get("/openapi.json", include_in_schema=False)
 async def openapi(username: str = Depends(__temp_get_current_username)):
     return get_openapi(title=conf.TITLE, version=conf.VERSION, routes=app.routes)
 
 
 if __name__ == "__main__":
-    asyncio.run(init_models(drop_all=True))
-    uvicorn.run("main:app", host=conf.SERVER_IP, port=conf.SERVER_PORT, reload=True)
+    uvicorn.run(
+        app="main:app" if conf.DEBUG else app,
+        host=conf.SERVER_IP,
+        port=conf.SERVER_PORT,
+        reload=conf.DEBUG,
+    )

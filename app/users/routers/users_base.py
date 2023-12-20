@@ -4,9 +4,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..schemas import *
 from ..models import *
 from ..services import users as UserService
+from core import settings as conf
 from core.database import get_session
 from core.security import verify_password
+from core.security import create_jwt_token
+from core.mail_sender import *
 from core.depends import depends as deps # Переделать
+from app.tokens.schemas import TokenType
 
 router = APIRouter()
 # TODO Прописать модели response и другое
@@ -31,7 +35,21 @@ async def sign_up(
         )
 
     user = await UserService.create_user(db_session, obj_in=data)
-    # TODO send email verif here...
+    verify_token = create_jwt_token(
+        type_=TokenType.email_verify,
+        email=data.email,
+        secret=conf.EMAIL_SECRET_KEY,
+        expires_delta=conf.EMAIL_ACCESS_TOKEN_EXPIRE_MINUTES,
+    )
+    await user_auth_sender.send_email(
+        sender_name="Danone Market", 
+        receiver_email=data.email,
+        subject="User Verify",
+        body= await render_auth_template(
+            template_file="verify_user.html",
+            data={"token": verify_token}
+        )
+    )
 
     return UserPreDB(**user.to_dict())
 
