@@ -23,8 +23,9 @@ class AsyncEmailSender:
         try:
             await self.server.starttls()
         except aiosmtplib.errors.SMTPException as e:
-            if conf.DEBUG == False:
-                raise e
+            print("Потому нужно будет пофиксить подключени к ssl порту")
+            self.smtp_port = conf.SMTP_PORT
+            await self.server.starttls()
         await self.server.login(self.username, self.password)
 
     async def send_email(self, sender_name, receiver_email, subject, body):
