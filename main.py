@@ -12,11 +12,11 @@ from fastapi.openapi.utils import get_openapi
 
 import core.settings as conf
 from core.database import init_models
+from core.mail_sender import user_auth_sender
+from core.mail_sender import password_reset_sender
 from app.users import users_routers
 from app.tokens import tokens_routers
 
-
-conf.DEBUG = False
 
 current_file_path = os.path.abspath(__file__)
 locales_path = os.path.join(os.path.dirname(current_file_path), "_locales")
@@ -25,7 +25,14 @@ locales_path = os.path.join(os.path.dirname(current_file_path), "_locales")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_models(drop_all=conf.DEBUG)
+    
+    await user_auth_sender.connect()
+    await password_reset_sender.connect()
+    
     yield
+    
+    await user_auth_sender.disconnect()
+    await password_reset_sender.disconnect()
 
 
 security = HTTPBasic()

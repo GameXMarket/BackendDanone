@@ -35,10 +35,10 @@ async def token_set(
 
     if not user:
         raise HTTPException(
-            status_code=400, detail="Incorrect email/username or password"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email/username or password"
         )
     elif not UserService.is_active(user):
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
 
     access, refresh = TokenSecurity.create_new_token_set(form_data.email)
     
@@ -93,7 +93,7 @@ async def token_delete(banned: None = Depends(deps.auto_token_ban)):
     return response
 
 
-@router.post(
+@router.get(
     "/verify-user",
 )
 async def verify_user_email(token: str, db_session: Session = Depends(get_session)):
@@ -101,10 +101,19 @@ async def verify_user_email(token: str, db_session: Session = Depends(get_sessio
     Метод используется для верификации пользователей, через почту\n
     Виден в документации только во время отладки.
     """
+    token_data = await TokenSecurity.verify_jwt_token(
+        token=token,
+        secret=conf.EMAIL_SECRET_KEY,
+        db_session=db_session
+    )
+    
+    if not token_data:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token not found"
+        )
 
-    # TODO нормальная валидация запросов с почты
-
-    user = await UserService.get_by_username(db_session, username=token)
+    user = await UserService.get_by_email(db_session, email=token_data.sub)
 
     if not user:
         raise HTTPException(
@@ -119,11 +128,13 @@ async def verify_user_email(token: str, db_session: Session = Depends(get_sessio
     user = await UserService.update_user(
         db_session, db_obj=user, obj_in={"is_verified": True}
     )
+    
+    banned_token = await BannedTokensService.ban_token(db_session, token=token)
 
     return schemas_u.UserPreDB(**user.to_dict())
 
 
-@router.post(
+@router.get(
     "/password-reset",
 )
 async def verify_password_reset(token: str, db_session: Session = Depends(get_session)):

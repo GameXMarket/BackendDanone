@@ -6,6 +6,8 @@ import aiosmtplib
 
 from jinja2 import Environment, FileSystemLoader
 
+from core import settings as conf
+
 
 class AsyncEmailSender:
     def __init__(self, smtp_server, smtp_port, username, password):
@@ -16,13 +18,18 @@ class AsyncEmailSender:
         self.server = None
 
     async def connect(self):
-        self.server: aiosmtplib.SMTP = await aiosmtplib.SMTP(
-            self.smtp_server, self.smtp_port
-        )
-        await self.server.starttls()
+        self.server: aiosmtplib.SMTP = aiosmtplib.SMTP()
+        await self.server.connect(hostname=self.smtp_server, port=self.smtp_port)
+        try:
+            await self.server.starttls()
+        except aiosmtplib.errors.SMTPException as e:
+            if conf.DEBUG == False:
+                raise e
         await self.server.login(self.username, self.password)
 
     async def send_email(self, sender_name, receiver_email, subject, body):
+        if not self.server:
+            raise ValueError(f"SMTP server must be {type(aiosmtplib.SMTP)}, not None")
         message = MIMEMultipart("alternative")
         message["From"] = formataddr((str(Header(sender_name, "utf-8")), self.username))
         message["To"] = receiver_email
@@ -37,10 +44,27 @@ class AsyncEmailSender:
             await self.server.quit()
 
 
-async def render_auth_template(template_file, token):
-    template_dir = "./_locales"
-    env = Environment(loader=FileSystemLoader(template_dir))
+async def render_auth_template(template_file, data: dict):
+    if not data.get("debug"):
+        data["debug"] = conf.DEBUG
+    
+    env = Environment(loader=FileSystemLoader("_locales"), enable_async=True)
     template = env.get_template(template_file)
-    rendered_html = await template.render_async({"token": token})
+    rendered_html = await template.render_async(data)
 
     return rendered_html
+
+
+user_auth_sender = AsyncEmailSender(
+    conf.SMTP_ADRESS,
+    conf.SMTP_PORT if conf.DEBUG else conf.SMTP_SSL_PORT,
+    conf.USER_VERIFY_LOGIN,
+    conf.USER_VERIFY_PASSWORD,
+)
+
+password_reset_sender = AsyncEmailSender(
+    conf.SMTP_ADRESS,
+    conf.SMTP_PORT if conf.DEBUG else conf.SMTP_SSL_PORT,
+    conf.PASSWORD_RESET_LOGIN,
+    conf.PASSWORD_RESET_PASSWORD,
+)
