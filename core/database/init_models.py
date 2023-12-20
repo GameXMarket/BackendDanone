@@ -1,9 +1,11 @@
+import logging
+
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from core.database import Base
 import core.settings.config as conf
 
-
+logger = logging.getLogger("uvicorn")
 engine = create_async_engine(conf.DATABASE_URL, echo=conf.DEBUG)
 
 
@@ -15,4 +17,4 @@ async def init_models(*, drop_all=False):
         if drop_all:
             await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-        print("init models")
+        logger.info("Init models finished")

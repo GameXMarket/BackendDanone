@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import Depends, APIRouter, Request, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +14,7 @@ from core.mail_sender import *
 from core.depends import depends as deps # Переделать
 from app.tokens.schemas import TokenType
 
+logger = logging.getLogger("uvicorn")
 router = APIRouter()
 # TODO Прописать модели response и другое
 
@@ -34,22 +37,31 @@ async def sign_up(
             detail="The user with this username already exists in the system.",
         )
 
-    user = await UserService.create_user(db_session, obj_in=data)
     verify_token = create_jwt_token(
         type_=TokenType.email_verify,
         email=data.email,
         secret=conf.EMAIL_SECRET_KEY,
         expires_delta=conf.EMAIL_ACCESS_TOKEN_EXPIRE_MINUTES,
     )
-    await user_auth_sender.send_email(
-        sender_name="Danone Market", 
-        receiver_email=data.email,
-        subject="User Verify",
-        body= await render_auth_template(
-            template_file="verify_user.html",
-            data={"token": verify_token}
+    
+    try:
+        await user_auth_sender.send_email(
+            sender_name="Danone Market", 
+            receiver_email=data.email,
+            subject="User Verify",
+            body= await render_auth_template(
+                template_file="verify_user.html",
+                data={"token": verify_token}
+            )
         )
-    )
+    except BaseException as ex:
+        logger.error(ex)
+        raise HTTPException(
+            detail="email not sended",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        ) 
+
+    user = await UserService.create_user(db_session, obj_in=data)
 
     return UserPreDB(**user.to_dict())
 

@@ -2,11 +2,18 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.header import Header
 from email.utils import formataddr
-import aiosmtplib
+import logging
+import os
 
+import aiosmtplib
 from jinja2 import Environment, FileSystemLoader
 
 from core import settings as conf
+
+
+logger = logging.getLogger("uvicorn")
+current_file_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+locales_path = os.path.join(os.path.dirname(current_file_path), "_locales")
 
 
 class AsyncEmailSender:
@@ -18,18 +25,18 @@ class AsyncEmailSender:
         self.server = None
 
     async def connect(self):
-        print("connecting to smtp")
+        logger.info("Connecting to smtp...")
         self.server: aiosmtplib.SMTP = aiosmtplib.SMTP()
         try:
-            await self.server.connect(hostname=self.smtp_server, port=self.smtp_port, timeout=5)
+            await self.server.connect(hostname=self.smtp_server, port=self.smtp_port, timeout=2)
         except aiosmtplib.errors.SMTPConnectTimeoutError as e:
-            print("Потому нужно будет пофиксить подключени к ssl порту")
+            logger.error("Потому нужно будет пофиксить подключени к ssl порту")
             self.smtp_port = conf.SMTP_PORT
-            await self.server.connect(hostname=self.smtp_server, port=self.smtp_port, timeout=5)
+            await self.server.connect(hostname=self.smtp_server, port=self.smtp_port, timeout=2)
         try:
             await self.server.starttls()
         except aiosmtplib.errors.SMTPException:
-            print("Также нужно будет почитать доки на счёт этого..")
+            logger.error("Также нужно будет почитать доки на счёт этого..")
         await self.server.login(self.username, self.password)
 
     async def send_email(self, sender_name, receiver_email, subject, body):
@@ -53,7 +60,7 @@ async def render_auth_template(template_file, data: dict):
     if not data.get("debug"):
         data["debug"] = conf.DEBUG
     
-    env = Environment(loader=FileSystemLoader("_locales"), enable_async=True)
+    env = Environment(loader=FileSystemLoader(locales_path), enable_async=True)
     template = env.get_template(template_file)
     rendered_html = await template.render_async(data)
 
