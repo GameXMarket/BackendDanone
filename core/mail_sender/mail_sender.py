@@ -18,14 +18,18 @@ class AsyncEmailSender:
         self.server = None
 
     async def connect(self):
+        print("connecting to smtp")
         self.server: aiosmtplib.SMTP = aiosmtplib.SMTP()
-        await self.server.connect(hostname=self.smtp_server, port=self.smtp_port)
         try:
-            await self.server.starttls()
-        except aiosmtplib.errors.SMTPException as e:
+            await self.server.connect(hostname=self.smtp_server, port=self.smtp_port, timeout=5)
+        except aiosmtplib.errors.SMTPConnectTimeoutError as e:
             print("Потому нужно будет пофиксить подключени к ssl порту")
             self.smtp_port = conf.SMTP_PORT
+            await self.server.connect(hostname=self.smtp_server, port=self.smtp_port, timeout=5)
+        try:
             await self.server.starttls()
+        except aiosmtplib.errors.SMTPException:
+            print("Также нужно будет почитать доки на счёт этого..")
         await self.server.login(self.username, self.password)
 
     async def send_email(self, sender_name, receiver_email, subject, body):
