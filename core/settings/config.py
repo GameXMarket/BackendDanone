@@ -2,7 +2,11 @@ from dotenv import load_dotenv
 import os
 
 # Загрузка переменных из .env файла
-load_dotenv()
+
+current_file_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+env_path = os.path.join(os.path.dirname(current_file_path) , ".env")
+
+load_dotenv(dotenv_path=env_path, override=True)
 
 # MAIN
 
@@ -49,3 +53,5 @@ USER_VERIFY_LOGIN: str = os.getenv("USER_VERIFY_LOGIN")
 USER_VERIFY_PASSWORD: str = os.getenv("USER_VERIFY_PASSWORD")
 PASSWORD_RESET_LOGIN: str = os.getenv("PASSWORD_RESET_LOGIN")
 PASSWORD_RESET_PASSWORD: str = os.getenv("PASSWORD_RESET_PASSWORD")
+
+print(PASSWORD_REGEX)
