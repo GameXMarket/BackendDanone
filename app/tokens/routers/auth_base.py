@@ -95,10 +95,12 @@ async def token_delete(banned: None = Depends(deps.auto_token_ban)):
 @router.get(
     "/verify-user",
 )
-async def verify_user_email(token: str, db_session: Session = Depends(get_session)):
+async def verify_user_email(
+    token: str,
+    db_session: Session = Depends(get_session)
+):
     """
-    Метод используется для верификации пользователей, через почту\n
-    Виден в документации только во время отладки.
+    Метод используется для верификации пользователей, через почту
     """
     token_data = await TokenSecurity.verify_jwt_token(
         token=token,
@@ -141,8 +143,7 @@ async def verify_password_reset(
     password_f: schemas_u.PasswordField,
     db_session: Session = Depends(get_session)):
     """
-    Метод используется для верификации пользователей, через почту\n
-    Виден в документации только во время отладки.
+    Метод используется для верификации пользователей, через почту
     """
 
     # TODO нормальная валидация запросов с почты + логика сброса по токену
