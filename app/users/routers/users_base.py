@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import Depends, APIRouter, Request, HTTPException, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..schemas import *
@@ -135,3 +136,45 @@ async def remove_user(
     deleted_user = await UserService.delete_user(db_session, email=user.email)
 
     return UserPreDB(**deleted_user.to_dict())
+
+
+@router.post(path="/me/reset-password")
+async def reset_user_password(
+    email_f: EmailField,
+    db_session: AsyncSession = Depends(get_session),
+):
+    user = await UserService.get_by_email(db_session, email=email_f.email)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    verify_token = create_jwt_token(
+        type_=TokenType.email_verify,
+        email=email_f.email,
+        secret=conf.PASSWORD_RESET_SECRET_KEY,
+        expires_delta=conf.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES,
+    )
+
+    try:
+        await user_auth_sender.send_email(
+            sender_name="Danone Market", 
+            receiver_email=email_f.email,
+            subject="Password Reset",
+            body= await render_auth_template(
+                template_file="password-reset.html",
+                data={"token": verify_token}
+            )
+        )
+    except BaseException as ex:
+        logger.error(ex)
+        raise HTTPException(
+            detail="email not sended",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        ) 
+    
+    return JSONResponse(content={"detail": "email_sended"})
+   
+    
