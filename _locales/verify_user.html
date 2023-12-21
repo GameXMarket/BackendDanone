@@ -33,9 +33,9 @@
         Вы видите данный код т.к. debug == {{ debug }}
     </p>
 
-    <a class="a-button" href="http://localhost:8000/verify-user?token={{ token }}">Подтвердить почту</a>
+    <a class="a-button" href="http://localhost:8000/auth/verify-user?token={{ token }}">Подтвердить почту</a>
     {% else %}
-    <a class="a-button" href="https://test.yunikeil.ru/verify-user?token={{ token }}">Подтвердить почту</a>
+    <a class="a-button" href="https://test.yunikeil.ru/auth/verify-user?token={{ token }}">Подтвердить почту</a>
     {% endif %}
 </body>
 
