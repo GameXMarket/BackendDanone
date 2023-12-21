@@ -26,15 +26,20 @@
 
 <body>
     <h2>Авторизация</h2>
-
-    {% if debug %}
     <p>
-        token = {{ token }} <br>
-        Вы видите данный код т.к. debug == {{ debug }}
-    </p>
+        Вы видите данный код т.к. это дебаг версия, <br>
 
+        {% if debug %}
+
+        token = {{ token }} <br>
+
+    </p>
     <a class="a-button" href="http://localhost:8000/auth/verify-user?token={{ token }}">Подтвердить почту</a>
     {% else %}
+
+    Оно будет работать и без фронтеда, но будет криво выглядеть, так что
+    (Предпологается,что при тестировании на проде будет fronted для данной части) <br>
+    </p>
     <a class="a-button" href="https://test.yunikeil.ru/auth/verify-user?token={{ token }}">Подтвердить почту</a>
     {% endif %}
 </body>
