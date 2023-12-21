@@ -15,8 +15,8 @@ from core import settings as conf
 
 # ! В случае надобности, просто меняем схему получения токенов
 access_cookie_scheme = APIKeyCookie(
-    name="session",
-    scheme_name="Cookie session token",
+    name="access",
+    scheme_name="Cookie access token",
     description="Поле и кнопка ниже ни на что не влияют, они сделаны для отображения запросов, требующих авторизации",
 )
 

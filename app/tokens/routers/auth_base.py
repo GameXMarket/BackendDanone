@@ -81,7 +81,6 @@ async def token_delete(banned: None = Depends(deps.auto_token_ban)):
      запрашивает сразу оба токена.
     """
     
-    # TODO Доделать нормальное переключение между дебагом и продом
     response = JSONResponse(content={"detail": "deleted"})
     
     if conf.DEBUG:
@@ -96,10 +95,12 @@ async def token_delete(banned: None = Depends(deps.auto_token_ban)):
 @router.get(
     "/verify-user",
 )
-async def verify_user_email(token: str, db_session: Session = Depends(get_session)):
+async def verify_user_email(
+    token: str,
+    db_session: Session = Depends(get_session)
+):
     """
-    Метод используется для верификации пользователей, через почту\n
-    Виден в документации только во время отладки.
+    Метод используется для верификации пользователей, через почту
     """
     token_data = await TokenSecurity.verify_jwt_token(
         token=token,
@@ -134,15 +135,48 @@ async def verify_user_email(token: str, db_session: Session = Depends(get_sessio
     return schemas_u.UserPreDB(**user.to_dict())
 
 
-@router.get(
+@router.post(
     "/password-reset",
 )
-async def verify_password_reset(token: str, db_session: Session = Depends(get_session)):
+async def verify_password_reset(
+    token: str,
+    password_f: schemas_u.PasswordField,
+    db_session: Session = Depends(get_session)):
     """
-    Метод используется для верификации пользователей, через почту\n
-    Виден в документации только во время отладки.
+    Метод используется для верификации пользователей, через почту
     """
 
     # TODO нормальная валидация запросов с почты + логика сброса по токену
 
-    return "method in progress.."
+    token_data = await TokenSecurity.verify_jwt_token(
+        token=token,
+        secret=conf.PASSWORD_RESET_SECRET_KEY,
+        db_session=db_session
+    )
+    
+    if not token_data:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token not found"
+        )
+
+    user = await UserService.get_by_email(db_session, email=token_data.sub)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+
+    if not UserService.is_active(user):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="User not active"
+        )
+
+    user = await UserService.update_user(
+        db_session, db_obj=user, obj_in={"password": password_f.password}
+    )
+    
+    banned_token = await BannedTokensService.ban_token(db_session, token=token, payload=token_data)
+
+    return schemas_u.UserPreDB(**user.to_dict())
+

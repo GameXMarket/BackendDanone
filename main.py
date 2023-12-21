@@ -7,7 +7,8 @@ from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 
 import core.settings as conf
@@ -48,6 +49,20 @@ app = FastAPI(
     redoc_url=None,
     lifespan=lifespan
 )
+
+# На время разработки...
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+if conf.DEBUG:
+    from debug import debug_routers
+    
+    app.include_router(debug_routers)
 
 app.include_router(users_routers)
 app.include_router(tokens_routers)
