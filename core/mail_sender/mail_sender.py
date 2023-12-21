@@ -62,13 +62,10 @@ async def render_auth_template(template_file, data: dict, **kwargs):
     
     # Используется для дебага, чтобы изменить директорию для поиска файлов
     if not (path := kwargs.get("templates_path")):
-        print(path)
         env = Environment(loader=FileSystemLoader(locales_path), enable_async=True)
     else:
         env = Environment(loader=FileSystemLoader(path), enable_async=True)
-    
-    print(path, locales_path)
-    
+        
     template = env.get_template(template_file)
     rendered_html = await template.render_async(data)
 
