@@ -56,7 +56,8 @@ async def sign_up(
             )
         )
     except BaseException as ex:
-        logger.error(ex)
+        logger.error(type(ex))
+        logger.exception(ex)
         raise HTTPException(
             detail="email not sended",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -169,7 +170,8 @@ async def reset_user_password(
             )
         )
     except BaseException as ex:
-        logger.error(ex)
+        logger.error(type(ex))
+        logger.exception(ex)
         raise HTTPException(
             detail="email not sended",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR

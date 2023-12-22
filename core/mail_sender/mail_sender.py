@@ -27,21 +27,12 @@ class AsyncEmailSender:
     async def connect(self):
         logger.info("Connecting to smtp...")
         self.server: aiosmtplib.SMTP = aiosmtplib.SMTP()
-        try:
-            await self.server.connect(hostname=self.smtp_server, port=self.smtp_port, timeout=2)
-        except aiosmtplib.errors.SMTPConnectTimeoutError as e:
-            logger.error("Потому нужно будет пофиксить подключени к ssl порту")
-            self.smtp_port = conf.SMTP_PORT
-            await self.server.connect(hostname=self.smtp_server, port=self.smtp_port, timeout=2)
-        try:
-            await self.server.starttls()
-        except aiosmtplib.errors.SMTPException:
-            logger.error("Также нужно будет почитать доки на счёт этого..")
+        await self.server.connect(hostname=self.smtp_server, port=self.smtp_port, use_tls=True, timeout=2)
         await self.server.login(self.username, self.password)
 
     async def send_email(self, sender_name, receiver_email, subject, body):
         if not self.server:
-            raise ValueError(f"SMTP server must be {type(aiosmtplib.SMTP)}, not None")
+            raise ValueError(f"SMTP server must be {type(aiosmtplib.SMTP)}, not N+one")
         message = MIMEMultipart("alternative")
         message["From"] = formataddr((str(Header(sender_name, "utf-8")), self.username))
         message["To"] = receiver_email
@@ -52,7 +43,7 @@ class AsyncEmailSender:
         await self.server.sendmail(self.username, receiver_email, message.as_string())
 
     async def disconnect(self):
-        if self.server:
+        if self.server.is_connected:
             await self.server.quit()
 
 
