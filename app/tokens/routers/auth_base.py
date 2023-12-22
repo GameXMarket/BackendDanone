@@ -44,7 +44,7 @@ async def token_set(
     
     if conf.DEBUG:
         response = JSONResponse(content={"detail": "tokens_added"})
-        response.set_cookie(key="session", value=access)
+        response.set_cookie(key="access", value=access)
         response.set_cookie(key="refresh", value=refresh)
 
         return response
@@ -62,7 +62,7 @@ def token_update(token_data: schemas_t.JwtPayload = Depends(deps.get_refresh)):
 
     if conf.DEBUG:
         response = JSONResponse(content={"detail": "tokens_updated"})
-        response.set_cookie(key="session", value=access)
+        response.set_cookie(key="access", value=access)
         response.set_cookie(key="refresh", value=refresh)
 
         return response
@@ -75,16 +75,13 @@ def token_update(token_data: schemas_t.JwtPayload = Depends(deps.get_refresh)):
 )
 async def token_delete(banned: None = Depends(deps.auto_token_ban)):
     """
-    Данный метод используются когда человек выходит из аккаунта\n
-    Я не до конца уверен в их актуальности, также возможно стоит
-     поместить данные методы в один путь /delete-tokens, который
-     запрашивает сразу оба токена.
+    Данный метод используются когда человек выходит из аккаунта, автоматически банит токены
     """
     
     response = JSONResponse(content={"detail": "deleted"})
     
     if conf.DEBUG:
-        response.delete_cookie("token")
+        response.delete_cookie("access")
         response.delete_cookie("refresh")
 
         return response
@@ -145,8 +142,6 @@ async def verify_password_reset(
     """
     Метод используется для верификации пользователей, через почту
     """
-
-    # TODO нормальная валидация запросов с почты + логика сброса по токену
 
     token_data = await TokenSecurity.verify_jwt_token(
         token=token,
