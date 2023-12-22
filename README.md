@@ -6,9 +6,8 @@ Local installation && Startup
 Required:
 
 * PostgreSQL, Tested on version 16
-* PowerShell, Tested on version 5.1, 7.3
+* PowerShell, Tested on version 5.1, 7.3 / Bash Tested on version 5.1.16(1)-release
 * Python and pip in PATH, Tested on 3.11.4, pip 23.3.1
-* Packages in the requirements.txt file
 
 Installation:
 
@@ -22,12 +21,13 @@ Installation:
     ```
 3. Copy and fill in the configuration.example.py file:
     ```shell
-    cp configuration.example.py configuration.py
+    cp example.env .env
     ```
 
 Startup:
 
-1. Run main.py file
+1. Fill it out .env file
+2. Run main.py file
     ```shell
     python .\main.py
     ```
