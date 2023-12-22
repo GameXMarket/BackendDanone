@@ -26,15 +26,9 @@ locales_path = os.path.join(os.path.dirname(current_file_path), "_locales")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_models(drop_all=conf.DEBUG)
-    
-    await user_auth_sender.connect()
-    await password_reset_sender.connect()
-    
+        
     yield
     
-    await user_auth_sender.disconnect()
-    await password_reset_sender.disconnect()
-
 
 security = HTTPBasic()
 openapi_tags = json.loads(open(f"{locales_path}/tags_metadata.json", "r").read())

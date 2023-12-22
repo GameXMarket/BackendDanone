@@ -25,12 +25,12 @@ class AsyncEmailSender:
         self.server = None
 
     async def connect(self):
-        logger.info("Connecting to smtp...")
         self.server: aiosmtplib.SMTP = aiosmtplib.SMTP()
         await self.server.connect(hostname=self.smtp_server, port=self.smtp_port, use_tls=True, timeout=2)
         await self.server.login(self.username, self.password)
 
     async def send_email(self, sender_name, receiver_email, subject, body):
+        await self.connect()
         if not self.server:
             raise ValueError(f"SMTP server must be {type(aiosmtplib.SMTP)}, not N+one")
         message = MIMEMultipart("alternative")
@@ -41,6 +41,7 @@ class AsyncEmailSender:
         message.attach(MIMEText(body, "html"))
 
         await self.server.sendmail(self.username, receiver_email, message.as_string())
+        await self.disconnect()
 
     async def disconnect(self):
         if self.server.is_connected:
@@ -65,14 +66,14 @@ async def render_auth_template(template_file, data: dict, **kwargs):
 
 user_auth_sender = AsyncEmailSender(
     conf.SMTP_ADRESS,
-    conf.SMTP_PORT if conf.DEBUG else conf.SMTP_SSL_PORT,
+    conf.SMTP_SSL_PORT,
     conf.USER_VERIFY_LOGIN,
     conf.USER_VERIFY_PASSWORD,
 )
 
 password_reset_sender = AsyncEmailSender(
     conf.SMTP_ADRESS,
-    conf.SMTP_PORT if conf.DEBUG else conf.SMTP_SSL_PORT,
+    conf.SMTP_SSL_PORT,
     conf.PASSWORD_RESET_LOGIN,
     conf.PASSWORD_RESET_PASSWORD,
 )
