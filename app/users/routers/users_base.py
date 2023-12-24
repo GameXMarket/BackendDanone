@@ -152,7 +152,11 @@ async def remove_user(
 
 @router.post(
     path="/reset-password",
-    responses={404: {"model": UserError}, 500: {"model": UserInfo}},
+    responses={
+        200: {"model": UserInfo},
+        404: {"model": UserError},
+        500: {"model": UserInfo}
+    },
 )
 async def reset_user_password(
     email_f: EmailField,

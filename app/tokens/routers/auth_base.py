@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import Depends, APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -14,12 +16,15 @@ import app.tokens.models as models_t
 import app.tokens.services as BannedTokensService
 
 
-router = APIRouter()
-# TODO Прописать модели response
+logger = logging.getLogger("uvicorn")
+router = APIRouter(responses={200: {"models": schemas_t.TokenSet}})
 
 
 @router.post(
-    "/login",
+    path="/login",
+    responses={
+        401: {"models": schemas_t.TokenError}
+    }
 )
 async def token_set(
     form_data: schemas_u.UserLogin,
@@ -52,7 +57,10 @@ async def token_set(
     return schemas_t.TokenSet(access=access, refresh=refresh)
 
 
-@router.post("/refresh")
+@router.post(
+    path="/refresh",
+    responses=deps.build_response(deps.get_refresh),
+)
 def token_update(token_data: schemas_t.JwtPayload = Depends(deps.get_refresh)):
     """
     Данный метод принимает refresh токен, возвращает новую пару ключей
@@ -71,7 +79,10 @@ def token_update(token_data: schemas_t.JwtPayload = Depends(deps.get_refresh)):
 
 
 @router.post(
-    "/logout",
+    path="/logout",
+    responses={
+        200: {"models": schemas_t.TokenInfo}
+    }.update(deps.build_response(deps.auto_token_ban))
 )
 async def token_delete(banned: None = Depends(deps.auto_token_ban)):
     """
@@ -90,7 +101,13 @@ async def token_delete(banned: None = Depends(deps.auto_token_ban)):
 
 
 @router.get(
-    "/verify-user",
+    path="/verify-user",
+    responses={
+        401: {"models": schemas_t.TokenError},
+        404: {"models": schemas_u.UserError},
+        409: {"models": schemas_u.UserError},
+        200: {"models": schemas_u.UserPreDB}
+    }
 )
 async def verify_user_email(
     token: str,
@@ -133,7 +150,13 @@ async def verify_user_email(
 
 
 @router.post(
-    "/password-reset",
+    path="/password-reset",
+    responses={
+        401: {"models": schemas_t.TokenError},
+        404: {"models": schemas_u.UserError},
+        409: {"models": schemas_u.UserError},
+        200: {"models": schemas_u.UserPreDB}
+    }
 )
 async def verify_password_reset(
     token: str,

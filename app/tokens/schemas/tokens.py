@@ -26,3 +26,11 @@ class BannedTokenInDB(BaseModel):
     id: int
     session_id: str
     expired_at: int
+
+
+class TokenInfo(BaseModel):
+    detail: str
+
+
+class TokenError(TokenInfo):
+    pass
