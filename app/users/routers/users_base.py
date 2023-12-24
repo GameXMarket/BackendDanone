@@ -12,15 +12,17 @@ from core.database import get_session
 from core.security import verify_password
 from core.security import create_jwt_token
 from core.mail_sender import *
-from core.depends import depends as deps # Переделать
+from core.depends import depends as deps  # Переделать
 from app.tokens.schemas import TokenType
 
+
 logger = logging.getLogger("uvicorn")
-router = APIRouter()
-# TODO Прописать модели response и другое
+router = APIRouter(responses={200: {"model": UserPreDB}})
 
 
-@router.post(path="/me", responses={200: {"model": BaseUser}, 409: {"model": UserError}})
+@router.post(
+    path="/me", responses={409: {"model": UserError}, 500: {"model": UserInfo}}
+)
 async def sign_up(
     request: Request, data: UserSignUp, db_session: AsyncSession = Depends(get_session)
 ):
@@ -44,37 +46,41 @@ async def sign_up(
         secret=conf.EMAIL_SECRET_KEY,
         expires_delta=conf.EMAIL_ACCESS_TOKEN_EXPIRE_MINUTES,
     )
-    
+
     try:
         await user_auth_sender.send_email(
-            sender_name="Danone Market", 
+            sender_name="Danone Market",
             receiver_email=data.email,
             subject="User Verify",
-            body= await render_auth_template(
-                template_file="verify_user.html",
-                data={"token": verify_token}
-            )
+            body=await render_auth_template(
+                template_file="verify_user.html", data={"token": verify_token}
+            ),
         )
     except BaseException as ex:
         logger.error(type(ex))
         logger.exception(ex)
         raise HTTPException(
-            detail="email not sended",
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-        ) 
+            detail="email not sended", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
     user = await UserService.create_user(db_session, obj_in=data)
 
     return UserPreDB(**user.to_dict())
 
 
-@router.get(path="/me")
+@router.get(path="/me", responses=deps.build_response(deps.get_current_user_user))
 async def get_user(user: User = Depends(deps.get_current_user_user)):
-
     return UserPreDB(**user.to_dict())
 
 
-@router.patch(path="/me")
+@router.patch(
+    path="/me",
+    responses={
+        401: {"model": UserError},
+        418: {"model": UserError},
+        409: {"model": UserError},
+    }.update(deps.build_response(deps.get_current_user_user)),
+)
 async def update_user(
     form_data: UserUpdate,
     user: User = Depends(deps.get_current_user_user),
@@ -120,7 +126,12 @@ async def update_user(
     return UserPreDB(**new_user.to_dict())
 
 
-@router.delete(path="/me")
+@router.delete(
+    path="/me",
+    responses={
+        401: {"model": UserError},
+    }.update(deps.build_response(deps.get_current_user_user)),
+)
 async def remove_user(
     old_password: PasswordField,
     user: User = Depends(deps.get_current_user_user),
@@ -139,19 +150,21 @@ async def remove_user(
     return UserPreDB(**deleted_user.to_dict())
 
 
-@router.post(path="/me/reset-password")
+@router.post(
+    path="/reset-password",
+    responses={404: {"model": UserError}, 500: {"model": UserInfo}},
+)
 async def reset_user_password(
     email_f: EmailField,
     db_session: AsyncSession = Depends(get_session),
 ):
     user = await UserService.get_by_email(db_session, email=email_f.email)
-    
+
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
-    
+
     verify_token = create_jwt_token(
         type_=TokenType.email_verify,
         email=email_f.email,
@@ -161,22 +174,18 @@ async def reset_user_password(
 
     try:
         await user_auth_sender.send_email(
-            sender_name="Danone Market", 
+            sender_name="Danone Market",
             receiver_email=email_f.email,
             subject="Password Reset",
-            body= await render_auth_template(
-                template_file="password-reset.html",
-                data={"token": verify_token}
-            )
+            body=await render_auth_template(
+                template_file="password-reset.html", data={"token": verify_token}
+            ),
         )
     except BaseException as ex:
         logger.error(type(ex))
         logger.exception(ex)
         raise HTTPException(
-            detail="email not sended",
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-        ) 
-    
+            detail="email not sended", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
     return JSONResponse(content={"detail": "email_sended"})
-   
-    
