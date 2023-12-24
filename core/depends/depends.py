@@ -32,8 +32,9 @@ async def get_refresh(
     refresh_t=Depends(refresh__cookie_scheme),
     db_session: AsyncSession = Depends(get_session),
 ) -> schemas_t.JwtPayload:
+    print(refresh_t)
     token_data: schemas_t.JwtPayload = await TokenSecurity.verify_jwt_token(
-        token=refresh_t, secret=conf.ACCESS_SECRET_KEY, db_session=db_session
+        token=refresh_t, secret=conf.REFRESH_SECRET_KEY, db_session=db_session
     )
 
     if not token_data:
