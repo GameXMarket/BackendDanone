@@ -11,6 +11,7 @@ load_dotenv(dotenv_path=env_path, override=True)
 # MAIN
 
 DEBUG: bool = os.getenv("DEBUG").lower() == "true"
+DROP_TABLES: bool = os.getenv("DROP_TABLES").lower() == "true"
 
 VERSION = os.getenv("VERSION")
 TITLE = os.getenv("TITLE")

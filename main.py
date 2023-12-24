@@ -25,7 +25,7 @@ locales_path = os.path.join(os.path.dirname(current_file_path), "_locales")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_models(drop_all=conf.DEBUG)
+    await init_models(drop_all=conf.DROP_TABLES)
         
     yield
     
