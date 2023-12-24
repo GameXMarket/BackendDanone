@@ -17,10 +17,10 @@ import app.tokens.services as BannedTokensService
 
 
 logger = logging.getLogger("uvicorn")
-router = APIRouter(responses={200: {"models": schemas_t.TokenSet}})
+router = APIRouter(responses={200: {"model": schemas_t.TokenSet}})
 
 
-@router.post(path="/login", responses={401: {"models": schemas_t.TokenError}})
+@router.post(path="/login", responses={401: {"model": schemas_t.TokenError}})
 async def token_set(
     form_data: schemas_u.UserLogin,
     db_session: Session = Depends(get_session),
@@ -78,7 +78,7 @@ def token_update(token_data: schemas_t.JwtPayload = Depends(deps.get_refresh)):
 
 @router.post(
     path="/logout",
-    responses={200: {"models": schemas_t.TokenInfo}}.update(
+    responses={200: {"model": schemas_t.TokenInfo}}.update(
         deps.build_response(deps.auto_token_ban)
     ),
 )
@@ -101,10 +101,10 @@ async def token_delete(banned: None = Depends(deps.auto_token_ban)):
 @router.get(
     path="/verify-user",
     responses={
-        401: {"models": schemas_t.TokenError},
-        404: {"models": schemas_u.UserError},
-        409: {"models": schemas_u.UserError},
-        200: {"models": schemas_u.UserPreDB},
+        401: {"model": schemas_t.TokenError},
+        404: {"model": schemas_u.UserError},
+        409: {"model": schemas_u.UserError},
+        200: {"model": schemas_u.UserPreDB},
     },
 )
 async def verify_user_email(token: str, db_session: Session = Depends(get_session)):
@@ -146,10 +146,10 @@ async def verify_user_email(token: str, db_session: Session = Depends(get_sessio
 @router.post(
     path="/password-reset",
     responses={
-        401: {"models": schemas_t.TokenError},
-        404: {"models": schemas_u.UserError},
-        409: {"models": schemas_u.UserError},
-        200: {"models": schemas_u.UserPreDB},
+        401: {"model": schemas_t.TokenError},
+        404: {"model": schemas_u.UserError},
+        409: {"model": schemas_u.UserError},
+        200: {"model": schemas_u.UserPreDB},
     },
 )
 async def verify_password_reset(
