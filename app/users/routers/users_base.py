@@ -76,10 +76,13 @@ async def get_user(user: User = Depends(deps.get_current_user_user)):
 @router.patch(
     path="/me",
     responses={
-        401: {"model": UserError},
-        418: {"model": UserError},
-        409: {"model": UserError},
-    }.update(deps.build_response(deps.get_current_user_user)),
+        **{
+            401: {"model": UserError},
+            418: {"model": UserError},
+            409: {"model": UserError},
+        },
+        **deps.build_response(deps.get_current_user_user),
+    },
 )
 async def update_user(
     form_data: UserUpdate,
@@ -129,8 +132,9 @@ async def update_user(
 @router.delete(
     path="/me",
     responses={
-        401: {"model": UserError},
-    }.update(deps.build_response(deps.get_current_user_user)),
+        **{401: {"model": UserError}},
+        **deps.build_response(deps.get_current_user_user),
+    },
 )
 async def remove_user(
     old_password: PasswordField,
@@ -155,7 +159,7 @@ async def remove_user(
     responses={
         200: {"model": UserInfo},
         404: {"model": UserError},
-        500: {"model": UserInfo}
+        500: {"model": UserInfo},
     },
 )
 async def reset_user_password(
