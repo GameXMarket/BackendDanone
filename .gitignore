@@ -171,3 +171,4 @@ configuration.py
 # Other files
 .examples/
 test.py
+test[0-9].py
