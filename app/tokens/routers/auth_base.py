@@ -78,9 +78,10 @@ def token_update(token_data: schemas_t.JwtPayload = Depends(deps.get_refresh)):
 
 @router.post(
     path="/logout",
-    responses={200: {"model": schemas_t.TokenInfo}}.update(
-        deps.build_response(deps.auto_token_ban)
-    ),
+    responses={
+        **{200: {"model": schemas_t.TokenInfo}},
+        **deps.build_response(deps.auto_token_ban),
+    },
 )
 async def token_delete(banned: None = Depends(deps.auto_token_ban)):
     """
