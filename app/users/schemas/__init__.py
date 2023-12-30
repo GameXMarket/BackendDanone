@@ -7,6 +7,7 @@ from .users import (
     UserLogin,
     UserUpdate,
     UserPreDB,
+    AdminSignUp,
     UserInDB,
     UserInfo,
     UserError,
