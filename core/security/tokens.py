@@ -13,11 +13,11 @@ def create_jwt_token(
     type_: schemas.TokenType,
     email: str,
     secret: str,
-    expires_delta: timedelta | int,
+    expires_delta: timedelta | float,
 ) -> str:
-    if isinstance(expires_delta, int):
+    if isinstance(expires_delta, float):
         expires_delta = timedelta(minutes=expires_delta)
-    
+        
     expire = datetime.utcnow() + expires_delta
     to_encode = {
         "exp": expire,

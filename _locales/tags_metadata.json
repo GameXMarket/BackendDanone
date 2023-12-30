@@ -1,11 +1,14 @@
 [
     {
+        "name": "auth",
+        "description": "Users Authentication"
+    },
+    {
         "name": "users",
         "description": "Various actions on the user profile"
     },
     {
-        "name": "auth",
-        "description": "Users Authentication"
-
+        "name": "offers",
+        "description": "Offers base endpoints"
     }
 ]

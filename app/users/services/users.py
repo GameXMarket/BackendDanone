@@ -1,6 +1,6 @@
+from typing import Any, List
 import time
 
-from fastapi import Depends
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, exists, delete, and_
@@ -15,8 +15,10 @@ async def get_by_id(db_session: AsyncSession, *, id: int):
     return user
 
 
-async def get_by_email(db_session: AsyncSession, *, email: str):
+async def get_by_email(db_session: AsyncSession, *, email: str, options: Any = None):
     user_stmt = select(models.User).where(models.User.email == email)
+    if options:
+        user_stmt = user_stmt.options(options[0](options[1]))
     user: models.User | None = (await db_session.execute(user_stmt)).scalar()
     return user
 
@@ -69,8 +71,8 @@ async def update_user(
 
 
 async def delete_user(db_session: AsyncSession, *, email: str):
-    current_user_stmt = select(models.User).where(models.User.email == email)
-    current_user = (await db_session.execute(current_user_stmt)).scalar()
+    current_user = await get_by_email(db_session, email=email)
+    
     if not current_user:
         return None
 
@@ -88,6 +90,7 @@ async def authenticate(db_session: AsyncSession, *, email: str, password: str):
 
     if not user:
         return None
+    
     if not verify_password(password, user.hashed_password):
         return None
 
