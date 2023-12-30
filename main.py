@@ -62,9 +62,18 @@ app = FastAPI(
 )
 
 # На время разработки...
+
+origins = [
+    "http://localhost:80",
+    "http://localhost:8080",
+    "http://localhost:3000",
+    "https://fronted-danone-k7l2.vercel.app/",
+    "https://test.yunikeil.ru",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
