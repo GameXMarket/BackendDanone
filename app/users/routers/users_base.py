@@ -2,6 +2,7 @@ import logging
 
 from fastapi import Depends, APIRouter, Request, HTTPException, status
 from fastapi.responses import JSONResponse
+from sqlalchemy.orm import noload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..schemas import *
@@ -18,16 +19,17 @@ from app.tokens.schemas import TokenType
 
 logger = logging.getLogger("uvicorn")
 router = APIRouter(responses={200: {"model": UserPreDB}})
+default_session = deps.UserSession()
 
 
 @router.post(
     path="/me", responses={409: {"model": UserError}, 500: {"model": UserInfo}}
 )
 async def sign_up(
-    request: Request, data: UserSignUp, db_session: AsyncSession = Depends(get_session)
+    data: UserSignUp, db_session: AsyncSession = Depends(get_session)
 ):
     """
-    Используется для регистрации новых пользователей, возвращает
+    Используется для регистрации новых пользователей
     """
     if await UserService.get_by_email(db_session, email=data.email):
         raise HTTPException(
@@ -68,8 +70,10 @@ async def sign_up(
     return UserPreDB(**user.to_dict())
 
 
-@router.get(path="/me", responses=deps.build_response(deps.get_current_user_user))
-async def get_user(user: User = Depends(deps.get_current_user_user)):
+@router.get(path="/me", responses={**deps.build_response(deps.UserSession.get_current_active_user)})
+async def get_user(session: deps.UserSession = Depends(default_session)):
+    user: User = await session.get_current_active_user()
+    
     return UserPreDB(**user.to_dict())
 
 
@@ -81,18 +85,20 @@ async def get_user(user: User = Depends(deps.get_current_user_user)):
             418: {"model": UserError},
             409: {"model": UserError},
         },
-        **deps.build_response(deps.get_current_user_user),
+        **deps.build_response(deps.UserSession.get_current_active_user),
     },
 )
 async def update_user(
     form_data: UserUpdate,
-    user: User = Depends(deps.get_current_user_user),
+    session: deps.UserSession = Depends(default_session),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
     Данный метод используется для изменения пароля и username пользователя\n
     Для подтверждения сначала проверятся токен, далее пароль и остальные поля
     """
+    user: User = await session.get_current_active_user()
+    
     if not verify_password(form_data.auth.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -133,14 +139,16 @@ async def update_user(
     path="/me",
     responses={
         **{401: {"model": UserError}},
-        **deps.build_response(deps.get_current_user_user),
+        **deps.build_response(deps.UserSession.get_current_active_user),
     },
 )
 async def remove_user(
     old_password: PasswordField,
-    user: User = Depends(deps.get_current_user_user),
+    session: deps.UserSession = Depends(default_session),
     db_session: AsyncSession = Depends(get_session),
 ):
+    user: User = await session.get_current_active_user()
+    
     if not await UserService.authenticate(
         db_session, email=user.email, password=old_password.password
     ):

@@ -170,7 +170,7 @@ async def verify_password_reset(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Token not found"
         )
-
+    
     user = await UserService.get_by_email(db_session, email=token_data.sub)
 
     if not user:

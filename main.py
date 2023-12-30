@@ -17,6 +17,7 @@ from core.mail_sender import user_auth_sender
 from core.mail_sender import password_reset_sender
 from app.users import users_routers
 from app.tokens import tokens_routers
+from app.offers import offers_routers
 
 
 current_file_path = os.path.abspath(__file__)
@@ -60,6 +61,7 @@ if conf.DEBUG:
 
 app.include_router(users_routers)
 app.include_router(tokens_routers)
+app.include_router(offers_routers)
 
 
 def __temp_get_current_username(

@@ -1,9 +1,11 @@
+from typing import List, Any
 from types import UnionType
 from http import HTTPStatus
 
 from fastapi.security import APIKeyCookie, APIKeyHeader
 from fastapi import Request, HTTPException, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import noload
 
 from app.tokens import models as models_t, schemas as schemas_t
 from app.tokens import services as TokensService
@@ -119,71 +121,50 @@ async def auto_token_ban(
         )
 
 
-async def get_current_user(
-    token_data: schemas_t.JwtPayload = Depends(get_access),
-    db_session: AsyncSession = Depends(get_session),
-):
-    user = await UserService.get_by_email(db_session, email=token_data.sub)
+class UserSession:
+    def __init__(self, query_options: Any = None, query_args: Any = None) -> None:
+        self.__options = None
+        if query_options and query_args:
+            self.__options = (query_options, query_args)
 
-    if not user:
-        # Можно кидать 404 с юзер нот фоунд, но т.к. токен валиден,
-        #  но я думаю лучше использовать одинаковый ответ
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
+    async def __call__(
+        self,
+        token_data: schemas_t.JwtPayload = Depends(get_access),
+        db_session: AsyncSession = Depends(get_session),
+    ) -> Any:
+        self.__token_data = token_data
+        self.__db_session = db_session
+        return self
+
+    def update_session(self, query_options: Any, query_args: Any):
+        self.__options = (query_options, query_args)
+    
+    async def get_current_user(self) -> models_u.User:
+        user = await UserService.get_by_email(
+            self.__db_session, email=self.__token_data.sub, options=self.__options
         )
 
-    return user
+        if not user:
+            # Можно кидать 404 с юзер нот фоунд, но т.к. токен валиден,
+            #  но я думаю лучше использовать одинаковый ответ
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials",
+            )
 
+        return user
 
-async def get_current_active_user(
-    current_user: models_u.User = Depends(get_current_user),
-):
-    is_active = UserService.is_active(current_user)
+    async def get_current_active_user(self) -> models_u.User:
+        current_user = await self.get_current_user()
+        
+        is_active = UserService.is_active(current_user)
 
-    if not is_active:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User is not active"
-        )
+        if not is_active:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="User is not active"
+            )
 
-    return current_user
-
-
-def __check_user_role(check_role_id: int, active_user: models_u.User):
-    user_role_id = UserService.get_role_id(active_user)
-
-    if check_role_id != user_role_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-        )
-
-    return active_user
-
-
-# Будет не особо актуально в скором времени
-def get_current_user_user(
-    current_active_user: models_u.User = Depends(get_current_active_user),
-):
-    return __check_user_role(0, current_active_user)
-
-
-def get_current_mod_user(
-    current_active_user: models_u.User = Depends(get_current_active_user),
-):
-    return __check_user_role(1, current_active_user)
-
-
-def get_current_arbit_user(
-    current_active_user: models_u.User = Depends(get_current_active_user),
-):
-    return __check_user_role(2, current_active_user)
-
-
-def get_current_admin_user(
-    current_active_user: models_u.User = Depends(get_current_active_user),
-):
-    return __check_user_role(3, current_active_user)
+        return current_user
 
 
 __base_responses: dict = {
@@ -200,29 +181,13 @@ __base_responses: dict = {
     auto_token_ban: {
         "parrent": None,
     },
-    get_current_user: {
+    UserSession.get_current_user: {
         "parrent": get_access,
         401: {"model": schemas_u.UserError}
     },
-    get_current_active_user: {
-        "parrent": get_current_user,
+    UserSession.get_current_active_user: {
+        "parrent": UserSession.get_current_user,
         404: {"model": schemas_u.UserError},
-    },
-    get_current_user_user: {
-        "parrent": get_current_active_user,
-        401: {"model": schemas_u.UserError},
-    },
-    get_current_mod_user: {
-        "parrent": get_current_active_user,
-        401: {"model": schemas_u.UserError},
-    },
-    get_current_arbit_user: {
-        "parrent": get_current_active_user,
-        401: {"model": schemas_u.UserError},
-    },
-    get_current_admin_user: {
-        "parrent": get_current_active_user,
-        401: {"model": schemas_u.UserError},
     },
 }
 
@@ -237,12 +202,16 @@ def __merge_responses(response_list):
                 for key, value in details.items():
                     if key in result_dict[code]:
                         # Ключ уже существует, объединяем значения
-                        if key == 'model':
-                            merged_models = __merge_models(result_dict[code][key], value)
+                        if key == "model":
+                            merged_models = __merge_models(
+                                result_dict[code][key], value
+                            )
                             result_dict[code][key] = merged_models[0]
                         elif value not in result_dict[code][key]:
                             # Для других ключей объединяем значения как строки через <br>
-                            result_dict[code][key] = f"{result_dict[code][key]}<br>{value}"
+                            result_dict[code][
+                                key
+                            ] = f"{result_dict[code][key]}<br>{value}"
                     else:
                         # Ключ отсутствует, просто добавляем его в результат
                         result_dict[code][key] = value
@@ -257,7 +226,7 @@ def __merge_models(model1, model2):
     if type(model1) == type(model2) == dict:
         # Оба значения являются словарями, рекурсивно объединяем их
         return __merge_responses([model1, model2])
-    
+
     elif type(model1) == type(model2) == str:
         # Одно из значений строковое, объединяем через <br>
         return f"{model1}<br>{model2}"
@@ -266,21 +235,23 @@ def __merge_models(model1, model2):
 
 
 def __update_is_changed(response_dict: dict):
-    varn_str = "<br><mark>Model has changed, check SCHEMA!</mark>"
+    varn_str = "<br><mark>Модель была изменена, проверь SCHEMA!</mark>"
 
     for code, details in response_dict.items():
         model = details.get("model")
         description = details.get("description", HTTPStatus(code).phrase)
         # Описание по умолчанию автоматически заполняется в fastapi, однако
         #  после изменения описания вручную оно перезаписыватеся
-        
+
         if isinstance(model, UnionType) and varn_str not in description:
             details["description"] = description + varn_str
 
     return response_dict
-    
 
-def build_response(func: object, *, final_responses: list = [], base_responses: dict = __base_responses):
+
+def build_response(
+    func: object, *, final_responses: list = [], base_responses: dict = __base_responses
+):
     response_dict: dict = base_responses.get(func, {})
 
     while response_dict:
@@ -290,13 +261,13 @@ def build_response(func: object, *, final_responses: list = [], base_responses: 
             del response_dict["parrent"]
         except KeyError:
             pass
-                
+
         final_responses.append(response_dict)
 
         if parent_func:
             response_dict = base_responses.get(parent_func, {})
         else:
             break
-    
+        
     responses_dict = __merge_responses(final_responses)
     return __update_is_changed(responses_dict)
