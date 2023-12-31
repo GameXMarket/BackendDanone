@@ -13,7 +13,7 @@ from core.database import get_session
 from core.security import verify_password
 from core.security import create_jwt_token
 from core.mail_sender import *
-from core.depends import depends as deps  # Переделать
+from core.depends import depends as deps 
 from app.tokens.schemas import TokenType
 
 

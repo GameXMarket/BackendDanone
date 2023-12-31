@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Tuple, Any
 import time
 
 from fastapi.encoders import jsonable_encoder
@@ -15,7 +15,7 @@ async def get_by_id(db_session: AsyncSession, *, id: int):
     return user
 
 
-async def get_by_email(db_session: AsyncSession, *, email: str, options: Any = None):
+async def get_by_email(db_session: AsyncSession, *, email: str, options: Tuple[Any] = None):
     user_stmt = select(models.User).where(models.User.email == email)
     if options:
         user_stmt = user_stmt.options(options[0](options[1]))
@@ -29,13 +29,14 @@ async def get_by_username(db_session: AsyncSession, *, username: str):
     return user
 
 
-async def create_user(db_session: AsyncSession, *, obj_in: schemas.UserSignUp):
+async def create_user(db_session: AsyncSession, *, obj_in: schemas.UserSignUp, additional_fields: dict = {}):
     db_obj = models.User(
         username=obj_in.username,
         email=obj_in.email,
         hashed_password=get_password_hash(obj_in.password),
         created_at=int(time.time()),
         updated_at=int(time.time()),
+        **additional_fields,
     )
 
     db_session.add(db_obj)

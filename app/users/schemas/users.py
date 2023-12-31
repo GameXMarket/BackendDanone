@@ -100,7 +100,7 @@ class UserInDB(UserPreDB):
 
 
 class AdminSignUp(UserSignUp):
-    """<mark>Используется только внутри системы, в частности при запуске приложения</mark>"""
+    """<mark>Предназначено для использования только внутри системы, в данный момент не используется.</mark>"""
     role_id: int = 3
     is_verified: bool = True
 

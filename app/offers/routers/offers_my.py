@@ -15,6 +15,7 @@ from app.users import models as models_u
 
 logger = logging.getLogger("uvicorn")
 router = APIRouter(responses={200: {"model": schemas_f.OfferPreDB}})
+base_session = deps.UserSession()
 
 
 @router.post(
@@ -22,7 +23,7 @@ router = APIRouter(responses={200: {"model": schemas_f.OfferPreDB}})
 )
 async def create_offfer(
     offer: schemas_f.CreateOffer,
-    session: deps.UserSession = Depends(deps.UserSession()),
+    session: deps.UserSession = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
@@ -46,7 +47,7 @@ async def create_offfer(
 async def get_mini_with_offset_limit(
     offset: int = 0,
     limit: int = 1,
-    session: deps.UserSession = Depends(deps.UserSession()),
+    session: deps.UserSession = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
@@ -78,7 +79,7 @@ async def get_mini_with_offset_limit(
 )
 async def get_by_id(
     offer_id: int,
-    session: deps.UserSession = Depends(deps.UserSession()),
+    session: deps.UserSession = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
     user: models_u.User = await session.get_current_active_user()
@@ -103,7 +104,7 @@ async def get_by_id(
 async def update_offer(
     offer_id: int,
     offer_in: schemas_f.CreateOffer,
-    session: deps.UserSession = Depends(deps.UserSession()),
+    session: deps.UserSession = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
@@ -133,7 +134,7 @@ async def update_offer(
 )
 async def delete_offer(
     offer_id: int,
-    session: deps.UserSession = Depends(deps.UserSession()),
+    session: deps.UserSession = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
     """

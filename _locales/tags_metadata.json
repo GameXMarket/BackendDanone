@@ -10,5 +10,9 @@
     {
         "name": "offers",
         "description": "Offers base endpoints"
+    },
+    {
+        "name": "categories",
+        "description": "Categories admin endpoints"
     }
 ]

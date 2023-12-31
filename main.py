@@ -17,6 +17,8 @@ from core.database import init_models, get_session
 from app.users import users_routers
 from app.tokens import tokens_routers
 from app.offers import offers_routers
+from app.categories import category_routers
+
 from app.users import models as models_u, schemas as schemas_u
 from app.users.services import get_by_email, create_user
 
@@ -37,11 +39,12 @@ async def lifespan(app: FastAPI):
     if not user:
         user: models_u.User = await create_user(
             db_session=db_session,
-            obj_in=schemas_u.AdminSignUp(
+            obj_in=schemas_u.UserSignUp(
                 password=conf.BASE_ADMIN_MARKET_PASSWORD,
                 email=conf.BASE_ADMIN_MAIL_LOGIN,
                 username=conf.BASE_ADMIN_MARKET_LOGIN,
             ),
+            additional_fields={"role_id": 3, "is_verified": True},
         )
     
     yield
@@ -87,6 +90,7 @@ if conf.DEBUG:
 app.include_router(users_routers)
 app.include_router(tokens_routers)
 app.include_router(offers_routers)
+app.include_router(category_routers)
 
 
 def __temp_get_current_username(

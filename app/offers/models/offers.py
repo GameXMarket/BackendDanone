@@ -23,7 +23,7 @@ class Offer(Base):
     updated_at = Column(Integer, nullable=False)
     upped_at = Column(Integer, nullable=False)
     
-    user: Mapped["User"] = relationship("User", back_populates="offers", lazy="noload")
+    user: Mapped["User"] = relationship(back_populates="offers", lazy="noload")
     
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
