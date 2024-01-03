@@ -14,14 +14,15 @@ class Category(Base):
            |              +--> subchild2
            +---> child3
     """
+
     __tablename__ = "category"
     id = Column(Integer, primary_key=True, index=True)
-    parrent_id = Column(Integer, ForeignKey('category.id', ondelete="CASCADE"))
-    author_id = Column(Integer, ForeignKey('user.id', ondelete="SET NULL"))
+    parrent_id = Column(Integer, ForeignKey("category.id", ondelete="CASCADE"))
+    author_id = Column(Integer, ForeignKey("user.id", ondelete="SET NULL"))
     name = Column(String)
     created_at = Column(Integer)
-    update_at = Column(Integer)
-    
+    updated_at = Column(Integer)
+
     childrens: Mapped[List["Category"]] = relationship(lazy="noload")
     author: Mapped[User] = relationship(lazy="noload")
 
@@ -31,13 +32,13 @@ class Category(Base):
         Данный аргумент можно устанавливать непосредственно перед запросом.
         """
         result = {
-            'id': self.id,
-            'name': self.name,
+            "id": self.id,
+            "name": self.name,
         }
-        
+
         if self.childrens:
-            result['childrens'] = [child.to_json() for child in self.childrens]
+            result["childrens"] = [child.to_json() for child in self.childrens]
         else:
-            result['childrens'] = []
+            result["childrens"] = []
 
         return result
