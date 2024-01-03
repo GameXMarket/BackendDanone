@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List
 
 from sqlalchemy import Column, Integer, String, Boolean
 from sqlalchemy.orm import relationship, Mapped
@@ -25,6 +25,10 @@ class User(Base):
     # Read about lazy arg more here:
     #  https://docs.sqlalchemy.org/en/14/orm/loading_relationships.html
     offers: Mapped[List["Offer"]] = relationship(back_populates="user", lazy="noload")
+    
+    def is_admin(self) -> bool:
+        if self.role_id == 3:
+            return True
             
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}

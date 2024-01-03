@@ -99,6 +99,12 @@ class UserInDB(UserPreDB):
     hashed_password: str
 
 
+class AdminSignUp(UserSignUp):
+    """<mark>Предназначено для использования только внутри системы, в данный момент не используется.</mark>"""
+    role_id: int = 3
+    is_verified: bool = True
+
+
 class UserInfo(BaseModel):
     """Модель, отражающая какую-либо информацию """
 

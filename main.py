@@ -10,14 +10,17 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import core.settings as conf
-from core.database import init_models
-from core.mail_sender import user_auth_sender
-from core.mail_sender import password_reset_sender
+from core.database import init_models, get_session
 from app.users import users_routers
 from app.tokens import tokens_routers
 from app.offers import offers_routers
+from app.categories import category_routers
+
+from app.users import models as models_u, schemas as schemas_u
+from app.users.services import get_by_email, create_user
 
 
 current_file_path = os.path.abspath(__file__)
@@ -27,9 +30,25 @@ locales_path = os.path.join(os.path.dirname(current_file_path), "_locales")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_models(drop_all=conf.DROP_TABLES)
-        
-    yield
+
+    db_session: AsyncSession = await anext(get_session())
+    user: models_u.User = await get_by_email(
+        db_session, email=conf.BASE_ADMIN_MAIL_LOGIN
+    )
+
+    if not user:
+        user: models_u.User = await create_user(
+            db_session=db_session,
+            obj_in=schemas_u.UserSignUp(
+                password=conf.BASE_ADMIN_MARKET_PASSWORD,
+                email=conf.BASE_ADMIN_MAIL_LOGIN,
+                username=conf.BASE_ADMIN_MARKET_LOGIN,
+            ),
+            additional_fields={"role_id": 3, "is_verified": True},
+        )
     
+    yield
+
 
 security = HTTPBasic()
 openapi_tags = json.loads(open(f"{locales_path}/tags_metadata.json", "r").read())
@@ -42,13 +61,22 @@ app = FastAPI(
     openapi_url="/openapi.json" if conf.DEBUG else None,
     docs_url="/docs" if conf.DEBUG else None,
     redoc_url=None,
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # На время разработки...
+
+origins = [
+    "http://localhost:80",
+    "http://localhost:8080",
+    "http://localhost:3000",
+    "https://fronted-danone-k7l2.vercel.app/",
+    "https://test.yunikeil.ru",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -56,12 +84,13 @@ app.add_middleware(
 
 if conf.DEBUG:
     from debug import debug_routers
-    
+
     app.include_router(debug_routers)
 
 app.include_router(users_routers)
 app.include_router(tokens_routers)
 app.include_router(offers_routers)
+app.include_router(category_routers)
 
 
 def __temp_get_current_username(
