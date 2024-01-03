@@ -21,14 +21,14 @@ if conf.DEBUG:
     access_token_scheme = APIKeyCookie(
         name="access",
         scheme_name="Cookie access token",
-        description="Поле и кнопка ниже ни на что не влияют, они сделаны для отображения запросов, требующих авторизации",
+        description="Поле и кнопка ниже просто для автоматической подстановки в запросах, они сделаны для отображения запросов, требующих авторизации",
         auto_error=False,
     )
 else:
     access_token_scheme = APIKeyHeader(
         name="Authorization",
         scheme_name="Header Authorization token",
-        description="Поле и кнопка ниже ни на что не влияют, они сделаны для отображения запросов, требующих авторизации",
+        description="Поле и кнопка ниже просто для автоматической подстановки в запросах, они сделаны для отображения запросов, требующих авторизации",
         auto_error=False,
     )
 
