@@ -27,7 +27,7 @@ async def get_root_with_offset_limit(
     Получаем список всех root категорий, без наследников
     """
     categories = await services.get_all_with_offset_limit(
-        db_session, offset=abs(offset), limit=abs(limit)
+        db_session, offset=abs(offset), limit=abs(limit), options=(selectinload, models.Category.childrens)
     )
 
     return categories

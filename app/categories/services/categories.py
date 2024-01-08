@@ -16,7 +16,7 @@ async def get_by_id(db_session: AsyncSession, *, id: int, options: Tuple[Any] = 
     return category
 
 
-async def get_all_with_offset_limit(db_session: AsyncSession, offset: int, limit: int):
+async def get_all_with_offset_limit(db_session: AsyncSession, offset: int, limit: int, options: Tuple[Any] = None):
     stmt = (
         select(models.Category)
         .where(models.Category.parrent_id == None)
@@ -24,6 +24,8 @@ async def get_all_with_offset_limit(db_session: AsyncSession, offset: int, limit
         .offset(offset)
         .limit(limit)
     )
+    if options:
+        stmt = stmt.options(options[0](options[1]))
     categories = [row.to_json() for row in (await db_session.execute(stmt)).scalars()]
     return categories
 
