@@ -23,7 +23,6 @@ async def get_root_with_offset_limit(
     db_session: AsyncSession = Depends(get_session),
 ):
     """
-    Метод не готов <br>
     Получаем список всех root категорий, без наследников
     """
     categories = await services.get_all_with_offset_limit(
