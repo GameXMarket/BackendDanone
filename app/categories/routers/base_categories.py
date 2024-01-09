@@ -25,11 +25,11 @@ async def get_root_with_offset_limit(
     """
     Получаем список всех root категорий, без наследников
     """
-    categories = await services.get_all_with_offset_limit(
+    categories_rows = await services.get_all_with_offset_limit(
         db_session, offset=abs(offset), limit=abs(limit), options=(selectinload, models.Category.childrens)
     )
 
-    return categories
+    return [row.to_json() for row in categories_rows]
 
 
 @router.get(path="/{category_id}")
@@ -73,7 +73,7 @@ async def create_category(
 
     if not user.is_admin():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
-
+    
     category = await services.create_category(
         db_session, author_id=user.id, obj_in=new_category
     )
@@ -137,11 +137,11 @@ async def update_category(
     if not old_category:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    new_category = await services.update_category(
+    updated_category = await services.update_category(
         db_session, author_id=user.id, db_obj=old_category, obj_in=new_category
     )
 
-    return new_category.to_json()
+    return updated_category.to_json()
 
 
 @router.delete(path="/{category_id}")

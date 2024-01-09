@@ -26,7 +26,7 @@ async def get_all_with_offset_limit(db_session: AsyncSession, offset: int, limit
     )
     if options:
         stmt = stmt.options(options[0](options[1]))
-    categories = [row.to_json() for row in (await db_session.execute(stmt)).scalars()]
+    categories = (await db_session.execute(stmt)).scalars()
     return categories
 
 
@@ -74,8 +74,6 @@ async def update_category(
     await db_session.commit()
 
     return db_obj
-
-    ...
 
 
 async def delete_category(db_session: AsyncSession, *, category_id: int):
