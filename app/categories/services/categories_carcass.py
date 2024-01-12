@@ -17,7 +17,7 @@ async def get_by_id(db_session: AsyncSession, *, id: int, options: List[Tuple[An
     return category
 
 
-async def get_all_with_offset_limit(db_session: AsyncSession, offset: int, limit: int, options: List[Tuple[Any]] = None) -> models.CategoryCarcass:
+async def get_all_with_offset_limit(db_session: AsyncSession, offset: int, limit: int, options: List[Tuple[Any]] = None) -> List[models.CategoryCarcass]:
     stmt = (
         select(models.CategoryCarcass)
         .where(models.CategoryCarcass.parrent_id == None)

@@ -25,7 +25,7 @@ async def get_root_with_offset_limit(
     """
     Получаем список всех root каркасов, без наследников
     """
-    categories_rows = await services.get_all_with_offset_limit(
+    categories_rows = await services.categories_carcass.get_all_with_offset_limit(
         db_session, offset=abs(offset), limit=abs(limit), options=[(selectinload, models.CategoryCarcass.childrens)]
     )
 
@@ -50,7 +50,7 @@ async def get_parrents_by_id(category_id: int, db_session: AsyncSession = Depend
     if not category:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     
-    parrents = await services.get_parents_recursive(db_session, category_id)
+    parrents = await services.categories_carcass.get_parents_recursive(db_session, category_id)
 
     return parrents
 
@@ -66,7 +66,7 @@ async def get_by_id(category_id: int, db_session: AsyncSession = Depends(get_ses
            +---> child3
     </pre>
     """
-    category: models.CategoryCarcass = await services.get_by_id(
+    category: models.CategoryCarcass = await services.categories_carcass.get_by_id(
         db_session, id=category_id, options=([(selectinload, models.CategoryCarcass.childrens), (selectinload, models.CategoryCarcass.values)])
     )
 
@@ -97,7 +97,7 @@ async def create_category_carcass(
     if not user.is_admin():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
     
-    category = await services.create_category(
+    category = await services.categories_carcass.create_category(
         db_session, author_id=user.id, obj_in=new_category
     )
 
@@ -126,12 +126,12 @@ async def create_subcategory_carcass(
     if not user.is_admin():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
-    parrent = await services.get_by_id(db_session, id=category_id)
+    parrent = await services.categories_carcass.get_by_id(db_session, id=category_id)
 
     if not parrent:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    category = await services.create_category(
+    category = await services.categories_carcass.create_category(
         db_session, author_id=user.id, obj_in=new_category, parrent_id=category_id
     )
 
@@ -155,12 +155,12 @@ async def update_category_carcass(
     if not user.is_admin():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
-    old_category = await services.get_by_id(db_session, id=category_id)
+    old_category = await services.categories_carcass.get_by_id(db_session, id=category_id)
 
     if not old_category:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    updated_category = await services.update_category(
+    updated_category = await services.categories_carcass.update_category(
         db_session, author_id=user.id, db_obj=old_category, obj_in=new_category
     )
 
@@ -183,7 +183,7 @@ async def delete_category_carcass(
     if not user.is_admin():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
-    deleted_category = await services.delete_category(
+    deleted_category = await services.categories_carcass.delete_category(
         db_session, category_id=category_id
     )
 
