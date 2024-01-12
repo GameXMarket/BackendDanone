@@ -59,11 +59,15 @@ async def token_set(
     path="/refresh",
     responses=deps.build_response(deps.get_refresh),
 )
-def token_update(token_data: schemas_t.JwtPayload = Depends(deps.get_refresh)):
+async def token_update(token_data: schemas_t.JwtPayload = Depends(deps.get_refresh), db_session: Session = Depends(get_session)):
     """
     Данный метод принимает refresh токен, возвращает новую пару ключей
     """
-
+    user = await UserService.get_by_email(db_session, email=token_data.sub)
+    
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    
     access, refresh = TokenSecurity.create_new_token_set(token_data.sub)
 
     if conf.DEBUG:

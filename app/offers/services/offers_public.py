@@ -24,7 +24,7 @@ async def get_by_offer_id(
 
 
 async def get_mini_by_offset_limit(
-    db_session: AsyncSession, *, offset: int, limit: int
+    db_session: AsyncSession, *, offset: int, limit: int, category_id: int = None
 ):
     stmt = (
         select(
@@ -38,6 +38,9 @@ async def get_mini_by_offset_limit(
         .offset(offset)
         .limit(limit)
     )
+    
+    if category_id:
+        stmt = stmt.where(models_f.Offer.category_id == category_id)
 
     offers = [
         schemas_f.OfferMini(

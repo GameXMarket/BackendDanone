@@ -24,6 +24,7 @@ router = APIRouter(responses={200: {"model": schemas_f.OfferPreDB}})
 async def test_get_mini_with_offset_limit(
     offset: int = 0,
     limit: int = 1,
+    category_id: int | None = None,
     db_session: AsyncSession = Depends(get_session),
 ):
     """
@@ -38,6 +39,7 @@ async def test_get_mini_with_offset_limit(
         db_session,
         offset=abs(offset),
         limit=abs(limit),
+        category_id=category_id,
     )
     
     return offers 

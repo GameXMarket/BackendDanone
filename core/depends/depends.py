@@ -136,6 +136,9 @@ class UserSession:
         self.__db_session = db_session
         return self
 
+    def get_token_data(self):
+        return self.__token_data
+    
     def update_session(self, query_options: Any, query_args: Any):
         self.__options = (query_options, query_args)
     
