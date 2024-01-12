@@ -37,10 +37,10 @@ async def get_parrents_by_id(category_id: int, db_session: AsyncSession = Depend
     """
     Получаем по id каркасс (root/child/subchild/и т.д.) и всех его наследников в одном поколении
     <pre>
-    root --+---> child1                    <br>
-           +---> child2 --+--> subchild1   <br>
-           |              +--> subchild2   <br>
-           +---> child3                    <br>
+    root --+---> child1
+           +---> child2 --+--> subchild1
+           |              +--> subchild2
+           +---> child3
     </pre>
     """
     category: models.CategoryCarcass = await services.get_by_id(
@@ -60,10 +60,10 @@ async def get_by_id(category_id: int, db_session: AsyncSession = Depends(get_ses
     """
     Получаем по id каркасс (root/child/subchild/и т.д.) и всех его наследников в одном поколении
     <pre>
-    root --+---> child1                    <br>
-           +---> child2 --+--> subchild1   <br>
-           |              +--> subchild2   <br>
-           +---> child3                    <br>
+    root --+---> child1
+           +---> child2 --+--> subchild1
+           |              +--> subchild2
+           +---> child3
     </pre>
     """
     category: models.CategoryCarcass = await services.get_by_id(
@@ -86,10 +86,10 @@ async def create_category_carcass(
     Создаёт новый root-каркасс (игру, платформу и т.д.) <br>
     Требуются права администратора
     <pre>
-    root --+---> child1                    <br>
-           +---> child2 --+--> subchild1   <br>
-           |              +--> subchild2   <br>
-           +---> child3                    <br>
+    root --+---> child1
+           +---> child2 --+--> subchild1
+           |              +--> subchild2
+           +---> child3
     </pre>
     """
     user = await session.get_current_active_user()
@@ -115,10 +115,10 @@ async def create_subcategory_carcass(
     Создаёт новый non-root каркасс  (валюта, прокачка и тд) <br>
     Требуются права администратора
     <pre>
-    root --+---> child1                    <br>
-           +---> child2 --+--> subchild1   <br>
-           |              +--> subchild2   <br>
-           +---> child3                    <br>
+    root --+---> child1
+           +---> child2 --+--> subchild1
+           |              +--> subchild2
+           +---> child3
     </pre>
     """
     user = await session.get_current_active_user()
