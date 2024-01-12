@@ -43,7 +43,7 @@ async def get_parrents_by_id(category_id: int, db_session: AsyncSession = Depend
            +---> child3
     </pre>
     """
-    category: models.CategoryCarcass = await services.get_by_id(
+    category: models.CategoryCarcass = await services.categories_carcass.get_by_id(
         db_session, id=category_id, options=([(selectinload, models.CategoryCarcass.childrens), (selectinload, models.CategoryCarcass.values)])
     )
 
@@ -126,11 +126,14 @@ async def create_subcategory_carcass(
     if not user.is_admin():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
-    parrent = await services.categories_carcass.get_by_id(db_session, id=category_id)
+    parrent: models.CategoryCarcass = await services.categories_carcass.get_by_id(db_session, id=category_id)
 
     if not parrent:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
+    if parrent.is_last:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="parrent category is_last")
+    
     category = await services.categories_carcass.create_category(
         db_session, author_id=user.id, obj_in=new_category, parrent_id=category_id
     )

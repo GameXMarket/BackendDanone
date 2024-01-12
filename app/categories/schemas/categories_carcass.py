@@ -26,8 +26,8 @@ class SubcategoryCarcassCreate(BaseCategoryCarcass):
     pass
 
 
-class CategoryCarcassUpdate(BaseCategoryCarcass):
-    pass
+class CategoryCarcassUpdate(BaseModel):
+    name: str
 
 
 class CategoryCarcassInfo(BaseModel):
