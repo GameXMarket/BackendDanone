@@ -20,7 +20,7 @@ class CategoryCarcass(Base):
 
     __tablename__ = "category_carcass"
     id = Column(Integer, primary_key=True, index=True)
-    parrent_id = Column(Integer, ForeignKey("category.id", ondelete="CASCADE"))
+    parrent_id = Column(Integer, ForeignKey("category_carcass.id", ondelete="CASCADE"))
     author_id = Column(Integer, ForeignKey("user.id", ondelete="SET NULL"))
     name = Column(String, nullable=False)
     is_last = Column(Boolean, default=False, nullable=False)

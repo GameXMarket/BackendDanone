@@ -16,26 +16,26 @@ router = APIRouter()
 base_session = deps.UserSession()
 
 
-@router.get(path="/gettall")
+@router.get(path="/gettall/")
 async def get_root_with_offset_limit(
     offset: int = 0,
     limit: int = 1,
     db_session: AsyncSession = Depends(get_session),
 ):
     """
-    Получаем список всех root категорий, без наследников
+    Получаем список всех root каркасов, без наследников
     """
     categories_rows = await services.get_all_with_offset_limit(
-        db_session, offset=abs(offset), limit=abs(limit), options=(selectinload, models.Category.childrens)
+        db_session, offset=abs(offset), limit=abs(limit), options=[(selectinload, models.CategoryCarcass.childrens)]
     )
 
-    return [row.to_json() for row in categories_rows]
+    return [row for row in categories_rows]
 
 
-@router.get(path="/{category_id}")
-async def get_by_id(category_id: int, db_session: AsyncSession = Depends(get_session)):
+@router.get(path="/reverse/{category_id}")
+async def get_parrents_by_id(category_id: int, db_session: AsyncSession = Depends(get_session)):
     """
-    Получаем по id категорию (root/child/subchild/и т.д.) и всех её наследников в одном поколении
+    Получаем по id каркасс (root/child/subchild/и т.д.) и всех его наследников в одном поколении
     <pre>
     root --+---> child1                    <br>
            +---> child2 --+--> subchild1   <br>
@@ -43,24 +43,47 @@ async def get_by_id(category_id: int, db_session: AsyncSession = Depends(get_ses
            +---> child3                    <br>
     </pre>
     """
-    category: models.Category = await services.get_by_id(
-        db_session, id=category_id, options=(selectinload, models.Category.childrens)
+    category: models.CategoryCarcass = await services.get_by_id(
+        db_session, id=category_id, options=([(selectinload, models.CategoryCarcass.childrens), (selectinload, models.CategoryCarcass.values)])
+    )
+
+    if not category:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    
+    parrents = await services.get_parents_recursive(db_session, category_id)
+
+    return parrents
+
+
+@router.get(path="/{category_id}")
+async def get_by_id(category_id: int, db_session: AsyncSession = Depends(get_session)):
+    """
+    Получаем по id каркасс (root/child/subchild/и т.д.) и всех его наследников в одном поколении
+    <pre>
+    root --+---> child1                    <br>
+           +---> child2 --+--> subchild1   <br>
+           |              +--> subchild2   <br>
+           +---> child3                    <br>
+    </pre>
+    """
+    category: models.CategoryCarcass = await services.get_by_id(
+        db_session, id=category_id, options=([(selectinload, models.CategoryCarcass.childrens), (selectinload, models.CategoryCarcass.values)])
     )
 
     if not category:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    return category.to_json()
+    return category
 
 
 @router.post(path="/")
-async def create_category(
-    new_category: schemas.CategoryCreate,
+async def create_category_carcass(
+    new_category: schemas.CategoryCarcassCreate,
     session: deps.UserSession = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
-    Создаёт новую root-категорию (игру, платформу и т.д.) <br>
+    Создаёт новый root-каркасс (игру, платформу и т.д.) <br>
     Требуются права администратора
     <pre>
     root --+---> child1                    <br>
@@ -78,18 +101,18 @@ async def create_category(
         db_session, author_id=user.id, obj_in=new_category
     )
 
-    return category.to_json()
+    return category
 
 
 @router.post(path="/{category_id}")
-async def create_subcategory(
+async def create_subcategory_carcass(
     category_id: int,
-    new_category: schemas.SubcategoryCreate,
+    new_category: schemas.SubcategoryCarcassCreate,
     session: deps.UserSession = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
-    Создаёт новую подкатегорию (валюта, прокачка и тд) <br>
+    Создаёт новый non-root каркасс  (валюта, прокачка и тд) <br>
     Требуются права администратора
     <pre>
     root --+---> child1                    <br>
@@ -112,18 +135,18 @@ async def create_subcategory(
         db_session, author_id=user.id, obj_in=new_category, parrent_id=category_id
     )
 
-    return category.to_json()
+    return category
 
 
 @router.put(path="/{category_id}")
-async def update_category(
+async def update_category_carcass(
     category_id: int,
-    new_category: schemas.CategoryUpdate,
+    new_category: schemas.CategoryCarcassUpdate,
     session: deps.UserSession = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
-    Обновляет категорию по её id <br>
+    Обновляет каркасс по его id <br>
     Требуются права администратора
     """
 
@@ -141,17 +164,17 @@ async def update_category(
         db_session, author_id=user.id, db_obj=old_category, obj_in=new_category
     )
 
-    return updated_category.to_json()
+    return updated_category
 
 
 @router.delete(path="/{category_id}")
-async def delete_category(
+async def delete_category_carcass(
     category_id: int,
     session: deps.UserSession = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
-    Удаляет категорию по её id <br>
+    Удаляет каркасс по его id <br>
     Требуются права администратора
     """
 
@@ -167,4 +190,4 @@ async def delete_category(
     if not deleted_category:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    return deleted_category.to_json()
+    return deleted_category

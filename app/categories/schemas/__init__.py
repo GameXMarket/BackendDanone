@@ -1,1 +1,1 @@
-from .categories import *
+from .categories_carcass import *

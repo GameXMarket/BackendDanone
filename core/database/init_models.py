@@ -17,4 +17,4 @@ async def init_models(*, drop_all=False):
         if drop_all:
             await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-        logger.info("Init models finished")
+        logger.info("Init models finished.")
