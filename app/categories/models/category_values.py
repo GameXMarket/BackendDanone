@@ -14,7 +14,7 @@ class CategoryValue(Base):
     Значения, привязанные к каркассу категории
     """
 
-    __tablename__ = "category_carcass"
+    __tablename__ = "category_value"
     id = Column(Integer, primary_key=True, index=True)
     carcass_id = Column(Integer, ForeignKey("category_carcass.id", ondelete="CASCADE"))
     value = Column(String, nullable=False)
