@@ -12,6 +12,7 @@ load_dotenv(dotenv_path=env_path, override=True)
 
 DEBUG: bool = os.getenv("DEBUG").lower() == "true"
 DROP_TABLES: bool = os.getenv("DROP_TABLES").lower() == "true"
+ECHO_SQL: bool = os.getenv("ECHO_SQL").lower() == "true"
 
 VERSION = os.getenv("VERSION")
 TITLE = os.getenv("TITLE")

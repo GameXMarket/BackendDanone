@@ -6,7 +6,7 @@ from core.database import Base
 import core.settings.config as conf
 
 logger = logging.getLogger("uvicorn")
-engine = create_async_engine(conf.DATABASE_URL, echo=conf.DEBUG)
+engine = create_async_engine(conf.DATABASE_URL, echo=conf.ECHO_SQL)
 
 
 async def init_models(*, drop_all=False):
