@@ -1,4 +1,4 @@
-from .users import (
+from .users_base import (
     get_by_id,
     get_by_email,
     get_by_username,
@@ -9,3 +9,4 @@ from .users import (
     is_active,
     get_role_id,
 )
+from .users_online import ConnectionContext, OnlineConnectionManager

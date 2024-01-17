@@ -1,14 +1,15 @@
-from typing import List, Any
+from typing import List, Any, Literal
 from types import UnionType
 from http import HTTPStatus
 
 from fastapi.security import APIKeyCookie, APIKeyHeader
-from fastapi import Request, HTTPException, Depends, status
+from fastapi import Header, Depends, HTTPException, status, WebSocketException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload
 
 from app.tokens import models as models_t, schemas as schemas_t
 from app.tokens import services as TokensService
+from app.tokens.schemas.tokens import JwtPayload
 from app.users import models as models_u, schemas as schemas_u
 from app.users import services as UserService
 from core.security import tokens as TokenSecurity
@@ -96,6 +97,25 @@ async def get_access(
     return token_data
 
 
+async def ws_get_access(Authorization: str = Header(None), db_session: AsyncSession = Depends(get_session)):
+    if not Authorization:
+        return None
+
+    if not Authorization.startswith("Bearer "):
+        return None
+    
+    Authorization = Authorization.replace("Bearer ", "")
+    
+    token_data = await TokenSecurity.verify_jwt_token(
+        token=Authorization, secret=conf.ACCESS_SECRET_KEY, db_session=db_session
+    )
+    
+    if not token_data:
+        return None
+    
+    return token_data
+
+
 async def auto_token_ban(
     refresh_t=Depends(refresh_token_scheme),
     access_t=Depends(access_token_scheme),
@@ -122,6 +142,11 @@ async def auto_token_ban(
 
 
 class UserSession:
+    request_method: Literal[
+        "http",
+        "ws"
+    ] = "http"
+    
     def __init__(self, query_options: Any = None, query_args: Any = None) -> None:
         self.__options = None
         if query_options and query_args:
@@ -130,44 +155,62 @@ class UserSession:
     async def __call__(
         self,
         token_data: schemas_t.JwtPayload = Depends(get_access),
-        db_session: AsyncSession = Depends(get_session),
     ) -> Any:
-        self.__token_data = token_data
-        self.__db_session = db_session
-        return self
 
-    def get_token_data(self):
-        return self.__token_data
-    
-    def update_session(self, query_options: Any, query_args: Any):
-        self.__options = (query_options, query_args)
-    
-    async def get_current_user(self) -> models_u.User:
+        return token_data, self
+
+    def __raise(self, code, comment):
+        match self.request_method:
+            case "http":
+                raise HTTPException(
+                    status_code=code,
+                    detail=comment,
+                )
+            case "ws":
+                raise WebSocketException(
+                    code=status.WS_1000_NORMAL_CLOSURE,
+                    reason=comment,
+                )
+        
+    async def get_current_user(self, db_session: AsyncSession, token_data: schemas_t.JwtPayload) -> models_u.User:
         user = await UserService.get_by_email(
-            self.__db_session, email=self.__token_data.sub, options=self.__options
+            db_session, email=token_data.sub, options=self.__options
         )
 
         if not user:
             # Можно кидать 404 с юзер нот фоунд, но т.к. токен валиден,
             #  но я думаю лучше использовать одинаковый ответ
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Could not validate credentials",
+            self.__raise(
+                code=status.HTTP_401_UNAUTHORIZED,
+                comment="Could not validate credentials",
             )
 
         return user
 
-    async def get_current_active_user(self) -> models_u.User:
-        current_user = await self.get_current_user()
+    async def get_current_active_user(self, db_session: AsyncSession, token_data: schemas_t.JwtPayload) -> models_u.User:
+        current_user = await self.get_current_user(db_session, token_data)
         
         is_active = UserService.is_active(current_user)
 
         if not is_active:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="User is not active"
+            self.__raise(
+                code=status.HTTP_404_NOT_FOUND, comment="User is not active"
             )
 
         return current_user
+
+
+class WsUserSession(UserSession):
+    request_method = "ws"
+    
+    async def __call__(
+        self,
+        token_data: JwtPayload = Depends(ws_get_access),
+    ) -> Any:
+        if not token_data:
+            return None
+
+        return await super().__call__(token_data)
 
 
 __base_responses: dict = {

@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 import secrets
 from typing import Annotated
 from contextlib import asynccontextmanager
@@ -11,9 +12,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from sqlalchemy.ext.asyncio import AsyncSession
+from redis.exceptions import ConnectionError
 
 import core.settings as conf
 from core.database import init_models, get_session
+from core.redis import redis_pool, get_redis_client
 from app.users import users_routers
 from app.tokens import tokens_routers
 from app.offers import offers_routers
@@ -25,6 +28,12 @@ from app.users.services import get_by_email, create_user
 
 current_file_path = os.path.abspath(__file__)
 locales_path = os.path.join(os.path.dirname(current_file_path), "_locales")
+logger = logging.getLogger("uvicorn")
+
+
+class StartedFailed(Exception):
+    def __init__(self, message):
+        super().__init__(message)
 
 
 @asynccontextmanager
@@ -47,7 +56,13 @@ async def lifespan(app: FastAPI):
             additional_fields={"role_id": 3, "is_verified": True},
         )
     
+    async with get_redis_client() as client:
+        logger.info(f"Redis ping returned with: {await client.ping()}.")
+            
     yield
+    
+    await redis_pool.aclose()
+    logger.info("RedisPool closed.")
 
 
 security = HTTPBasic()

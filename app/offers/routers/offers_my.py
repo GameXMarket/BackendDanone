@@ -11,6 +11,7 @@ from core import settings as conf
 from core.database import get_session
 from core.depends import depends as deps
 from app.users import models as models_u
+from app.tokens import schemas as schemas_t
 
 
 logger = logging.getLogger("uvicorn")
@@ -23,13 +24,14 @@ base_session = deps.UserSession()
 )
 async def create_offfer(
     offer: schemas_f.CreateOffer,
-    session: deps.UserSession = Depends(base_session),
+    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
     Создаётся новый оффер у авторизованного пользователя
     """
-    user: models_u.User = await session.get_current_active_user()
+    token_data, user_context = current_session
+    user: models_u.User = await session.get_current_active_user(db_session, token_data)
     offer: models_f.Offer = await services_f.create_offer(
         db_session, user_id=user.id, obj_in=offer
     )
@@ -47,9 +49,10 @@ async def create_offfer(
 async def get_mini_with_offset_limit(
     offset: int = 0,
     limit: int = 1,
-    session: deps.UserSession = Depends(base_session),
+    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
+    # # ЭТО НЕ БУДЕТ РАБОТАТЬ !!! 
     """
     Получает мини офферы авторизованного пользователя, требуется два паметра: offset, limit<br>
     &nbsp;- если offset == 10, то первые 10 строк будут пропущены, и выборка начнется с 11-й строки<br>
@@ -57,7 +60,8 @@ async def get_mini_with_offset_limit(
 
     Соритрует результат по дате создания от старых к новым (id могут идти не по порядку)
     """
-    user: models_u.User = await session.get_current_active_user()
+    token_data, user_context = current_session
+    user: models_u.User = await session.get_current_active_user(db_session, token_data)
     offers: list[
         schemas_f.OfferMini
     ] = await services_f.get_mini_by_user_id_offset_limit(
@@ -79,9 +83,10 @@ async def get_mini_with_offset_limit(
 )
 async def get_by_id(
     offer_id: int,
-    session: deps.UserSession = Depends(base_session),
+    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
+    token_data, user_context = current_session
     user: models_u.User = await session.get_current_active_user()
 
     offer = await services_f.get_by_user_id_offer_id(
@@ -104,12 +109,13 @@ async def get_by_id(
 async def update_offer(
     offer_id: int,
     offer_in: schemas_f.CreateOffer,
-    session: deps.UserSession = Depends(base_session),
+    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
     Обновляется оффер у авторизованного пользователя по его id
     """
+    token_data, user_context = current_session
     user: models_u.User = await session.get_current_active_user()
     offer_db = await services_f.get_by_user_id_offer_id(
         db_session, user_id=user.id, id=abs(offer_id)
@@ -134,12 +140,13 @@ async def update_offer(
 )
 async def delete_offer(
     offer_id: int,
-    session: deps.UserSession = Depends(base_session),
+    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
     Удаляется оффер у авторизованного пользователя по его id
     """
+    token_data, user_context = current_session
     user: models_u.User = await session.get_current_active_user()
     deleted_offer = await services_f.delete_offer(
         db_session, user_id=user.id, offer_id=abs(offer_id)
