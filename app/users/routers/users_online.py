@@ -18,5 +18,5 @@ async def lazy_users_online(ws_context_data: tuple[ConnectionContext, OnlineConn
     
     try:
         await conn_manager.start_listening(conn_context)
-    except BaseException: # WebSocketDisconnect
+    except WebSocketDisconnect:
         await conn_manager.disconnect(conn_context)

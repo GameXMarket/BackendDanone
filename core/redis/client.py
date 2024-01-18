@@ -27,7 +27,13 @@ async def get_redis_client() -> AsyncGenerator[aredis.Redis, None]:
         raise _exception
 
 
-async def get_redis_pipeline() -> AsyncIterator[Pipeline]:
+@asynccontextmanager
+async def get_redis_pipeline(need_client: bool = False) -> AsyncGenerator[tuple[Pipeline, aredis.Redis] | Pipeline, None]:
     async with get_redis_client() as client:
         async with client.pipeline(transaction=True) as pipe:
-            yield pipe
+            if need_client:
+                yield pipe, client
+            else:
+                yield pipe
+
+            await pipe.execute()

@@ -2,11 +2,12 @@ import random
 from typing import Any
 from dataclasses import dataclass
 
-from fastapi import Depends, WebSocket
+from pydantic import ValidationError
+from fastapi import Depends, WebSocket, WebSocketException, status
 
 from core import depends as deps
-from core.redis import get_redis_client
-from ..schemas import users_online
+from core.redis import get_redis_client, get_redis_pipeline
+from app.users import schemas as schemas_u
 from app.tokens import schemas as schemas_t
 
 
@@ -17,6 +18,7 @@ class ConnectionContext:
     is_auth_user: bool
     unique_id: int
     """
+
     websocket: WebSocket
     is_auth_user: bool
     unique_id: int
@@ -24,13 +26,16 @@ class ConnectionContext:
 
 class OnlineConnectionManager:
     ws_connections: dict[int, WebSocket] = {}
-    
+
     def __init__(self):
         pass
-    
+
     def __call__(
-        self, websocket: WebSocket, current_session: tuple[schemas_t.JwtPayload, deps.WsUserSession] | None = Depends(deps.WsUserSession())
-    ) -> Any: # переписать всю эту поеботу
+        self,
+        websocket: WebSocket,
+        current_session: tuple[schemas_t.JwtPayload, deps.WsUserSession]
+        | None = Depends(deps.WsUserSession()),
+    ) -> Any:
         if current_session:
             is_auth_user = True
             token_data, user_context = current_session
@@ -38,85 +43,138 @@ class OnlineConnectionManager:
         else:
             is_auth_user = False
             unique_id = random.randrange(10**19, 10**20)
-        
+
         return ConnectionContext(websocket, is_auth_user, unique_id), self
 
-    async def connect(self, conn_context: ConnectionContext):        
+    async def __raise(
+        self, conn_context: ConnectionContext, code: int, reason: str | None = None
+    ):
+        await self.disconnect(conn_context)
+        raise WebSocketException(code, reason)
+
+    async def connect(self, conn_context: ConnectionContext):
         await conn_context.websocket.accept()
         self.ws_connections[conn_context.unique_id] = conn_context.websocket
 
         async with get_redis_client() as redis_client:
             if conn_context.is_auth_user:
                 await redis_client.sadd("online_users", conn_context.unique_id)
-            
-            # Добавить рассылку при изменении стейта
-            subscribers = await redis_client.smembers(f"pub:{conn_context.unique_id}")
-            
-        print(f"user {conn_context.unique_id} connected\npubs: {subscribers}")
-        await self.broadcast(True, subscribers, conn_context)
+                subscribers = await redis_client.smembers(
+                    f"pub:{conn_context.unique_id}"
+                )
+
+        if conn_context.is_auth_user and subscribers:
+            await self.broadcast(True, subscribers, conn_context)
 
     async def disconnect(self, conn_context: ConnectionContext):
-        del self.ws_connections[conn_context.unique_id]
-        
+        del self.ws_connections[conn_context.unique_id]  # Нужно тестить эту херню
+
         async with get_redis_client() as redis_client:
             if conn_context.is_auth_user:
                 await redis_client.srem("online_users", conn_context.unique_id)
-            
-            # Добавить рассылку при изменении стейта
-            subscribers = await redis_client.smembers(f"pub:{conn_context.unique_id}")
-            
+                subscribers = await redis_client.smembers(
+                    f"pub:{conn_context.unique_id}"
+                )
+
             # Удаление из всех ключей "sub:{conn_context.unique_id}" подписчика
-            keys_to_delete = await redis_client.smembers(f"sub:{conn_context.unique_id}")
+            keys_to_delete = await redis_client.smembers(
+                f"sub:{conn_context.unique_id}"
+            )
             await redis_client.delete(f"sub:{conn_context.unique_id}")
-            
+
             for key in keys_to_delete:
                 await redis_client.srem(f"pub:{int(key)}", conn_context.unique_id)
-        
-        await self.broadcast(False, subscribers, conn_context)
 
-    async def broadcast(self, state: bool, subscribers: list[bytes], conn_context: ConnectionContext):
+        if conn_context.is_auth_user and subscribers:
+            await self.broadcast(False, subscribers, conn_context)
+
+    async def broadcast(
+        self, state: bool, subscribers: list[bytes], conn_context: ConnectionContext
+    ):
         for client in subscribers:
             if ws := self.ws_connections.pop(int(client), None):
                 await ws.send_json({int(conn_context.unique_id): state})
-    
+
     async def start_listening(self, conn_context: ConnectionContext):
         while True:
             # subscribe, unsubscribe
             # sub - subcriber (тот, кто подписывается)
             # pub - publisher (тот, кто раздаёт ивенты, на кого подписываются)
-            data: dict[str, list[int]] = await conn_context.websocket.receive_json()
-            subscribers: list[int] = data.get("subscribe", [])
-            unsubscribers: list[int] = data.get("unsubscribe", [])
-            
-            if not subscribers and not unsubscribers:               
-                continue
-            
+
+            try:
+                data: schemas_u.ReceiveData = schemas_u.ReceiveData.model_validate(
+                    await conn_context.websocket.receive_json()
+                )
+            except ValidationError as e:
+                await conn_context.websocket.send_text(e.json())
+                await self.__raise(
+                    conn_context,
+                    code=status.WS_1003_UNSUPPORTED_DATA,
+                )
+
+            if not data.subscribers and not data.unsubscribers:
+                await self.__raise(
+                    conn_context,
+                    code=status.WS_1002_PROTOCOL_ERROR,
+                    reason="not subscribers and not unsubscribers",
+                )
+
+            if (
+                conn_context.unique_id in data.subscribers
+                or conn_context.unique_id in data.unsubscribers
+            ):
+                await self.__raise(
+                    conn_context,
+                    code=status.WS_1002_PROTOCOL_ERROR,
+                    reason="user_id in subscribers or user_id in unsubscribers",
+                )
+
             response: dict = {}
-            
-            async with get_redis_client() as redis_client:
-                if subscribers:
+
+            async with get_redis_pipeline(need_client=True) as (
+                redis_pipeline,
+                pipe_client,
+            ):
+                if data.subscribers:
                     # Записываем пользователю всех на кого подписался
-                    await redis_client.sadd(f"sub:{conn_context.unique_id}", *subscribers)
-                    response["subscribe"] = []
-                
-                if unsubscribers:
-                    # Удаляем у пользователя всех от кого отписался
-                    await redis_client.srem(f"sub:{conn_context.unique_id}", *unsubscribers)
-                    response["unsubscribe"] = "ok"
-            
-                for client in subscribers:
-                    # Создаём список онлайн пользователей для отправки
-                    response["subscribe"].append(
-                        bool(await redis_client.sismember("online_users", client))
+                    await redis_pipeline.sadd(
+                        f"sub:{conn_context.unique_id}", *data.subscribers
                     )
-                    
+                    response["subscribe"] = []
+
+                if data.unsubscribers:
+                    # Удаляем у пользователя всех от кого отписался
+                    await redis_pipeline.srem(
+                        f"sub:{conn_context.unique_id}", *data.unsubscribers
+                    )
+                    response["unsubscribe"] = "ok"
+
+                for client in data.subscribers:
+                    # Создаём список онлайн пользователей для отправки,
+                    # Выполням запрос вне пайплайна
+                    response["subscribe"].append(
+                        bool(await pipe_client.sismember("online_users", client))
+                    )
+
+                    if client in data.unsubscribers:
+                        await self.__raise(
+                            conn_context,
+                            code=status.WS_1002_PROTOCOL_ERROR,
+                            reason="subscribers user_id in unsubscribers",
+                        )
+
                     # Расписываем саббера по публишерам
-                    await redis_client.sadd(f"pub:{client}", conn_context.unique_id)
-                    
-                
-                for client in unsubscribers:
-                    
+                    await redis_pipeline.sadd(f"pub:{client}", conn_context.unique_id)
+
+                for client in data.unsubscribers:
+                    if client in data.subscribers:
+                        await self.__raise(
+                            conn_context,
+                            code=status.WS_1002_PROTOCOL_ERROR,
+                            reason="unsubscribers user_id in subscribers",
+                        )
+
                     # Удаляем саббера из публишеров
-                    await redis_client.srem(f"pub:{client}", conn_context.unique_id)
-                    
+                    await redis_pipeline.srem(f"pub:{client}", conn_context.unique_id)
+
             await conn_context.websocket.send_json(response)
