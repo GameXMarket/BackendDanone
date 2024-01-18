@@ -13,6 +13,7 @@ class TokenType(str, Enum):
 class JwtPayload(BaseModel):
     token_type: TokenType
     session: str
+    user_id: int | None = None
     exp: int
     sub: EmailStr
 

@@ -15,7 +15,9 @@ async def get_by_id(db_session: AsyncSession, *, id: int):
     return user
 
 
-async def get_by_email(db_session: AsyncSession, *, email: str, options: Tuple[Any] = None):
+async def get_by_email(
+    db_session: AsyncSession, *, email: str, options: Tuple[Any] = None
+):
     user_stmt = select(models.User).where(models.User.email == email)
     if options:
         user_stmt = user_stmt.options(options[0](options[1]))
@@ -29,7 +31,12 @@ async def get_by_username(db_session: AsyncSession, *, username: str):
     return user
 
 
-async def create_user(db_session: AsyncSession, *, obj_in: schemas.UserSignUp, additional_fields: dict = {}):
+async def create_user(
+    db_session: AsyncSession,
+    *,
+    obj_in: schemas.UserSignUp,
+    additional_fields: dict = {},
+):
     db_obj = models.User(
         username=obj_in.username,
         email=obj_in.email,
@@ -46,7 +53,7 @@ async def create_user(db_session: AsyncSession, *, obj_in: schemas.UserSignUp, a
 
 
 async def update_user(
-    db_session: AsyncSession, *, db_obj: models.User, obj_in: schemas.UserInDB
+    db_session: AsyncSession, *, db_obj: models.User, obj_in: schemas.UserInDB | dict
 ):
     """UserInDB - Максимальное кол-во полей, доступное тут, настоящий тип может быть и другим"""
     db_obj.updated_at = int(time.time())
@@ -71,9 +78,17 @@ async def update_user(
     return db_obj
 
 
+async def update_last_online(db_session: AsyncSession, *, db_obj: models.User):
+    new_user = await update_user(
+        db_session, db_obj=db_obj, obj_in={"last_online": int(time.time())}
+    )
+
+    return new_user
+
+
 async def delete_user(db_session: AsyncSession, *, email: str):
     current_user = await get_by_email(db_session, email=email)
-    
+
     if not current_user:
         return None
 
@@ -91,7 +106,7 @@ async def authenticate(db_session: AsyncSession, *, email: str, password: str):
 
     if not user:
         return None
-    
+
     if not verify_password(password, user.hashed_password):
         return None
 

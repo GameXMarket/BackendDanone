@@ -22,6 +22,7 @@ SERVER_IP: str = os.getenv("SERVER_IP")
 SERVER_PORT: int = int(os.getenv("SERVER_PORT"))
 
 DATABASE_URL: str = os.getenv("DATABASE_URL")
+REDIS_URL: str = os.getenv("REDIS_URL")
 
 ALGORITHM: str = os.getenv("ALGORITHM")
 ACCESS_SECRET_KEY = os.getenv("ACCESS_SECRET_KEY")
