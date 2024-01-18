@@ -1,6 +1,7 @@
 import random
 from typing import Any
 from dataclasses import dataclass
+from json.decoder import JSONDecodeError
 
 from pydantic import ValidationError
 from fastapi import Depends, WebSocket, WebSocketException, status
@@ -87,7 +88,7 @@ class OnlineConnectionManager:
 
         if conn_context.is_auth_user and subscribers:
             await self.broadcast(False, subscribers, conn_context)
-
+            
     async def broadcast(
         self, state: bool, subscribers: list[bytes], conn_context: ConnectionContext
     ):
@@ -105,12 +106,18 @@ class OnlineConnectionManager:
                 data: schemas_u.ReceiveData = schemas_u.ReceiveData.model_validate(
                     await conn_context.websocket.receive_json()
                 )
+            except JSONDecodeError:
+                await self.__raise(
+                    conn_context,
+                    code=status.WS_1003_UNSUPPORTED_DATA,
+                )
             except ValidationError as e:
                 await conn_context.websocket.send_text(
                     e.json(
                         include_context=False, include_input=False, include_url=False
                     )
                 )
+                
                 await self.__raise(
                     conn_context,
                     code=status.WS_1003_UNSUPPORTED_DATA,
@@ -132,6 +139,7 @@ class OnlineConnectionManager:
                 redis_pipeline,
                 pipe_client,
             ):
+                
                 if data.subscribers:
                     # Записываем пользователю всех на кого подписался
                     await redis_pipeline.sadd(
