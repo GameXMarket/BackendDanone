@@ -9,6 +9,7 @@ from core import settings as conf
 from core.depends import depends as deps
 from core.database import get_session
 from .. import models, schemas, services
+from app.tokens import schemas as schemas_t
 
 
 logger = logging.getLogger("uvicorn")
@@ -79,7 +80,7 @@ async def get_by_id(category_id: int, db_session: AsyncSession = Depends(get_ses
 @router.post(path="/")
 async def create_category_carcass(
     new_category: schemas.CategoryCarcassCreate,
-    session: deps.UserSession = Depends(base_session),
+    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
@@ -92,7 +93,8 @@ async def create_category_carcass(
            +---> child3
     </pre>
     """
-    user = await session.get_current_active_user()
+    token_data, user_context = current_session
+    user = await user_context.get_current_active_user(db_session, token_data)
 
     if not user.is_admin():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
@@ -108,7 +110,7 @@ async def create_category_carcass(
 async def create_subcategory_carcass(
     category_id: int,
     new_category: schemas.SubcategoryCarcassCreate,
-    session: deps.UserSession = Depends(base_session),
+    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
@@ -121,7 +123,8 @@ async def create_subcategory_carcass(
            +---> child3
     </pre>
     """
-    user = await session.get_current_active_user()
+    token_data, user_context = current_session
+    user = await user_context.get_current_active_user(db_session, token_data)
 
     if not user.is_admin():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
@@ -145,15 +148,15 @@ async def create_subcategory_carcass(
 async def update_category_carcass(
     category_id: int,
     new_category: schemas.CategoryCarcassUpdate,
-    session: deps.UserSession = Depends(base_session),
+    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
     Обновляет каркасс по его id <br>
     Требуются права администратора
     """
-
-    user = await session.get_current_active_user()
+    token_data, user_context = current_session
+    user = await session.get_current_active_user(db_session, token_data)
 
     if not user.is_admin():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
@@ -173,15 +176,15 @@ async def update_category_carcass(
 @router.delete(path="/{category_id}")
 async def delete_category_carcass(
     category_id: int,
-    session: deps.UserSession = Depends(base_session),
+    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
     Удаляет каркасс по его id <br>
     Требуются права администратора
     """
-
-    user = await session.get_current_active_user()
+    token_data, user_context = current_session
+    user = await session.get_current_active_user(db_session, token_data)
 
     if not user.is_admin():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)

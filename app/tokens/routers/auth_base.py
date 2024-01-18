@@ -43,16 +43,15 @@ async def token_set(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user"
         )
 
-    access, refresh = TokenSecurity.create_new_token_set(form_data.email)
+    access, refresh = TokenSecurity.create_new_token_set(form_data.email, user.id)
 
+    response = JSONResponse({"access": access, "refresh": refresh})
+    
     if conf.DEBUG:
-        response = JSONResponse(content={"detail": "tokens_added"})
         response.set_cookie(key="access", value=access)
         response.set_cookie(key="refresh", value=refresh)
 
-        return response
-
-    return schemas_t.TokenSet(access=access, refresh=refresh)
+    return response
 
 
 @router.post(
@@ -68,16 +67,15 @@ async def token_update(token_data: schemas_t.JwtPayload = Depends(deps.get_refre
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     
-    access, refresh = TokenSecurity.create_new_token_set(token_data.sub)
+    access, refresh = TokenSecurity.create_new_token_set(token_data.sub, user.id)
 
+    response = JSONResponse({"access": access, "refresh": refresh})
+    
     if conf.DEBUG:
-        response = JSONResponse(content={"detail": "tokens_updated"})
         response.set_cookie(key="access", value=access)
         response.set_cookie(key="refresh", value=refresh)
 
-        return response
-
-    return schemas_t.TokenSet(access=access, refresh=refresh)
+    return response
 
 
 @router.post(
@@ -97,8 +95,6 @@ async def token_delete(banned: None = Depends(deps.auto_token_ban)):
     if conf.DEBUG:
         response.delete_cookie("access")
         response.delete_cookie("refresh")
-
-        return response
 
     return response
 
@@ -125,6 +121,10 @@ async def verify_user_email(token: str, db_session: Session = Depends(get_sessio
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Token not found"
         )
 
+    banned_token = await BannedTokensService.ban_token(
+        db_session, token=token, payload=token_data
+    )
+
     user = await UserService.get_by_email(db_session, email=token_data.sub)
 
     if not user:
@@ -140,11 +140,7 @@ async def verify_user_email(token: str, db_session: Session = Depends(get_sessio
     user = await UserService.update_user(
         db_session, db_obj=user, obj_in={"is_verified": True}
     )
-
-    banned_token = await BannedTokensService.ban_token(
-        db_session, token=token, payload=token_data
-    )
-
+    
     return schemas_u.UserPreDB(**user.to_dict())
 
 
@@ -175,6 +171,10 @@ async def verify_password_reset(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Token not found"
         )
     
+    banned_token = await BannedTokensService.ban_token(
+        db_session, token=token, payload=token_data
+    )
+    
     user = await UserService.get_by_email(db_session, email=token_data.sub)
 
     if not user:
@@ -191,8 +191,5 @@ async def verify_password_reset(
         db_session, db_obj=user, obj_in={"password": password_f.password}
     )
 
-    banned_token = await BannedTokensService.ban_token(
-        db_session, token=token, payload=token_data
-    )
 
     return schemas_u.UserPreDB(**user.to_dict())

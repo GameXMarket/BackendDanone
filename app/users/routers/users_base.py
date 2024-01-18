@@ -1,20 +1,20 @@
 import logging
 
-from fastapi import Depends, APIRouter, Request, HTTPException, status
+from fastapi import Depends, APIRouter, WebSocket, WebSocketDisconnect, HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import noload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..schemas import *
 from ..models import *
-from ..services import users as UserService
+from ..services import users_base as UserService
 from core import settings as conf
 from core.database import get_session
 from core.security import verify_password
 from core.security import create_jwt_token
 from core.mail_sender import *
 from core.depends import depends as deps 
-from app.tokens.schemas import TokenType
+from app.tokens import schemas as schemas_t
 
 
 logger = logging.getLogger("uvicorn")
@@ -43,7 +43,7 @@ async def sign_up(
         )
 
     verify_token = create_jwt_token(
-        type_=TokenType.email_verify,
+        type_=schemas_t.TokenType.email_verify,
         email=data.email,
         secret=conf.EMAIL_SECRET_KEY,
         expires_delta=conf.EMAIL_ACCESS_TOKEN_EXPIRE_MINUTES,
@@ -71,8 +71,9 @@ async def sign_up(
 
 
 @router.get(path="/me", responses={**deps.build_response(deps.UserSession.get_current_active_user)})
-async def get_user(session: deps.UserSession = Depends(default_session)):
-    user: User = await session.get_current_active_user()
+async def get_user(current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(default_session), db_session: AsyncSession = Depends(get_session)):
+    token_data, user_context = current_session
+    user: User = await user_context.get_current_active_user(db_session, token_data)
     
     return UserPreDB(**user.to_dict())
 
@@ -90,14 +91,15 @@ async def get_user(session: deps.UserSession = Depends(default_session)):
 )
 async def update_user(
     form_data: UserUpdate,
-    session: deps.UserSession = Depends(default_session),
+    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(default_session),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
     Данный метод используется для изменения пароля и username пользователя\n
     Для подтверждения сначала проверятся токен, далее пароль и остальные поля
     """
-    user: User = await session.get_current_active_user()
+    token_data, user_context = current_session
+    user: User = await user_context.get_current_active_user(db_session, token_data)
     
     if not verify_password(form_data.auth.password, user.hashed_password):
         raise HTTPException(
@@ -144,10 +146,11 @@ async def update_user(
 )
 async def remove_user(
     old_password: PasswordField,
-    session: deps.UserSession = Depends(default_session),
+    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(default_session),
     db_session: AsyncSession = Depends(get_session),
 ):
-    user: User = await session.get_current_active_user()
+    token_data, user_context = current_session
+    user: User = await user_context.get_current_active_user(db_session, token_data)
     
     if not await UserService.authenticate(
         db_session, email=user.email, password=old_password.password
@@ -182,7 +185,7 @@ async def reset_user_password(
         )
 
     verify_token = create_jwt_token(
-        type_=TokenType.email_verify,
+        type_=schemas_t.TokenType.email_verify,
         email=email_f.email,
         secret=conf.PASSWORD_RESET_SECRET_KEY,
         expires_delta=conf.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES,
