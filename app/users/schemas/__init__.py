@@ -12,3 +12,4 @@ from .users import (
     UserInfo,
     UserError,
 )
+from .users_online import ReceiveData
