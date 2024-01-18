@@ -145,6 +145,7 @@ class OnlineConnectionManager:
                     await redis_pipeline.sadd(
                         f"sub:{conn_context.unique_id}", *data.subscribers
                     )
+                    await redis_pipeline.expire(f"sub:{conn_context.unique_id}", 60 * 60 * 24)
                     response["subscribe"] = []
 
                 if data.unsubscribers:
@@ -170,6 +171,7 @@ class OnlineConnectionManager:
 
                     # Расписываем саббера по публишерам
                     await redis_pipeline.sadd(f"pub:{client}", conn_context.unique_id)
+                    await redis_pipeline.expire(f"pub:{client}", 60 * 60 * 24)
 
                 for client in data.unsubscribers:
                     if client in data.subscribers:
