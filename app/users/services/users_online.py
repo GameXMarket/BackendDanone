@@ -106,17 +106,14 @@ class OnlineConnectionManager:
                     await conn_context.websocket.receive_json()
                 )
             except ValidationError as e:
-                await conn_context.websocket.send_text(e.json())
+                await conn_context.websocket.send_text(
+                    e.json(
+                        include_context=False, include_input=False, include_url=False
+                    )
+                )
                 await self.__raise(
                     conn_context,
                     code=status.WS_1003_UNSUPPORTED_DATA,
-                )
-
-            if not data.subscribers and not data.unsubscribers:
-                await self.__raise(
-                    conn_context,
-                    code=status.WS_1002_PROTOCOL_ERROR,
-                    reason="not subscribers and not unsubscribers",
                 )
 
             if (
