@@ -7,7 +7,7 @@ Required:
 
 * PostgreSQL, Tested on version 16
 * PowerShell, Tested on version 5.1, 7.3 / Bash Tested on version 5.1.16(1)-release
-* Python and pip in PATH, Tested on 3.11.4, pip 23.3.1
+* Python and pip in PATH, Tested on 3.10, 3.11, 3.12, pip 23.3.1
 
 Installation:
 
