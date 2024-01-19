@@ -25,7 +25,7 @@ async def create_value(carcass_id: int, value: schemas.ValueCreate, current_sess
     Создаёт value у каркасса
     """
     token_data, user_context = current_session
-    user = await session.get_current_active_user(db_session, token_data)
+    user = await user_context.get_current_active_user(db_session, token_data)
 
     if not user.is_admin():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
@@ -43,7 +43,7 @@ async def update_value(value_id: int, value: schemas.ValueUpdate, current_sessio
     Обновляет value по его id
     """
     token_data, user_context = current_session
-    user = await session.get_current_active_user(db_session, token_data)
+    user = await user_context.get_current_active_user(db_session, token_data)
 
     if not user.is_admin():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
@@ -67,7 +67,7 @@ async def delete_value(value_id: int, current_session: tuple[schemas_t.JwtPayloa
     Удаляет value по его id
     """
     token_data, user_context = current_session
-    user = await session.get_current_active_user(db_session, token_data)
+    user = await user_context.get_current_active_user(db_session, token_data)
 
     if not user.is_admin():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)

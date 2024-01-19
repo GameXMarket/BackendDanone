@@ -156,7 +156,7 @@ async def update_category_carcass(
     Требуются права администратора
     """
     token_data, user_context = current_session
-    user = await session.get_current_active_user(db_session, token_data)
+    user = await user_context.get_current_active_user(db_session, token_data)
 
     if not user.is_admin():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
@@ -184,7 +184,7 @@ async def delete_category_carcass(
     Требуются права администратора
     """
     token_data, user_context = current_session
-    user = await session.get_current_active_user(db_session, token_data)
+    user = await user_context.get_current_active_user(db_session, token_data)
 
     if not user.is_admin():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)

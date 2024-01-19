@@ -31,7 +31,7 @@ async def create_offfer(
     Создаётся новый оффер у авторизованного пользователя
     """
     token_data, user_context = current_session
-    user: models_u.User = await session.get_current_active_user(db_session, token_data)
+    user: models_u.User = await user_context.get_current_active_user(db_session, token_data)
     offer: models_f.Offer = await services_f.create_offer(
         db_session, user_id=user.id, obj_in=offer
     )
@@ -61,7 +61,7 @@ async def get_mini_with_offset_limit(
     Соритрует результат по дате создания от старых к новым (id могут идти не по порядку)
     """
     token_data, user_context = current_session
-    user: models_u.User = await session.get_current_active_user(db_session, token_data)
+    user: models_u.User = await user_context.get_current_active_user(db_session, token_data)
     offers: list[
         schemas_f.OfferMini
     ] = await services_f.get_mini_by_user_id_offset_limit(
@@ -87,7 +87,7 @@ async def get_by_id(
     db_session: AsyncSession = Depends(get_session),
 ):
     token_data, user_context = current_session
-    user: models_u.User = await session.get_current_active_user()
+    user: models_u.User = await user_context.get_current_active_user()
 
     offer = await services_f.get_by_user_id_offer_id(
         db_session, user_id=user.id, id=offer_id
@@ -116,7 +116,7 @@ async def update_offer(
     Обновляется оффер у авторизованного пользователя по его id
     """
     token_data, user_context = current_session
-    user: models_u.User = await session.get_current_active_user()
+    user: models_u.User = await user_context.get_current_active_user()
     offer_db = await services_f.get_by_user_id_offer_id(
         db_session, user_id=user.id, id=abs(offer_id)
     )
@@ -147,7 +147,7 @@ async def delete_offer(
     Удаляется оффер у авторизованного пользователя по его id
     """
     token_data, user_context = current_session
-    user: models_u.User = await session.get_current_active_user()
+    user: models_u.User = await user_context.get_current_active_user()
     deleted_offer = await services_f.delete_offer(
         db_session, user_id=user.id, offer_id=abs(offer_id)
     )
