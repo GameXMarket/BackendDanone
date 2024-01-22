@@ -11,6 +11,8 @@ from app.users.models import User
 class Offer(Base):
     __tablename__ = "offer"
     id = Column(Integer, primary_key=True, index=True)
+    # About ondelete arg:
+    # https://docs.sqlalchemy.org/en/20/core/constraints.html#sqlalchemy.schema.ForeignKey.params.ondelete
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'))  # ForeignKey to user_id
     attachment_id = Column(Integer)  # ForeignKey to attachment_id
     category_id = Column(Integer)  # ForeignKey to category_id in a new table
