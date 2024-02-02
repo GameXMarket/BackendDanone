@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from redis.exceptions import ConnectionError
 
 import core.settings as conf
-from core.database import init_models, get_session
+from core.database import init_models, context_get_session
 from core.redis import redis_pool, get_redis_client
 from app.users import users_routers
 from app.tokens import tokens_routers
@@ -40,21 +40,21 @@ class StartedFailed(Exception):
 async def lifespan(app: FastAPI):
     await init_models(drop_all=conf.DROP_TABLES)
 
-    db_session: AsyncSession = await anext(get_session())
-    user: models_u.User = await get_by_email(
-        db_session, email=conf.BASE_ADMIN_MAIL_LOGIN
-    )
-
-    if not user:
-        user: models_u.User = await create_user(
-            db_session=db_session,
-            obj_in=schemas_u.UserSignUp(
-                password=conf.BASE_ADMIN_MARKET_PASSWORD,
-                email=conf.BASE_ADMIN_MAIL_LOGIN,
-                username=conf.BASE_ADMIN_MARKET_LOGIN,
-            ),
-            additional_fields={"role_id": 3, "is_verified": True},
+    async with context_get_session() as db_session:
+        user: models_u.User = await get_by_email(
+            db_session, email=conf.BASE_ADMIN_MAIL_LOGIN
         )
+
+        if not user:
+            user: models_u.User = await create_user(
+                db_session=db_session,
+                obj_in=schemas_u.UserSignUp(
+                    password=conf.BASE_ADMIN_MARKET_PASSWORD,
+                    email=conf.BASE_ADMIN_MAIL_LOGIN,
+                    username=conf.BASE_ADMIN_MARKET_LOGIN,
+                ),
+                additional_fields={"role_id": 3, "is_verified": True},
+            )
     
     async with get_redis_client() as client:
         logger.info(f"Redis ping returned with: {await client.ping()}.")
