@@ -12,9 +12,9 @@ class Message(Base):
     attachment_id = Column(Integer, nullable=True)
     sender_id = Column(Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False)
     receiver_id = Column(Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False)
-    reply_to = Column(Integer, ForeignKey('message.id', ondelete="SETNULL"), nullable=True)
+    reply_to = Column(Integer, ForeignKey('message.id', ondelete="SET NULL"), nullable=True)
     content = Column(String)
     created_at = Column(Integer)
     
-    sender: Mapped[User] = relationship(lazy="noload")
-    receiver: Mapped[User] = relationship(lazy="noload")
+    sender: Mapped[User] = relationship(lazy="noload", foreign_keys=[sender_id])
+    receiver: Mapped[User] = relationship(lazy="noload", foreign_keys=[receiver_id])

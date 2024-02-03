@@ -14,7 +14,7 @@ async def get_by_id(db_session: AsyncSession, sender_id: int, message_id: int):
 
 async def get_with_offset_limit(db_session: AsyncSession, sender_id: int, receiver_id: int):
     stmt = select(messages_models.Message).where(messages_models.Message.sender_id == sender_id and messages_models.Message.receiver_id == receiver_id)
-    return (await db_session.execute(stmt)).scalars()
+    return (await db_session.execute(stmt)).scalars().all()
 
 
 async def create_message(
@@ -32,5 +32,7 @@ async def create_message(
     db_session.add(db_obj)
     await db_session.commit()
     return db_obj
+
+
 
 

@@ -21,6 +21,7 @@ from app.users import users_routers
 from app.tokens import tokens_routers
 from app.offers import offers_routers
 from app.categories import category_routers
+from app.messages import message_routers
 
 from app.users import models as models_u, schemas as schemas_u
 from app.users.services import get_by_email, create_user
@@ -106,6 +107,7 @@ app.include_router(users_routers)
 app.include_router(tokens_routers)
 app.include_router(offers_routers)
 app.include_router(category_routers)
+app.include_router(message_routers)
 
 
 def __temp_get_current_username(
