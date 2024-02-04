@@ -5,8 +5,10 @@ from json.decoder import JSONDecodeError
 
 from pydantic import ValidationError
 from fastapi import Depends, WebSocket, WebSocketException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from core import depends as deps
+from core.database import get_session
 from core.redis import get_redis_client, get_redis_pipeline
 from app.users import schemas as schemas_u
 from app.tokens import schemas as schemas_t
@@ -31,7 +33,7 @@ class OnlineConnectionManager:
     def __init__(self):
         pass
 
-    def __call__(
+    async def __call__(
         self,
         websocket: WebSocket,
         current_session: tuple[schemas_t.JwtPayload, deps.WsUserSession]
@@ -39,8 +41,7 @@ class OnlineConnectionManager:
     ) -> Any:
         if current_session:
             is_auth_user = True
-            token_data, user_context = current_session
-            unique_id = token_data.user_id
+            unique_id = current_session[0].user_id
         else:
             is_auth_user = False
             unique_id = random.randrange(10**19, 10**20)
@@ -56,7 +57,7 @@ class OnlineConnectionManager:
     async def connect(self, conn_context: ConnectionContext):
         await conn_context.websocket.accept()
         self.ws_connections[conn_context.unique_id] = conn_context.websocket
-
+        
         async with get_redis_client() as redis_client:
             if conn_context.is_auth_user:
                 await redis_client.sadd("online_users", conn_context.unique_id)
@@ -68,7 +69,8 @@ class OnlineConnectionManager:
             await self.broadcast(True, subscribers, conn_context)
 
     async def disconnect(self, conn_context: ConnectionContext):
-        del self.ws_connections[conn_context.unique_id]  # Нужно тестить эту херню
+        if conn_context.unique_id in self.ws_connections:
+            del self.ws_connections[conn_context.unique_id]
 
         async with get_redis_client() as redis_client:
             if conn_context.is_auth_user:
@@ -88,12 +90,12 @@ class OnlineConnectionManager:
 
         if conn_context.is_auth_user and subscribers:
             await self.broadcast(False, subscribers, conn_context)
-            
+
     async def broadcast(
         self, state: bool, subscribers: list[bytes], conn_context: ConnectionContext
     ):
         for client in subscribers:
-            if ws := self.ws_connections.pop(int(client), None):
+            if ws := self.ws_connections.get(int(client), None):
                 await ws.send_json({int(conn_context.unique_id): state})
 
     async def start_listening(self, conn_context: ConnectionContext):
@@ -117,7 +119,7 @@ class OnlineConnectionManager:
                         include_context=False, include_input=False, include_url=False
                     )
                 )
-                
+
                 await self.__raise(
                     conn_context,
                     code=status.WS_1003_UNSUPPORTED_DATA,
@@ -139,13 +141,15 @@ class OnlineConnectionManager:
                 redis_pipeline,
                 pipe_client,
             ):
-                
+
                 if data.subscribers:
                     # Записываем пользователю всех на кого подписался
                     await redis_pipeline.sadd(
                         f"sub:{conn_context.unique_id}", *data.subscribers
                     )
-                    await redis_pipeline.expire(f"sub:{conn_context.unique_id}", 60 * 60 * 24)
+                    await redis_pipeline.expire(
+                        f"sub:{conn_context.unique_id}", 60 * 60 * 24
+                    )
                     response["subscribe"] = []
 
                 if data.unsubscribers:
