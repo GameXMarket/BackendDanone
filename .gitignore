@@ -163,10 +163,8 @@ cython_debug/
 # VSCode
 .vscode/
 
-# Local config files
-# When using .py it may be difficult to update 
-#  without restarting the application
-configuration.py
+# Application data files
+data/
 
 # Other files
 .examples/
