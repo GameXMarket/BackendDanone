@@ -36,11 +36,7 @@ class StartedFailed(Exception):
     def __init__(self, message):
         super().__init__(message)
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    await init_models(drop_all=conf.DROP_TABLES)
-
+async def __init_base_db():
     async with context_get_session() as db_session:
         user: models_u.User = await get_by_email(
             db_session, email=conf.BASE_ADMIN_MAIL_LOGIN
@@ -56,7 +52,27 @@ async def lifespan(app: FastAPI):
                 ),
                 additional_fields={"role_id": 3, "is_verified": True},
             )
-    
+        
+        if conf.DEBUG:
+            test_user: models_u.User = await get_by_email(
+                db_session, email=conf.BASE_DEBUG_USER_EMAIL
+            )
+            if not test_user:
+                test_user: models_u.User = await create_user(
+                    db_session=db_session,
+                    obj_in=schemas_u.UserSignUp(
+                        password=conf.BASE_DEBUG_USER_PASS,
+                        email=conf.BASE_DEBUG_USER_EMAIL,
+                        username=conf.BASE_DEBUG_USER_LOGIN,
+                    ),
+                    additional_fields={"role_id": 0, "is_verified": True},
+                )
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_models(drop_all=conf.DROP_TABLES)
+    await __init_base_db()
+
     async with get_redis_client() as client:
         logger.info(f"Redis ping returned with: {await client.ping()}.")
             
