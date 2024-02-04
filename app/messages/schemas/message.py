@@ -2,9 +2,9 @@ from pydantic import BaseModel
 
 
 class Message(BaseModel):
-    attachment_id: int
+    attachment_id: int | None = None
     receiver_id: int
-    reply_to: int
+    reply_to: int | None = None
     content: str
 
 
