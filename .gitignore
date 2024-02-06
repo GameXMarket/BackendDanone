@@ -172,3 +172,5 @@ configuration.py
 .examples/
 test.py
 test[0-9].py
+delete.ps1
+delete.sh
