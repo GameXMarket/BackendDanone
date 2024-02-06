@@ -12,6 +12,7 @@ bcrypt==4.0.1
 pyotp
 email-validator
 pytest
+anyio
 aiosmtplib
 Jinja2
 python-dotenv
