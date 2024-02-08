@@ -46,10 +46,10 @@ async def token_set(
     access, refresh = TokenSecurity.create_new_token_set(form_data.email, user.id)
 
     response = JSONResponse({"access": access, "refresh": refresh})
+    response.set_cookie(key="refresh", value=refresh)
     
     if conf.DEBUG:
         response.set_cookie(key="access", value=access)
-        response.set_cookie(key="refresh", value=refresh)
 
     return response
 
@@ -70,10 +70,10 @@ async def token_update(token_data: schemas_t.JwtPayload = Depends(deps.get_refre
     access, refresh = TokenSecurity.create_new_token_set(token_data.sub, user.id)
 
     response = JSONResponse({"access": access, "refresh": refresh})
-    
+    response.set_cookie(key="refresh", value=refresh)
+
     if conf.DEBUG:
         response.set_cookie(key="access", value=access)
-        response.set_cookie(key="refresh", value=refresh)
 
     return response
 
