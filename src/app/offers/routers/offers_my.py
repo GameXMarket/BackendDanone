@@ -87,7 +87,7 @@ async def get_by_id(
     db_session: AsyncSession = Depends(get_session),
 ):
     token_data, user_context = current_session
-    user: models_u.User = await user_context.get_current_active_user()
+    user: models_u.User = await user_context.get_current_active_user(db_session, token_data)
 
     offer = await services_f.get_by_user_id_offer_id(
         db_session, user_id=user.id, id=offer_id
@@ -116,7 +116,7 @@ async def update_offer(
     Обновляется оффер у авторизованного пользователя по его id
     """
     token_data, user_context = current_session
-    user: models_u.User = await user_context.get_current_active_user()
+    user: models_u.User = await user_context.get_current_active_user(db_session, token_data)
     offer_db = await services_f.get_by_user_id_offer_id(
         db_session, user_id=user.id, id=abs(offer_id)
     )
@@ -147,7 +147,7 @@ async def delete_offer(
     Удаляется оффер у авторизованного пользователя по его id
     """
     token_data, user_context = current_session
-    user: models_u.User = await user_context.get_current_active_user()
+    user: models_u.User = await user_context.get_current_active_user(db_session, token_data)
     deleted_offer = await services_f.delete_offer(
         db_session, user_id=user.id, offer_id=abs(offer_id)
     )

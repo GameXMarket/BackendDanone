@@ -25,6 +25,3 @@ class CategoryValue(Base):
     carcass: Mapped["CategoryCarcass"] = relationship(lazy="noload", back_populates="values")
     author: Mapped[User] = relationship(lazy="noload")
 
-    def to_dict(self):
-        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
-

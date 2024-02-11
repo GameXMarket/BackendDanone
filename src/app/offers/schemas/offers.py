@@ -12,6 +12,10 @@ class OfferStatusEnum(str, Enum):
     deleted: str = "deleted"
 
 
+class CategoryValueIdsBase(BaseModel):
+    category_value_ids: list[int] | None = None
+
+
 class OfferMiniBase(BaseModel):
     attachment_id: int | None = None
     name: str = Field(examples=["Offer name"])
@@ -24,8 +28,8 @@ class OfferMini(OfferMiniBase):
 
 class OfferBase(OfferMiniBase):
     price: int = Field(examples=[1000], gt=0, lt=100000)
-    category_id: int | None = None
     count: int = Field(examples=[1], gt=0, lt=100000)
+    category_value_ids: list[int] | None = None
 
 
 class OfferPreDB(OfferBase):
@@ -38,7 +42,7 @@ class OfferPreDB(OfferBase):
 
 
 class CreateOffer(OfferBase):
-    pass
+    category_value_ids: list[int]
 
 
 class UpdateOffer(OfferBase):

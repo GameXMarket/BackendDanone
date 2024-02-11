@@ -15,7 +15,6 @@ class Offer(Base):
     # https://docs.sqlalchemy.org/en/20/core/constraints.html#sqlalchemy.schema.ForeignKey.params.ondelete
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'))  # ForeignKey to user_id
     attachment_id = Column(Integer)  # ForeignKey to attachment_id
-    category_id = Column(Integer)  # ForeignKey to category_id in a new table
     name = Column(String, nullable=False)
     description = Column(Text, nullable=False)
     price = Column(Integer, nullable=False)
@@ -26,6 +25,10 @@ class Offer(Base):
     upped_at = Column(Integer, nullable=False)
     
     user: Mapped["User"] = relationship(back_populates="offers", lazy="noload")
+    category_values: Mapped[list["OfferCategoryValue"]] = relationship(lazy="selectin")
     
-    def to_dict(self):
-        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+class OfferCategoryValue(Base):
+    __tablename__ = "offer_category_value"
+    category_value_id = Column(Integer, ForeignKey('category_value.id'), primary_key=True)
+    offer_id = Column(Integer, ForeignKey('offer.id', ondelete="CASCADE"), primary_key=True)

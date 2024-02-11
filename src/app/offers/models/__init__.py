@@ -1,1 +1,1 @@
-from .offers import Offer
+from .offers import Offer, OfferCategoryValue
