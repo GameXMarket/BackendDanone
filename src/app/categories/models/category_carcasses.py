@@ -30,7 +30,3 @@ class CategoryCarcass(Base):
     childrens: Mapped[List["CategoryCarcass"]] = relationship(lazy="noload")
     values: Mapped[List["CategoryValue"]] = relationship(lazy="noload", back_populates="carcass")
     author: Mapped[User] = relationship(lazy="noload")
-
-    def to_dict(self):
-        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
-

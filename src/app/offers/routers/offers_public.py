@@ -1,5 +1,7 @@
 import logging
+import json
 
+import fastapi
 from fastapi import Depends, APIRouter, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -23,8 +25,8 @@ router = APIRouter(responses={200: {"model": schemas_f.OfferPreDB}})
 )
 async def test_get_mini_with_offset_limit(
     offset: int = 0,
-    limit: int = 1,
-    category_id: int | None = None,
+    limit: int = 10,
+    category_value_ids: str | None = fastapi.Query(default=None, examples=["[1, 2]"]),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
@@ -35,11 +37,17 @@ async def test_get_mini_with_offset_limit(
 
     Соритрует результат по дате создания от старых к новым (id могут идти не по порядку)
     """
+    if category_value_ids:
+        category_value_ids = json.loads(category_value_ids)
+    
+    if not isinstance(category_value_ids, list[int]):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="example: [1,2]")
+    
     offers: list[schemas_f.OfferMini] = await services_f.get_mini_by_offset_limit(
         db_session,
         offset=abs(offset),
         limit=abs(limit),
-        category_id=category_id,
+        category_value_ids=category_value_ids,
     )
     
     return offers 

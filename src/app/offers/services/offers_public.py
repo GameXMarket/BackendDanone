@@ -4,11 +4,12 @@ from typing import List
 from fastapi import Depends
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, exists, delete, and_, asc
+from sqlalchemy import select, update, exists, delete, and_, asc, func
 
 from .. import models as models_f
 from .. import schemas as schemas_f
 from app.users import models as models_u
+from . import __offer_category_value as __ocv
 
 
 # Дублирование кода, можно переписать по нормальному старые методы,
@@ -24,7 +25,7 @@ async def get_by_offer_id(
 
 
 async def get_mini_by_offset_limit(
-    db_session: AsyncSession, *, offset: int, limit: int, category_id: int = None
+    db_session: AsyncSession, *, offset: int, limit: int, category_value_ids: list[int] = None
 ):
     stmt = (
         select(
@@ -38,9 +39,15 @@ async def get_mini_by_offset_limit(
         .offset(offset)
         .limit(limit)
     )
-    
-    if category_id:
-        stmt = stmt.where(models_f.Offer.category_id == category_id)
+
+    # сортировка по ids
+    if category_value_ids:
+        stmt = stmt.where(
+                and_(
+                    models_f.Offer.category_values.any(models_f.OfferCategoryValue.category_value_id == cv_id)
+                    for cv_id in category_value_ids
+                )
+            )
 
     offers = [
         schemas_f.OfferMini(
