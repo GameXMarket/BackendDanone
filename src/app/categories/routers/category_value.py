@@ -38,7 +38,7 @@ async def create_value(carcass_id: int, value: schemas.ValueCreate, current_sess
 @router.put(
     path="/{value_id}"
 )
-async def update_value(value_id: int, value: schemas.ValueUpdate, current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session), db_session: AsyncSession = Depends(get_session)):
+async def update_value(value_id: int, new_value: schemas.ValueUpdate, current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session), db_session: AsyncSession = Depends(get_session)):
     """
     Обновляет value по его id
     """
@@ -53,7 +53,7 @@ async def update_value(value_id: int, value: schemas.ValueUpdate, current_sessio
     if not value:
         raise HTTPException(status_code=404)
     
-    new_value = await services.categories_values.update_value(db_session, author_id=user.id, db_obj=value, value=value)
+    new_value = await services.categories_values.update_value(db_session, author_id=user.id, db_obj=value, value=new_value)
     
     return new_value
 

@@ -27,33 +27,10 @@ async def get_root_with_offset_limit(
     Получаем список всех root каркасов, без наследников
     """
     categories_rows = await services.categories_carcass.get_all_with_offset_limit(
-        db_session, offset=abs(offset), limit=abs(limit), options=[(selectinload, models.CategoryCarcass.childrens)]
+        db_session, offset=abs(offset), limit=abs(limit), options=[(selectinload, models.CategoryCarcass.values)]
     )
 
     return [row for row in categories_rows]
-
-
-@router.get(path="/reverse/{category_id}")
-async def get_parrents_by_id(category_id: int, db_session: AsyncSession = Depends(get_session)):
-    """
-    Получаем по id каркасс (root/child/subchild/и т.д.) и всех его наследников в одном поколении
-    <pre>
-    root --+---> child1
-           +---> child2 --+--> subchild1
-           |              +--> subchild2
-           +---> child3
-    </pre>
-    """
-    category: models.CategoryCarcass = await services.categories_carcass.get_by_id(
-        db_session, id=category_id, options=([(selectinload, models.CategoryCarcass.childrens), (selectinload, models.CategoryCarcass.values)])
-    )
-
-    if not category:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    
-    parrents = await services.categories_carcass.get_parents_recursive(db_session, category_id)
-
-    return parrents
 
 
 @router.get(path="/{category_id}")
@@ -68,7 +45,7 @@ async def get_by_id(category_id: int, db_session: AsyncSession = Depends(get_ses
     </pre>
     """
     category: models.CategoryCarcass = await services.categories_carcass.get_by_id(
-        db_session, id=category_id, options=([(selectinload, models.CategoryCarcass.childrens), (selectinload, models.CategoryCarcass.values)])
+        db_session, id=category_id, options=([(selectinload, models.CategoryCarcass.values), (selectinload, models.CategoryCarcass.values)])
     )
 
     if not category:
@@ -84,8 +61,9 @@ async def create_category_carcass(
     db_session: AsyncSession = Depends(get_session),
 ):
     """
-    Создаёт новый root-каркасс (игру, платформу и т.д.) <br>
+    Создаёт новый каркасс (игру, платформу и т.д.) <br>
     Требуются права администратора
+    root-каркасс должен быть только один.
     <pre>
     root --+---> child1
            +---> child2 --+--> subchild1
@@ -101,44 +79,6 @@ async def create_category_carcass(
     
     category = await services.categories_carcass.create_category(
         db_session, author_id=user.id, obj_in=new_category
-    )
-
-    return category
-
-
-@router.post(path="/{category_id}")
-async def create_subcategory_carcass(
-    category_id: int,
-    new_category: schemas.SubcategoryCarcassCreate,
-    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
-    db_session: AsyncSession = Depends(get_session),
-):
-    """
-    Создаёт новый non-root каркасс  (валюта, прокачка и тд) <br>
-    Требуются права администратора
-    <pre>
-    root --+---> child1
-           +---> child2 --+--> subchild1
-           |              +--> subchild2
-           +---> child3
-    </pre>
-    """
-    token_data, user_context = current_session
-    user = await user_context.get_current_active_user(db_session, token_data)
-
-    if not user.is_admin():
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
-
-    parrent: models.CategoryCarcass = await services.categories_carcass.get_by_id(db_session, id=category_id)
-
-    if not parrent:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-
-    if parrent.is_last:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="parrent category is_last")
-    
-    category = await services.categories_carcass.create_category(
-        db_session, author_id=user.id, obj_in=new_category, parrent_id=category_id
     )
 
     return category

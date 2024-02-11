@@ -36,7 +36,7 @@ async def create_value(
     db_obj = models.CategoryValue(
         author_id=author_id,
         carcass_id=carcass_id,
-        value=value.value,
+        **value.model_dump(),
         created_at=int(time.time()),
         updated_at=int(time.time()),
     )
@@ -57,10 +57,10 @@ async def update_value(
     db_obj.updated_at = int(time.time())
     db_obj.author_id = author_id
     db_obj.value = value.value
+    db_obj.next_carcass_id = value.next_carcass_id
 
     db_session.add(db_obj)
     await db_session.commit()
-
     return db_obj
 
 

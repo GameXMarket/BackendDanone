@@ -6,8 +6,7 @@ from sqlalchemy.orm import relationship, Mapped
 from core.database import Base
 from app.users.models import User
 
-if TYPE_CHECKING:
-    from .category_values import CategoryValue
+from .category_values import CategoryValue
 
 
 class CategoryCarcass(Base):
@@ -20,13 +19,14 @@ class CategoryCarcass(Base):
 
     __tablename__ = "category_carcass"
     id = Column(Integer, primary_key=True, index=True)
-    parrent_id = Column(Integer, ForeignKey("category_carcass.id", ondelete="CASCADE"))
     author_id = Column(Integer, ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
-    name = Column(String, nullable=False)
+    is_root = Column(Boolean, nullable=False)
+    select_name = Column(String, nullable=False)
+    in_offer_name = Column(String, nullable=False)
+    admin_comment = Column(String, nullable=True)
     is_last = Column(Boolean, default=False, nullable=False)
     created_at = Column(Integer, nullable=False)
     updated_at = Column(Integer, nullable=False)
 
-    childrens: Mapped[List["CategoryCarcass"]] = relationship(lazy="noload")
-    values: Mapped[List["CategoryValue"]] = relationship(lazy="noload", back_populates="carcass")
+    values: Mapped[List[CategoryValue]] = relationship(lazy="noload", back_populates="carcass", foreign_keys=[CategoryValue.carcass_id])
     author: Mapped[User] = relationship(lazy="noload")

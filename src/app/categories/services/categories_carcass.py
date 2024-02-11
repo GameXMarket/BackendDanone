@@ -20,7 +20,6 @@ async def get_by_id(db_session: AsyncSession, *, id: int, options: List[Tuple[An
 async def get_all_with_offset_limit(db_session: AsyncSession, offset: int, limit: int, options: List[Tuple[Any]] = None) -> List[models.CategoryCarcass]:
     stmt = (
         select(models.CategoryCarcass)
-        .where(models.CategoryCarcass.parrent_id == None)
         .order_by(models.CategoryCarcass.created_at)
         .offset(offset)
         .limit(limit)
@@ -32,30 +31,15 @@ async def get_all_with_offset_limit(db_session: AsyncSession, offset: int, limit
     return categories
 
 
-async def get_parents_recursive(db_session: AsyncSession, category_id: int) -> List[models.CategoryCarcass]:
-    parents = []
-
-    async def get_parent_recursive(category_id):
-        parent_category: models.CategoryCarcass = await get_by_id(db_session, id=category_id)
-        if parent_category:
-            parents.append(parent_category)
-            await get_parent_recursive(parent_category.parrent_id)
-
-    await get_parent_recursive(category_id)    
-    return sorted(parents, key=lambda x: x.created_at, reverse=True)
-
-
 async def create_category(
     db_session: AsyncSession,
     *,
     author_id: int,
     obj_in: schemas.CategoryCarcassCreate,
-    parrent_id: int | None = None,
 ) -> models.CategoryCarcass:
     db_obj = models.CategoryCarcass(
-        parrent_id=parrent_id,
         author_id=author_id,
-        name=obj_in.name,
+        **obj_in.model_dump(exclude_unset=True),
         created_at=int(time.time()),
         updated_at=int(time.time()),
     )
