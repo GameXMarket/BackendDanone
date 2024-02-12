@@ -40,7 +40,7 @@ async def test_get_mini_with_offset_limit(
     if category_value_ids:
         category_value_ids = json.loads(category_value_ids)
     
-    if not isinstance(category_value_ids, list[int]):
+    if not isinstance(category_value_ids, list):
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="example: [1,2]")
     
     offers: list[schemas_f.OfferMini] = await services_f.get_mini_by_offset_limit(
