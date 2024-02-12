@@ -4,7 +4,8 @@ import os
 # Загрузка переменных из .env файла
 
 current_file_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-env_path = os.path.join(os.path.dirname(os.path.dirname(current_file_path)) , ".env")
+root_path = os.path.dirname(os.path.dirname(current_file_path))
+env_path = os.path.join(root_path, ".env")
 
 load_dotenv(dotenv_path=env_path, override=True)
 
@@ -68,3 +69,7 @@ if DEBUG:
     BASE_DEBUG_USER_LOGIN: str = os.getenv("BASE_DEBUG_USER_LOGIN")
     BASE_DEBUG_USER_EMAIL: str = os.getenv("BASE_DEBUG_USER_EMAIL")
     BASE_DEBUG_USER_PASS: str = os.getenv("BASE_DEBUG_USER_PASS")
+
+# OTHER
+
+DATA_PATH: str = os.path.join(root_path, "data")

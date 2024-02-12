@@ -11,8 +11,6 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
-from sqlalchemy.ext.asyncio import AsyncSession
-from redis.exceptions import ConnectionError
 
 import core.settings as conf
 from core.database import init_models, context_get_session
@@ -22,7 +20,7 @@ from app.tokens import tokens_routers
 from app.offers import offers_routers
 from app.categories import category_routers
 from app.messages import message_routers
-
+# ниже импорты, для инит дб, лучше вынести в отдельный файл вместе с методом.
 from app.users import models as models_u, schemas as schemas_u
 from app.users.services import get_by_email, create_user
 
@@ -32,9 +30,39 @@ locales_path = os.path.join(os.path.dirname(current_file_path), "_locales")
 logger = logging.getLogger("uvicorn")
 
 
+from app.attachment.models import Attachment, File
+
+""" # Temp dev sql
+INSERT INTO category_carcass (id, author_id, is_root, select_name, in_offer_name, admin_comment, is_last, created_at, updated_at)
+VALUES  
+(1,  1, true, 'Выберите игру', 'Игра', 'Рут, выбор игры, для удобства, нигде не видно данное поле.', false,  1707674165,  1707674165),
+(2,  1, false, 'Выберите услугу', 'Тип объявления', 'Услуги для игры brawl stars', false,  1707674328,  1707674328),
+(5,  1, false, 'Выберите уровни БП', 'Уровни БП', 'Уровни Боевоего пропуска для игры brawl stars', false,  1707675293,  1707675293),
+(4,  1, false, 'Выберите номинал', 'Номинал', 'Номинал гемов для игры brawl stars,', false,  1707674593,  1707674593),
+(3,  1, false, 'Выберите способ доставки', 'Способ доставки', 'Способы доставки для игры, для гемов brawl stars', false,  1707674536,  1707674536);
+"""
+"""
+INSERT INTO category_value (id, carcass_id, next_carcass_id, author_id, value, created_at, updated_at)
+VALUES
+(1,  1,  2,  1, 'Brawl Stars',  1707674732,  1707674732),
+(2,  2,  3,  1, 'Покупка гемов',  1707674857,  1707674857),
+(3,  3,  4,  1, 'Supersell ID',  1707674900,  1707674900),
+(4,  3,  4,  1, 'Встреча в жизни',  1707674918,  1707674918),
+(5,  3,  4,  1, 'Через сторонние магазины',  1707674933,  1707674933),
+(6,  4, NULL,  1, '30 Гемов',  1707675066,  1707675066),
+(7,  4, NULL,  1, '170 Гемов',  1707675071,  1707675071),
+(8,  4, NULL,  1, '2000 Гемов',  1707675079,  1707675079),
+(9,  2,  5,  1, 'Боевой пропуск',  1707675228,  1707676954),
+(10,  5, NULL,  1, '1 уровень БП',  1707677022,  1707677022),
+(11,  5, NULL,  1, '5 уровней БП',  1707677036,  1707677036),
+(12,  5, NULL,  1, '10 уровней БП',  1707677041,  1707677041);
+"""
+
+
 class StartedFailed(Exception):
     def __init__(self, message):
         super().__init__(message)
+
 
 async def __init_base_db():
     async with context_get_session() as db_session:
@@ -67,6 +95,7 @@ async def __init_base_db():
                     ),
                     additional_fields={"role_id": 0, "is_verified": True},
                 )
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -166,4 +195,5 @@ if __name__ == "__main__":
         host=conf.SERVER_IP,
         port=conf.SERVER_PORT,
         reload=conf.DEBUG,
+        proxy_headers=not conf.DEBUG,
     )
