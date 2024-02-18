@@ -1,10 +1,11 @@
 import time
+from inspect import cleandoc
 from typing import Tuple, List, Any
 
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
-from sqlalchemy import select, update, exists, delete, and_
+from sqlalchemy.orm import selectinload, aliased
+from sqlalchemy import select, distinct, union_all, update, exists, delete, and_, text
 
 from .. import models, schemas
 
@@ -20,10 +21,42 @@ async def get_by_id(
     return value
 
 
-async def get_associated_by_id(
-    db_session: AsyncSession, root_id: int, options: List[Tuple[Any]] = None, v_ids: set = set()
+async def get_many_by_ids(
+    db_session: AsyncSession, ids: list[int], options: List[Tuple[Any]] = None
 ):
-    ...    
+    stmt = select(models.CategoryValue).where(models.CategoryValue.id.in_(ids))
+    if options:
+        for option in options:
+            stmt = stmt.options(option[0](option[1]))    
+    values = (await db_session.execute(stmt)).scalars().all()
+    
+    return [v.to_dict("carcass") for v in values]
+
+
+async def get_associated_by_id(
+    db_session: AsyncSession, root_ids: List[int], options: List[Tuple[Any]] = None
+) -> List[models.CategoryValue]:
+    CategoryValueAlias = aliased(models.CategoryValue)
+
+    stmt = (
+        select(models.CategoryValue)
+        .where(models.CategoryValue.id.in_(root_ids))
+        .cte(name="categorytree", recursive=True)
+    )
+
+    recursive = select(CategoryValueAlias).join(
+        stmt, CategoryValueAlias.carcass_id == stmt.c.next_carcass_id
+    )
+    stmt = stmt.union_all(recursive)
+
+    result = await db_session.execute(
+        select(models.CategoryValue)
+        .order_by(models.CategoryValue.id)
+        .distinct().join(stmt, models.CategoryValue.id == stmt.c.id)
+    )
+    
+    return [m.to_dict() for m in result.scalars().all()]
+
 
 async def get_by_carcass_id(
     db_session: AsyncSession, *, carcass_id: int, options: List[Tuple[Any]] = None
