@@ -38,11 +38,12 @@ class Attachment(Base):
      первичным и вторичным.
     entity_type - перечисление для идентификации таблиц-наследников
     """
-    __tablename__ = "attachment"
+
+    __tablename__ = "base_attachment"
     id = Column(Integer, primary_key=True)
     entity_type = Column(
         Enum(
-            "base_attachment"
+            "base_attachment",
             "user_attacment",
             "message_attacment",
             "offer_attacment",
@@ -63,7 +64,7 @@ class UserAttachment(Attachment):
     __tablename__ = "user_attacment"
     id = Column(Integer, ForeignKey("attachment.id"), primary_key=True)
     user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), unique=True)
-    
+
     __mapper_args__ = {
         "polymorphic_identity": "user_attacment",
     }
@@ -72,8 +73,10 @@ class UserAttachment(Attachment):
 class MessageAttachment(Attachment):
     __tablename__ = "message_attacment"
     id = Column(Integer, ForeignKey("attachment.id"), primary_key=True)
-    message_id = Column(Integer, ForeignKey("message.id", ondelete="CASCADE"), unique=True)
-    
+    message_id = Column(
+        Integer, ForeignKey("message.id", ondelete="CASCADE"), unique=True
+    )
+
     __mapper_args__ = {
         "polymorphic_identity": "message_attacment",
     }
@@ -83,7 +86,7 @@ class OfferAttachment(Attachment):
     __tablename__ = "offer_attacment"
     id = Column(Integer, ForeignKey("attachment.id"), primary_key=True)
     offer = Column(Integer, ForeignKey("offer.id", ondelete="CASCADE"), unique=True)
-    
+
     __mapper_args__ = {
         "polymorphic_identity": "offer_attacment",
     }
@@ -99,6 +102,7 @@ class ConflictAttachment(Attachment):
         "polymorphic_identity": "conflict_attacment",
     }
 """
+
 
 class File(Base):
     __tablename__ = "file"
