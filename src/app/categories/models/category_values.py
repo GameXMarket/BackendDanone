@@ -1,6 +1,6 @@
 from typing import List, TYPE_CHECKING
 
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, VARCHAR, ForeignKey
 from sqlalchemy.orm import validates, relationship, Mapped
 
 from core.database import Base
@@ -26,7 +26,7 @@ class CategoryValue(Base):
     author_id = Column(
         Integer, ForeignKey("user.id", ondelete="SET NULL"), nullable=True
     )
-    value = Column(String, nullable=False)
+    value = Column(VARCHAR(length=17), nullable=False)
     created_at = Column(Integer, nullable=False)
     updated_at = Column(Integer, nullable=False)
 
