@@ -62,7 +62,7 @@ class Attachment(Base):
 
 class UserAttachment(Attachment):
     __tablename__ = "user_attacment"
-    id = Column(Integer, ForeignKey("attachment.id"), primary_key=True)
+    id = Column(Integer, ForeignKey("base_attachment.id"), primary_key=True)
     user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), unique=True)
 
     __mapper_args__ = {
@@ -72,7 +72,7 @@ class UserAttachment(Attachment):
 
 class MessageAttachment(Attachment):
     __tablename__ = "message_attacment"
-    id = Column(Integer, ForeignKey("attachment.id"), primary_key=True)
+    id = Column(Integer, ForeignKey("base_attachment.id"), primary_key=True)
     message_id = Column(
         Integer, ForeignKey("message.id", ondelete="CASCADE"), unique=True
     )
@@ -84,7 +84,7 @@ class MessageAttachment(Attachment):
 
 class OfferAttachment(Attachment):
     __tablename__ = "offer_attacment"
-    id = Column(Integer, ForeignKey("attachment.id"), primary_key=True)
+    id = Column(Integer, ForeignKey("base_attachment.id"), primary_key=True)
     offer = Column(Integer, ForeignKey("offer.id", ondelete="CASCADE"), unique=True)
 
     __mapper_args__ = {
@@ -107,7 +107,7 @@ class ConflictAttachment(Attachment):
 class File(Base):
     __tablename__ = "file"
     id = Column(Integer, primary_key=True)
-    attachment_id = Column(Integer, ForeignKey("attachment.id", ondelete="CASCADE"))
+    attachment_id = Column(Integer, ForeignKey("base_attachment.id", ondelete="CASCADE"))
     file_name = Column(String)
     file_type = Column(String)
     created_at = Column(Integer)
