@@ -51,6 +51,7 @@ async def get_associated_by_id(
 
     result = await db_session.execute(
         select(models.CategoryValue)
+        .where(models.CategoryValue.id.not_in(root_ids))
         .order_by(models.CategoryValue.id)
         .distinct().join(stmt, models.CategoryValue.id == stmt.c.id)
     )
