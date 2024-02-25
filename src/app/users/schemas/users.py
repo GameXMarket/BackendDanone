@@ -77,7 +77,7 @@ class UserUpdate(UsernameField, PasswordField):
     username: Optional[str] = _u
     password: Optional[str] = _p
     is_verified: bool = True
-    auth: PasswordField
+    auth: Optional[PasswordField]
 
 
 class UserPreDB(BaseUser):

@@ -101,31 +101,13 @@ async def update_user(
     token_data, user_context = current_session
     user: User = await user_context.get_current_active_user(db_session, token_data)
     
-    if not verify_password(form_data.auth.password, user.hashed_password):
+    if form_data.password and not verify_password(form_data.auth.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect old password",
         )
 
-    update_data = form_data.model_dump(exclude_unset=True)
-    del update_data["auth"]
-
-    if update_data.get("username") == user.username:
-        del update_data["username"]
-
-    if update_data.get("password") == form_data.auth.password:
-        del update_data["password"]
-
-    if update_data.get("is_verified") == form_data.is_verified:
-        del update_data["is_verified"]
-
-    if not update_data:
-        raise HTTPException(
-            status_code=status.HTTP_418_IM_A_TEAPOT,
-            detail="User not modified",
-        )
-
-    if update_data.get("usename"):
+    if form_data.username:
         if await UserService.get_by_username(db_session, username=form_data.username):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
