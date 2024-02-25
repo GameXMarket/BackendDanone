@@ -23,7 +23,7 @@ sudo docker run hello-world
 
 
 ```shell
-yunikeil@server-host:~$ sudo docker run --name some-postgres -e POSTGRES_PASSWORD=24011953 --restart always -p  192.168.4.104:5432:5432 -d postgres
+yunikeil@server-host:~$ sudo docker run --name some-postgres -e POSTGRES_PASSWORD=postgres --restart always -p  5432:5432 -d postgres
 ```
 
 

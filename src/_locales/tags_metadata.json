@@ -18,5 +18,9 @@
     {
         "name": "chat",
         "description": "Chat base endpoints"
+    },
+    {
+        "name": "attacment",
+        "description": "Attacment base endpoints"
     }
 ]

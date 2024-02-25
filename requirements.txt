@@ -16,5 +16,7 @@ pytest
 anyio
 aiosmtplib
 Jinja2
+aiofiles
 python-dotenv
 redis
+ansible

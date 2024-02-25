@@ -15,11 +15,13 @@ from fastapi.openapi.utils import get_openapi
 import core.settings as conf
 from core.database import init_models, context_get_session
 from core.redis import redis_pool, get_redis_client
+from core.utils import check_dir_exists
 from app.users import users_routers
 from app.tokens import tokens_routers
 from app.offers import offers_routers
 from app.categories import category_routers
 from app.messages import message_routers
+from app.attachment import attachment_routers
 # ниже импорты, для инит дб, лучше вынести в отдельный файл вместе с методом.
 from app.users import models as models_u, schemas as schemas_u
 from app.users.services import get_by_email, create_user
@@ -104,7 +106,9 @@ async def lifespan(app: FastAPI):
 
     async with get_redis_client() as client:
         logger.info(f"Redis ping returned with: {await client.ping()}.")
-            
+
+    check_dir_exists(conf.DATA_PATH, auto_create=True)
+        
     yield
     
     await redis_pool.aclose()
@@ -131,8 +135,9 @@ origins = [
     "http://localhost:80",
     "http://localhost:8080",
     "http://localhost:3000",
-    "https://fronted-danone-k7l2.vercel.app/",
+    "https://fronted-danone-k7l2.vercel.app",
     "https://test.yunikeil.ru",
+    "https://fronted-danone-git-front-logic-dydecs-projects.vercel.app",
 ]
 
 app.add_middleware(
@@ -143,16 +148,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 if conf.DEBUG:
     from debug import debug_routers
 
     app.include_router(debug_routers)
+
 
 app.include_router(users_routers)
 app.include_router(tokens_routers)
 app.include_router(offers_routers)
 app.include_router(category_routers)
 app.include_router(message_routers)
+app.include_router(attachment_routers)
 
 
 def __temp_get_current_username(

@@ -70,6 +70,6 @@ if DEBUG:
     BASE_DEBUG_USER_EMAIL: str = os.getenv("BASE_DEBUG_USER_EMAIL")
     BASE_DEBUG_USER_PASS: str = os.getenv("BASE_DEBUG_USER_PASS")
 
-# OTHER
+# ATTACMENT
 
 DATA_PATH: str = os.path.join(root_path, "data")

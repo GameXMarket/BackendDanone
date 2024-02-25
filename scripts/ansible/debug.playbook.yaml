@@ -1,9 +1,8 @@
-- name: My first play
-  hosts: postgre
-  tasks:
-   - name: Ping my hosts
-     ansible.builtin.ping:
-
-   - name: Print message
-     ansible.builtin.debug:
-      msg: Hello world
+---
+- hosts: postgre, redis
+  become: true
+  vars:
+    container_count: 4
+    default_container_name: docker
+    default_container_image: ubuntu
+    default_container_command: sleep 1
