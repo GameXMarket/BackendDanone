@@ -57,7 +57,7 @@ async def get_message(
 
 
 @ws_router.websocket("/my")
-async def lazy_users_online(
+async def users_chat_listener(
     ws_context_data: tuple[
         services.ConnectionContext, services.ChatConnectionManager
     ] = Depends(base_manager),

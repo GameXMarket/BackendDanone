@@ -68,7 +68,7 @@ class ChatConnectionManager:
     def __init__(self):
         pass
 
-    def __call__(
+    async def __call__(
         self,
         websocket: WebSocket,
         current_session: tuple[schemas_t.JwtPayload, deps.WsUserSession]
@@ -77,7 +77,7 @@ class ChatConnectionManager:
         if current_session:
             user_id = current_session[0].user_id
         else:
-            self.__raise(ConnectionContext(websocket, -1))
+            await self.__raise(ConnectionContext(websocket, -1), 4000, reason="Could not validate credentials")
 
         return ConnectionContext(websocket, user_id), self
 
