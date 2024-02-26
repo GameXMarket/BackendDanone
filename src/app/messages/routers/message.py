@@ -29,7 +29,7 @@ async def get_messages(
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
 
-    messages = await services.get_with_offset_limit(db_session, user.id, receiver_id)
+    messages = await services.get_with_offset_limit(db_session, user.id, receiver_id, offset, limit)
 
     if not messages:
         raise HTTPException(404)
