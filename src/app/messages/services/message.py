@@ -62,6 +62,8 @@ class ConnectionContext:
     user_id: int
 
 
+# TODO проверку на существавание юзера и тд
+# Пока просто будут исключения из-за ограничений на бд
 class ChatConnectionManager:
     ws_connections: dict[int, WebSocket] = {}
 

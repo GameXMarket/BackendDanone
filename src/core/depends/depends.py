@@ -3,7 +3,7 @@ from types import UnionType
 from http import HTTPStatus
 
 from fastapi.security import APIKeyCookie, APIKeyHeader
-from fastapi import Header, Depends, HTTPException, status, WebSocketException
+from fastapi import Query, Depends, HTTPException, status, WebSocketException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload
 
@@ -97,22 +97,17 @@ async def get_access(
     return token_data
 
 
-async def ws_get_access(Authorization: str = Header(None), db_session: AsyncSession = Depends(get_session)):
-    if not Authorization:
+async def ws_get_access(token: str = Query(None), db_session: AsyncSession = Depends(get_session)):  
+    if not token:
         return None
-
-    if not Authorization.startswith("Bearer "):
-        return None
-    
-    Authorization = Authorization.replace("Bearer ", "")
     
     token_data = await TokenSecurity.verify_jwt_token(
-        token=Authorization, secret=conf.ACCESS_SECRET_KEY, db_session=db_session
+        token=token, secret=conf.ACCESS_SECRET_KEY, db_session=db_session
     )
     
     if not token_data:
         return None
-    
+        
     return token_data
 
 
