@@ -15,7 +15,7 @@ from app.tokens import schemas as schemas_t
 
 
 logger = logging.getLogger("uvicorn")
-router = APIRouter(responses={200: {"model": schemas_f.OfferPreDB}})
+router = APIRouter()
 base_session = deps.UserSession()
 
 
@@ -75,9 +75,9 @@ async def get_mini_with_offset_limit(
 
 
 @router.get(
-    path="/my/categories"
+    path="/my/bycategories"
 )
-async def get_root_categories_with_offset_count(
+async def get_root_categories_count_with_offset_limit(
     offset: int = 0,
     limit: int = 10,
     current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
@@ -90,7 +90,27 @@ async def get_root_categories_with_offset_count(
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
 
-    return await services_f.get_root_categories_with_offset_count(db_session, user.id, offset, limit)
+    return await services_f.get_root_categories_count_with_offset_limit(db_session, user.id, offset, limit)
+
+
+@router.get(
+    path="/my/bycarcassid"
+)
+async def get_offers_by_category(
+    carcass_id: int,
+    offset: int = 0,
+    limit: int = 10,
+    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
+    db_session: AsyncSession = Depends(get_session),
+
+):
+    """
+    Возвращает ваши категории + кол-во лотов
+    """
+    token_data, user_context = current_session
+    user = await user_context.get_current_active_user(db_session, token_data)
+
+    return await services_f.get_offers_by_carcass_id(db_session, user.id, carcass_id, offset, limit)
 
 
 

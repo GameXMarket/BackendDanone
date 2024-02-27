@@ -55,37 +55,97 @@ async def get_mini_by_user_id_offset_limit(
     return offers
 
 
-async def __get_root_values(db_session: AsyncSession):
+async def get_root_categories_count_with_offset_limit(
+    db_session: AsyncSession, user_id, offset, limit
+):
     root_values = (
         await db_session.execute(
-            select(CategoryValue.id, CategoryValue.value)
+            select(CategoryValue.id, CategoryValue.value, CategoryValue.next_carcass_id)
             .where(CategoryCarcass.is_root == True)
-            .where(CategoryValue.carcass_id == CategoryCarcass.id)  
+            .where(CategoryValue.carcass_id == CategoryCarcass.id)
         )
     ).all()
-        
-    return root_values
 
-
-async def get_root_categories_with_offset_count(db_session: AsyncSession, user_id, offset, limit):
-    root_values = await __get_root_values(db_session)
     result = []
     for value in root_values:
-        rrr = (
+        offer_count = (
             await db_session.execute(
                 select(func.count())
                 .select_from(models_f.Offer)
                 .where(models_f.Offer.user_id == user_id)
                 .where(models_f.OfferCategoryValue.category_value_id == value[0])
                 .where(models_f.Offer.id == models_f.OfferCategoryValue.offer_id)
-                .offset(offset).limit(limit)
+                .offset(offset)
+                .limit(limit)
             )
         ).scalar_one_or_none()
-        result.append({"value_id": value[0], "value_name": value[1], "offer_count": rrr})
-    
+        
+        if offer_count:
+            result.append(
+                {
+                    "value_id": value[0],
+                    "value_name": value[1],
+                    "next_carcass_id": value[2],
+                    "offer_count": offer_count,
+                }
+            )
+
     return result
-    
-    
+
+
+async def get_offers_by_carcass_id(
+    db_session: AsyncSession, user_id, carcass_id, offset, limit
+):
+    carcass_names = (
+        await db_session.execute(
+            select(CategoryCarcass.select_name, CategoryCarcass.in_offer_name).where(
+                CategoryCarcass.id == carcass_id
+            )
+        )
+    ).all()[0]
+
+    next_value_ids = (
+        (
+            await db_session.execute(
+                select(CategoryValue.id).where(CategoryValue.carcass_id == carcass_id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    results = (
+        await db_session.execute(
+            select(
+                models_f.Offer.id,
+                models_f.Offer.name,
+                models_f.Offer.price,
+                models_f.Offer.count,
+                CategoryValue.value,
+            )
+            .where(models_f.Offer.user_id == user_id)
+            .where(models_f.Offer.id == models_f.OfferCategoryValue.offer_id)
+            .where(models_f.OfferCategoryValue.category_value_id.in_(next_value_ids))
+            .where(CategoryValue.id == models_f.OfferCategoryValue.category_value_id)
+        )
+    ).all()
+
+    return list(
+        map(
+            lambda v: {
+                "offer_id": v[0],
+                "name": v[1],
+                "price": v[2],
+                "count": v[3],
+                "carcass_select_name": carcass_names[0],
+                "carcass_in_offer_name": carcass_names[1],
+                "carcass_in_offer_value": v[4],
+            },
+            results,
+        )
+    )
+
+
 async def create_offer(
     db_session: AsyncSession, user_id: int, obj_in: schemas_f.CreateOffer
 ) -> models_f.Offer:
