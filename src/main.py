@@ -15,7 +15,7 @@ from fastapi.openapi.utils import get_openapi
 import core.settings as conf
 from core.database import init_models, context_get_session
 from core.redis import redis_pool, get_redis_client
-from core.logging import CoreHandler
+from core.logging import InfoHandlerTG, ErrorHandlerTG
 from core.utils import check_dir_exists
 from app.users import users_routers
 from app.tokens import tokens_routers
@@ -101,8 +101,15 @@ async def __init_base_db():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    info_tg_handler = InfoHandlerTG()
+    error_tg_handler = ErrorHandlerTG()
+    
+    uvi_access_logger = logging.getLogger("uvicorn.access")
+    uvi_access_logger.addHandler(info_tg_handler)
+    
     logger = logging.getLogger("uvicorn")
-    logger.addHandler(CoreHandler())
+    logger.addHandler(info_tg_handler)
+    logger.addHandler(error_tg_handler)
 
     await init_models(drop_all=conf.DROP_TABLES)
     await __init_base_db()
