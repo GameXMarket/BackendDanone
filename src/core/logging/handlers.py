@@ -3,7 +3,7 @@ import logging
 import asyncio
 
 from core.utils.telegram import send_telegram_message
-from core.settings.config import TG_LOG_TOKEN, TG_LOG_CHANNEL
+from core.settings.config import TG_LOG_TOKEN, TG_ERROR_LOG_CHANNEL, TG_INFO_LOG_CHANNEL
 
 
 class CoreHandler(logging.Handler):
@@ -28,7 +28,8 @@ class CoreHandler(logging.Handler):
         pass
 
     async def process_info(self, record: logging.LogRecord):
-        pass
+        message = f"```shell\nI{record.levelname}\t\t{record.message}\n```"
+        await send_telegram_message(TG_LOG_TOKEN, TG_INFO_LOG_CHANNEL, message)
     
     async def process_warning(self, record: logging.LogRecord):
         pass
@@ -40,7 +41,7 @@ class CoreHandler(logging.Handler):
             tb_str = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
 
         message = f"`{record.levelname}\t{record.message}`\n```shell\n{tb_str}\n```"
-        await send_telegram_message(TG_LOG_TOKEN, TG_LOG_CHANNEL, message)
+        await send_telegram_message(TG_LOG_TOKEN, TG_ERROR_LOG_CHANNEL, message)
 
     async def process_critical(self, record: logging.LogRecord):
         pass
