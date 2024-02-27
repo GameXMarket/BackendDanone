@@ -73,3 +73,7 @@ if DEBUG:
 # ATTACMENT
 
 DATA_PATH: str = os.path.join(root_path, "data")
+
+# logging
+
+TG_LOG_TOKEN: str = os.getenv("TG_LOG_TOKEN")
