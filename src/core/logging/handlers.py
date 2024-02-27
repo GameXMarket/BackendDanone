@@ -28,7 +28,7 @@ class CoreHandler(logging.Handler):
         pass
 
     async def process_info(self, record: logging.LogRecord):
-        message = f"```shell\n{record.levelname}\t\t{record.message}\n```"
+        message = f"`{record.levelname} - {record.message}`"
         await send_telegram_message(
             TG_LOG_TOKEN, TG_INFO_LOG_CHANNEL, message, need_keyboard=False
         )
