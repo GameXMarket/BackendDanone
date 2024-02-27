@@ -59,14 +59,18 @@ async def send_telegram_message(
         }
         if inline_keyboard:
             data["reply_markup"] = inline_keyboard
-
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                target_url, headers=headers, data=json.dumps(data)
-            )
-            if (response.status_code == 200) and need_log:
-                tg_logger.info(f"Telegram message sent to {chat_id}")
-            elif response.status_code != 200:
-                tg_logger.error(
-                    f"Telegram message not sent?\n status: {response.status_code}\n response_text: {response.text}"
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    target_url, headers=headers, data=json.dumps(data)
                 )
+                if (response.status_code == 200) and need_log:
+                    tg_logger.info(f"Telegram message sent to {chat_id}")
+                elif response.status_code != 200:
+                    tg_logger.error(
+                        f"Telegram message not sent?\n status: {response.status_code}\n response_text: {response.text}"
+                    )
+        except BaseException:
+            # Различные ошибки связанный с рейт-лимитом
+            pass
