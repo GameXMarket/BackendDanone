@@ -77,3 +77,4 @@ DATA_PATH: str = os.path.join(root_path, "data")
 # logging
 
 TG_LOG_TOKEN: str = os.getenv("TG_LOG_TOKEN")
+TG_LOG_CHANNEL: int = os.getenv("TG_LOG_CHANNEL")

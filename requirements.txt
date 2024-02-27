@@ -18,5 +18,6 @@ aiosmtplib
 Jinja2
 aiofiles
 python-dotenv
+colorlog
 redis
 ansible

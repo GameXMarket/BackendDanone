@@ -15,6 +15,7 @@ from fastapi.openapi.utils import get_openapi
 import core.settings as conf
 from core.database import init_models, context_get_session
 from core.redis import redis_pool, get_redis_client
+from core.logging import CoreHandler
 from core.utils import check_dir_exists
 from app.users import users_routers
 from app.tokens import tokens_routers
@@ -29,7 +30,6 @@ from app.users.services import get_by_email, create_user
 
 current_file_path = os.path.abspath(__file__)
 locales_path = os.path.join(os.path.dirname(current_file_path), "_locales")
-logger = logging.getLogger("uvicorn")
 
 
 from app.attachment.models import Attachment, File
@@ -50,7 +50,7 @@ VALUES
 (2,  2,  3,  1, 'Покупка гемов',  1707674857,  1707674857),
 (3,  3,  4,  1, 'Supersell ID',  1707674900,  1707674900),
 (4,  3,  4,  1, 'Встреча в жизни',  1707674918,  1707674918),
-(5,  3,  4,  1, 'Через сторонние магазины',  1707674933,  1707674933),
+(5,  3,  4,  1, 'Через сторонние',  1707674933,  1707674933),
 (6,  4, NULL,  1, '30 Гемов',  1707675066,  1707675066),
 (7,  4, NULL,  1, '170 Гемов',  1707675071,  1707675071),
 (8,  4, NULL,  1, '2000 Гемов',  1707675079,  1707675079),
@@ -101,6 +101,9 @@ async def __init_base_db():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger = logging.getLogger("uvicorn")
+    logger.addHandler(CoreHandler())
+
     await init_models(drop_all=conf.DROP_TABLES)
     await __init_base_db()
 
