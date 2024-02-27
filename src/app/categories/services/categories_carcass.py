@@ -8,7 +8,9 @@ from sqlalchemy import select, update, exists, delete, and_
 from .. import models, schemas
 
 
-async def get_by_id(db_session: AsyncSession, *, id: int, options: List[Tuple[Any]] = None) -> models.CategoryCarcass | None:
+async def get_by_id(
+    db_session: AsyncSession, *, id: int, options: List[Tuple[Any]] = None
+) -> models.CategoryCarcass | None:
     stmt = select(models.CategoryCarcass).where(models.CategoryCarcass.id == id)
     if options:
         for option in options:
@@ -17,7 +19,9 @@ async def get_by_id(db_session: AsyncSession, *, id: int, options: List[Tuple[An
     return category
 
 
-async def get_all_with_offset_limit(db_session: AsyncSession, offset: int, limit: int, options: List[Tuple[Any]] = None) -> List[models.CategoryCarcass]:
+async def get_all_with_offset_limit(
+    db_session: AsyncSession, offset: int, limit: int, options: List[Tuple[Any]] = None
+) -> List[models.CategoryCarcass]:
     stmt = (
         select(models.CategoryCarcass)
         .order_by(models.CategoryCarcass.created_at)
@@ -75,7 +79,9 @@ async def update_category(
     return db_obj
 
 
-async def delete_category(db_session: AsyncSession, *, category_id: int) -> models.CategoryCarcass:
+async def delete_category(
+    db_session: AsyncSession, *, category_id: int
+) -> models.CategoryCarcass:
     category = await get_by_id(db_session, id=category_id)
 
     if not category:
@@ -85,3 +91,13 @@ async def delete_category(db_session: AsyncSession, *, category_id: int) -> mode
     await db_session.commit()
 
     return category
+
+
+async def get_carcass_names(db_session: AsyncSession, carcass_id: int):
+    stmt = select(
+        models.CategoryCarcass.select_name, models.CategoryCarcass.in_offer_name
+    ).where(models.CategoryCarcass.id == carcass_id)
+    carcass_names = (await db_session.execute(stmt)).all()
+    if carcass_names:
+        return carcass_names[0]
+    return None

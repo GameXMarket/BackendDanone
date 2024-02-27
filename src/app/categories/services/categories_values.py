@@ -124,3 +124,21 @@ async def delete_value(
     await db_session.commit()
 
     return value
+
+async def get_root_values(db_session: AsyncSession):
+    stmt = (
+        select(models.CategoryValue.id, models.CategoryValue.value, models.CategoryValue.next_carcass_id)
+        .where(models.CategoryCarcass.is_root == True)
+        .where(models.CategoryValue.carcass_id == models.CategoryCarcass.id)
+    )
+    root_values = (await db_session.execute(stmt)).all()
+    if root_values:
+        return root_values
+    return None
+
+async def get_value_ids_by_carcass(db_session: AsyncSession, carcass_id: int):
+    stmt = select(models.CategoryValue.id).where(models.CategoryValue.carcass_id == carcass_id)
+    value_ids = (await db_session.execute(stmt)).scalars().all()
+    if value_ids:
+        return value_ids
+    return None

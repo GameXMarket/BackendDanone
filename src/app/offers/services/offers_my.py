@@ -12,6 +12,8 @@ from .. import schemas as schemas_f
 from app.users import models as models_u
 from . import __offer_category_value as __ocv
 from app.categories.models import CategoryCarcass, CategoryValue
+from app.categories.services.categories_carcass import get_carcass_names
+from app.categories.services.categories_values import get_value_ids_by_carcass, get_root_values
 
 
 async def get_by_user_id_offer_id(
@@ -58,28 +60,24 @@ async def get_mini_by_user_id_offset_limit(
 async def get_root_categories_count_with_offset_limit(
     db_session: AsyncSession, user_id, offset, limit
 ):
-    root_values = (
-        await db_session.execute(
-            select(CategoryValue.id, CategoryValue.value, CategoryValue.next_carcass_id)
-            .where(CategoryCarcass.is_root == True)
-            .where(CategoryValue.carcass_id == CategoryCarcass.id)
-        )
-    ).all()
-
     result = []
+    root_values = get_root_values(db_session)
+    if not root_values:
+        return None
+    
     for value in root_values:
+        stmt = (
+            select(func.count())
+            .select_from(models_f.Offer)
+            .where(models_f.Offer.user_id == user_id)
+            .where(models_f.OfferCategoryValue.category_value_id == value[0])
+            .where(models_f.Offer.id == models_f.OfferCategoryValue.offer_id)
+            .offset(offset)
+            .limit(limit)
+        )
         offer_count = (
-            await db_session.execute(
-                select(func.count())
-                .select_from(models_f.Offer)
-                .where(models_f.Offer.user_id == user_id)
-                .where(models_f.OfferCategoryValue.category_value_id == value[0])
-                .where(models_f.Offer.id == models_f.OfferCategoryValue.offer_id)
-                .offset(offset)
-                .limit(limit)
-            )
+            await db_session.execute(stmt)
         ).scalar_one_or_none()
-        
         if offer_count:
             result.append(
                 {
@@ -96,39 +94,28 @@ async def get_root_categories_count_with_offset_limit(
 async def get_offers_by_carcass_id(
     db_session: AsyncSession, user_id, carcass_id, offset, limit
 ):
-    carcass_names = (
-        await db_session.execute(
-            select(CategoryCarcass.select_name, CategoryCarcass.in_offer_name).where(
-                CategoryCarcass.id == carcass_id
-            )
-        )
-    ).all()[0]
+    carcass_names = await get_carcass_names(db_session, carcass_id)
+    if not carcass_names:
+        return None
 
-    next_value_ids = (
-        (
-            await db_session.execute(
-                select(CategoryValue.id).where(CategoryValue.carcass_id == carcass_id)
-            )
+    next_value_ids = await get_value_ids_by_carcass(db_session, carcass_id)
+    if not next_value_ids:
+        return None
+
+    stmt = (
+        select(
+            models_f.Offer.id,
+            models_f.Offer.name,
+            models_f.Offer.price,
+            models_f.Offer.count,
+            CategoryValue.value,
         )
-        .scalars()
-        .all()
+        .where(models_f.Offer.user_id == user_id)
+        .where(models_f.Offer.id == models_f.OfferCategoryValue.offer_id)
+        .where(models_f.OfferCategoryValue.category_value_id.in_(next_value_ids))
+        .where(CategoryValue.id == models_f.OfferCategoryValue.category_value_id)
     )
-
-    results = (
-        await db_session.execute(
-            select(
-                models_f.Offer.id,
-                models_f.Offer.name,
-                models_f.Offer.price,
-                models_f.Offer.count,
-                CategoryValue.value,
-            )
-            .where(models_f.Offer.user_id == user_id)
-            .where(models_f.Offer.id == models_f.OfferCategoryValue.offer_id)
-            .where(models_f.OfferCategoryValue.category_value_id.in_(next_value_ids))
-            .where(CategoryValue.id == models_f.OfferCategoryValue.category_value_id)
-        )
-    ).all()
+    results = (await db_session.execute(stmt)).all()
 
     return list(
         map(

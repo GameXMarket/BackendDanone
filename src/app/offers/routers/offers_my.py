@@ -24,14 +24,18 @@ base_session = deps.UserSession()
 )
 async def create_offfer(
     offer: schemas_f.CreateOffer,
-    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        base_session
+    ),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
     Создаётся новый оффер у авторизованного пользователя
     """
     token_data, user_context = current_session
-    user: models_u.User = await user_context.get_current_active_user(db_session, token_data)
+    user: models_u.User = await user_context.get_current_active_user(
+        db_session, token_data
+    )
     offer: models_f.Offer = await services_f.create_offer(
         db_session, user_id=user.id, obj_in=offer
     )
@@ -49,7 +53,9 @@ async def create_offfer(
 async def get_mini_with_offset_limit(
     offset: int = 0,
     limit: int = 10,
-    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        base_session
+    ),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
@@ -60,7 +66,9 @@ async def get_mini_with_offset_limit(
     Соритрует результат по дате создания от старых к новым (id могут идти не по порядку)
     """
     token_data, user_context = current_session
-    user: models_u.User = await user_context.get_current_active_user(db_session, token_data)
+    user: models_u.User = await user_context.get_current_active_user(
+        db_session, token_data
+    )
     offers: list[
         schemas_f.OfferMini
     ] = await services_f.get_mini_by_user_id_offset_limit(
@@ -73,16 +81,14 @@ async def get_mini_with_offset_limit(
     return offers
 
 
-
-@router.get(
-    path="/my/bycategories"
-)
+@router.get(path="/my/bycategories")
 async def get_root_categories_count_with_offset_limit(
     offset: int = 0,
     limit: int = 10,
-    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        base_session
+    ),
     db_session: AsyncSession = Depends(get_session),
-
 ):
     """
     Возвращает ваши категории + кол-во лотов
@@ -90,19 +96,24 @@ async def get_root_categories_count_with_offset_limit(
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
 
-    return await services_f.get_root_categories_count_with_offset_limit(db_session, user.id, offset, limit)
+    categories = await services_f.get_root_categories_count_with_offset_limit(
+        db_session, user.id, offset, limit
+    )
+    if not categories:
+        raise HTTPException(404)
+
+    return categories
 
 
-@router.get(
-    path="/my/bycarcassid"
-)
+@router.get(path="/my/bycarcassid")
 async def get_offers_by_category(
     carcass_id: int,
     offset: int = 0,
     limit: int = 10,
-    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        base_session
+    ),
     db_session: AsyncSession = Depends(get_session),
-
 ):
     """
     Возвращает ваши категории + кол-во лотов
@@ -110,8 +121,13 @@ async def get_offers_by_category(
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
 
-    return await services_f.get_offers_by_carcass_id(db_session, user.id, carcass_id, offset, limit)
+    offers = await services_f.get_offers_by_carcass_id(
+        db_session, user.id, carcass_id, offset, limit
+    )
+    if not offers:
+        raise HTTPException(404)
 
+    return offers
 
 
 @router.get(
@@ -123,11 +139,15 @@ async def get_offers_by_category(
 )
 async def get_by_id(
     offer_id: int,
-    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        base_session
+    ),
     db_session: AsyncSession = Depends(get_session),
 ):
     token_data, user_context = current_session
-    user: models_u.User = await user_context.get_current_active_user(db_session, token_data)
+    user: models_u.User = await user_context.get_current_active_user(
+        db_session, token_data
+    )
 
     offer = await services_f.get_by_user_id_offer_id(
         db_session, user_id=user.id, id=offer_id
@@ -149,16 +169,20 @@ async def get_by_id(
 async def update_offer(
     offer_id: int,
     offer_in: schemas_f.CreateOffer,
-    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        base_session
+    ),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
     Обновляется оффер у авторизованного пользователя по его id
     """
     token_data, user_context = current_session
-    user: models_u.User = await user_context.get_current_active_user(db_session, token_data)
+    user: models_u.User = await user_context.get_current_active_user(
+        db_session, token_data
+    )
     offer_db = await services_f.get_by_user_id_offer_id(
-        db_session, user_id=user.id, id=abs(offer_id)
+        db_session, user_id=user.id, id=offer_id
     )
 
     if not offer_db:
@@ -180,16 +204,20 @@ async def update_offer(
 )
 async def delete_offer(
     offer_id: int,
-    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        base_session
+    ),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
     Удаляется оффер у авторизованного пользователя по его id
     """
     token_data, user_context = current_session
-    user: models_u.User = await user_context.get_current_active_user(db_session, token_data)
+    user: models_u.User = await user_context.get_current_active_user(
+        db_session, token_data
+    )
     deleted_offer = await services_f.delete_offer(
-        db_session, user_id=user.id, offer_id=abs(offer_id)
+        db_session, user_id=user.id, offer_id=offer_id
     )
 
     if not deleted_offer:
