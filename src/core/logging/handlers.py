@@ -9,10 +9,10 @@ from core.settings.config import TG_LOG_TOKEN, TG_ERROR_LOG_CHANNEL, TG_INFO_LOG
 class CoreHandler(logging.Handler):
     def __init__(
         self,
-        level: int | str = 0,    
+        level: int | str = 0,
     ) -> None:
         self.levelnoms: dict = {
-            0:  self.process_notset,
+            0: self.process_notset,
             10: self.process_debug,
             20: self.process_info,
             30: self.process_warning,
@@ -28,9 +28,11 @@ class CoreHandler(logging.Handler):
         pass
 
     async def process_info(self, record: logging.LogRecord):
-        message = f"```shell\nI{record.levelname}\t\t{record.message}\n```"
-        await send_telegram_message(TG_LOG_TOKEN, TG_INFO_LOG_CHANNEL, message)
-    
+        message = f"```shell\n{record.levelname}\t\t{record.message}\n```"
+        await send_telegram_message(
+            TG_LOG_TOKEN, TG_INFO_LOG_CHANNEL, message, need_keyboard=False
+        )
+
     async def process_warning(self, record: logging.LogRecord):
         pass
 
@@ -38,7 +40,9 @@ class CoreHandler(logging.Handler):
         exc_info = record.exc_info
         if exc_info:
             exc_type, exc_value, exc_traceback = exc_info
-            tb_str = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+            tb_str = "".join(
+                traceback.format_exception(exc_type, exc_value, exc_traceback)
+            )
 
         message = f"`{record.levelname}\t{record.message}`\n```shell\n{tb_str}\n```"
         await send_telegram_message(TG_LOG_TOKEN, TG_ERROR_LOG_CHANNEL, message)
