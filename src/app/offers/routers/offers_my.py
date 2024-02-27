@@ -48,11 +48,10 @@ async def create_offfer(
 )
 async def get_mini_with_offset_limit(
     offset: int = 0,
-    limit: int = 1,
+    limit: int = 10,
     current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
-    # # ЭТО НЕ БУДЕТ РАБОТАТЬ !!! 
     """
     Получает мини офферы авторизованного пользователя, требуется два паметра: offset, limit<br>
     &nbsp;- если offset == 10, то первые 10 строк будут пропущены, и выборка начнется с 11-й строки<br>
@@ -72,6 +71,27 @@ async def get_mini_with_offset_limit(
     )
 
     return offers
+
+
+
+@router.get(
+    path="/my/categories"
+)
+async def get_root_categories_with_offset_count(
+    offset: int = 0,
+    limit: int = 10,
+    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
+    db_session: AsyncSession = Depends(get_session),
+
+):
+    """
+    Возвращает ваши категории + кол-во лотов
+    """
+    token_data, user_context = current_session
+    user = await user_context.get_current_active_user(db_session, token_data)
+
+    return await services_f.get_root_categories_with_offset_count(db_session, user.id, offset, limit)
+
 
 
 @router.get(
