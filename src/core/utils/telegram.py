@@ -21,7 +21,7 @@ async def split_message(text: str, max_length: int = 4069):
         remaining = text[split_index:]
         if chunk.count("```") % 2 != 0:
             chunk = chunk + "```"
-            remaining = "```" + remaining
+            remaining = "```shell" + remaining
 
         return [chunk] + await split_message(remaining)
 
