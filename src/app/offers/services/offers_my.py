@@ -61,7 +61,7 @@ async def get_root_categories_count_with_offset_limit(
     db_session: AsyncSession, user_id, offset, limit
 ):
     result = []
-    root_values = get_root_values(db_session)
+    root_values = await get_root_values(db_session)
     if not root_values:
         return None
     
