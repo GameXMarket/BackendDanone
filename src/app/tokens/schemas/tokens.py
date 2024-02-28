@@ -6,8 +6,10 @@ from pydantic import BaseModel, EmailStr
 class TokenType(str, Enum):
     access: str = "access"
     refresh: str = "refresh"
-    email_verify: str = "email-verify"
+    email_verify: str = "email_verify"
     password_reset: str = "password_reset"
+    email_change: str = "email_change"
+    
 
 
 class JwtPayload(BaseModel):

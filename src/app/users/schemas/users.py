@@ -72,12 +72,16 @@ class UserLogin(EmailField, PasswordField):
     pass
 
 
-class UserUpdate(UsernameField, PasswordField):
-    """Используется для изменения имени и пароля"""
-    username: Optional[str] = _u
-    password: Optional[str] = _p
-    is_verified: bool = True
-    auth: Optional[PasswordField]
+class UserUpdateUsername(UsernameField):
+    pass
+
+
+class UserUpdatePassword(PasswordField):
+    auth: PasswordField
+
+
+class UserUpdateEmail(BaseModel):
+    auth: PasswordField
 
 
 class UserPreDB(BaseUser):

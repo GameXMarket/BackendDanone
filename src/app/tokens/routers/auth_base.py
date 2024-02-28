@@ -18,7 +18,7 @@ import app.tokens.services as BannedTokensService
 
 logger = logging.getLogger("uvicorn")
 router = APIRouter(responses={200: {"model": schemas_t.TokenSet}})
-
+# ! Need refactoring
 
 @router.post(path="/login", responses={401: {"model": schemas_t.TokenError}})
 async def token_set(
@@ -58,7 +58,7 @@ async def token_set(
     path="/refresh",
     responses=deps.build_response(deps.get_refresh),
 )
-async def token_update(token_data: schemas_t.JwtPayload = Depends(deps.get_refresh), db_session: Session = Depends(get_session)):
+async def token_update(token_data: schemas_t.JwtPayload = Depends(deps.get_refresh), db_session = Depends(get_session)):
     """
     Данный метод принимает refresh токен, возвращает новую пару ключей
     """
@@ -191,5 +191,53 @@ async def verify_password_reset(
         db_session, db_obj=user, obj_in={"password": password_f.password}
     )
 
+    return schemas_u.UserPreDB(**user.to_dict())
+
+
+@router.post(
+    path="/email-change",
+    responses={
+        401: {"model": schemas_t.TokenError},
+        404: {"model": schemas_u.UserError},
+        409: {"model": schemas_u.UserError},
+        200: {"model": schemas_u.UserPreDB},
+    },
+)
+async def verify_password_reset(
+    token: str,
+    form_data: schemas_u.EmailField,
+    db_session: Session = Depends(get_session),
+):
+    """
+    Метод используется для верификации пользователей, через почту
+    """
+    token_data = await TokenSecurity.verify_jwt_token(
+        token=token, secret=conf.EMAIL_CHANGE_SECRET_KEY, db_session=db_session
+    )
+
+    if not token_data:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token not found"
+        )
+    
+    banned_token = await BannedTokensService.ban_token(
+        db_session, token=token, payload=token_data
+    )
+    
+    user = await UserService.get_by_id(db_session, id=token_data.user_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+
+    if not UserService.is_active(user):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="User not active"
+        )
+
+    user = await UserService.update_user(
+        db_session, db_obj=user, obj_in={"email": form_data.email}
+    )
 
     return schemas_u.UserPreDB(**user.to_dict())

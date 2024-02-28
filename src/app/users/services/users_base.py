@@ -53,7 +53,7 @@ async def create_user(
 
 
 async def update_user(
-    db_session: AsyncSession, *, db_obj: models.User, obj_in: schemas.UserInDB | dict
+    db_session: AsyncSession, db_obj: models.User, obj_in: schemas.UserInDB | dict
 ):
     """UserInDB - Максимальное кол-во полей, доступное тут, настоящий тип может быть и другим"""
     db_obj.updated_at = int(time.time())

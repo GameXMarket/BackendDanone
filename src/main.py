@@ -101,6 +101,7 @@ async def __init_base_db():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # ! Решение только на время разработки
     info_tg_handler = InfoHandlerTG()
     error_tg_handler = ErrorHandlerTG()
     

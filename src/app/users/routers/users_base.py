@@ -1,5 +1,6 @@
 import logging
 
+import fastapi
 from fastapi import Depends, APIRouter, WebSocket, WebSocketDisconnect, HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import noload
@@ -78,59 +79,93 @@ async def get_user(current_session: tuple[schemas_t.JwtPayload ,deps.UserSession
     return UserPreDB(**user.to_dict())
 
 
-@router.patch(
-    path="/me",
-    responses={
-        **{
-            401: {"model": UserError},
-            418: {"model": UserError},
-            409: {"model": UserError},
-        },
-        **deps.build_response(deps.UserSession.get_current_active_user),
-    },
-)
-async def update_user(
-    form_data: UserUpdate,
+@router.patch(path="/me/update/username")
+async def update_user_username(
+    data_form: UserUpdateUsername,
     current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(default_session),
     db_session: AsyncSession = Depends(get_session),
 ):
-    """
-    Данный метод используется для изменения пароля и username пользователя\n
-    Для подтверждения сначала проверятся токен, далее пароль и остальные поля
-    """
+    token_data, user_context = current_session
+    user: User = await user_context.get_current_active_user(db_session, token_data)
+
+    if await UserService.get_by_username(db_session, username=data_form.username):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,)
+    
+    updated_user = await UserService.update_user(db_session, user, {"username": data_form.username})
+    return updated_user
+
+
+@router.patch(path="/me/update/password")
+async def update_user_password(
+    data_form: UserUpdatePassword,
+    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(default_session),
+    db_session: AsyncSession = Depends(get_session),
+):
     token_data, user_context = current_session
     user: User = await user_context.get_current_active_user(db_session, token_data)
     
-    if form_data.password and not verify_password(form_data.auth.password, user.hashed_password):
+    if not verify_password(data_form.auth.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect old password",
+            detail="Could not validate credentials",
         )
 
-    if form_data.username:
-        if await UserService.get_by_username(db_session, username=form_data.username):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="The user with this username already exists in the system.",
-            )
+    updated_user = await UserService.update_user(db_session, user, {"password": data_form.password})
+    return updated_user
 
-    new_user = await UserService.update_user(db_session, db_obj=user, obj_in=form_data)
 
-    return UserPreDB(**new_user.to_dict())
+@router.patch(path="/me/update/email",)
+async def update_user_email(
+    data_form: UserUpdateEmail,
+    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(default_session),
+    db_session: AsyncSession = Depends(get_session),
+):
+    token_data, user_context = current_session
+    user: User = await user_context.get_current_active_user(db_session, token_data)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+
+    verify_token = create_jwt_token(
+        type_=schemas_t.TokenType.email_change,
+        email=user.email,
+        secret=conf.EMAIL_CHANGE_SECRET_KEY,
+        expires_delta=conf.EMAIL_CHANGE_TOKEN_EXPIRE_MINUTES,
+        user_id=user.id
+    )
+
+    try:
+        await user_auth_sender.send_email(
+            sender_name="Danone Market",
+            receiver_email=user.email,
+            subject="Email change",
+            body=await render_auth_template(
+                template_file="email-change.html", data={"token": verify_token}
+            ),
+        )
+    except BaseException as ex:
+        logger.error(type(ex))
+        logger.exception(ex)
+        raise HTTPException(
+            detail="email not sended", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+    return JSONResponse(content={"detail": "email_sended"})
 
 
 @router.delete(
     path="/me",
-    responses={
-        **{401: {"model": UserError}},
-        **deps.build_response(deps.UserSession.get_current_active_user),
-    },
 )
 async def remove_user(
     old_password: PasswordField,
     current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(default_session),
     db_session: AsyncSession = Depends(get_session),
 ):
+    """
+    Метод для дебага
+    """
     token_data, user_context = current_session
     user: User = await user_context.get_current_active_user(db_session, token_data)
     
