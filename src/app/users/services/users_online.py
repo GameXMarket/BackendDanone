@@ -69,6 +69,7 @@ class OnlineConnectionManager:
             await self.broadcast(True, subscribers, conn_context)
 
     async def disconnect(self, conn_context: ConnectionContext):
+        # ! Временный костыль
         if conn_context.unique_id in self.ws_connections:
             del self.ws_connections[conn_context.unique_id]
 

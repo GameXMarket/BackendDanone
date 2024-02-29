@@ -95,7 +95,9 @@ class ChatConnectionManager:
         self.ws_connections[conn_context.user_id] = conn_context.websocket
 
     async def disconnect(self, conn_context: ConnectionContext):
-        del self.ws_connections[conn_context.user_id]
+        # ! Временный костыль
+        if conn_context.user_id in self.ws_connections:
+            del self.ws_connections[conn_context.user_id]
 
     async def broadcast(
         self, conn_context: ConnectionContext, message: models_m.Message
