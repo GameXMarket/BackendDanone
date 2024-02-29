@@ -25,7 +25,7 @@ class Offer(Base):
     upped_at = Column(Integer, nullable=False)
     
     user: Mapped["User"] = relationship(back_populates="offers", lazy="noload")
-    category_values: Mapped[list["OfferCategoryValue"]] = relationship(lazy="selectin")
+    category_values: Mapped[list["OfferCategoryValue"]] = relationship(cascade="all, delete-orphan", lazy="selectin")
     
 
 class OfferCategoryValue(Base):
