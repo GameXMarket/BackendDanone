@@ -106,11 +106,16 @@ class ChatConnectionManager:
     async def broadcast(
         self, conn_context: ConnectionContext, message: models_m.Message
     ):
+        all_current_user_connections = self.ws_connections[conn_context.user_id]
+        
+        for ws in all_current_user_connections:
+            await ws.send_json(message.to_dict())
+        
         if message.receiver_id not in self.ws_connections:
             return
-        
-        all_current_connections = self.ws_connections[message.receiver_id]
-        for ws in all_current_connections:
+
+        all_current_chat_connections = self.ws_connections[message.receiver_id]
+        for ws in all_current_chat_connections:
             await ws.send_json(message.to_dict())
 
     async def start_listening(self, conn_context: ConnectionContext):
