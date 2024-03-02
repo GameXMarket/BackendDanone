@@ -65,7 +65,7 @@ class ConnectionContext:
 # TODO проверку на существавание юзера и тд
 # Пока просто будут исключения из-за ограничений на бд
 class ChatConnectionManager:
-    ws_connections: dict[int, WebSocket] = {}
+    ws_connections: dict[int, set[WebSocket]] = {}
 
     def __init__(self):
         pass
@@ -92,11 +92,15 @@ class ChatConnectionManager:
 
     async def connect(self, conn_context: ConnectionContext):
         await conn_context.websocket.accept()
-        self.ws_connections[conn_context.user_id] = conn_context.websocket
+        if conn_context.user_id not in self.ws_connections:
+            self.ws_connections[conn_context.user_id] = set()
+            
+        self.ws_connections[conn_context.user_id].add(conn_context.websocket)
 
     async def disconnect(self, conn_context: ConnectionContext):
-        # ! Временный костыль
-        if conn_context.user_id in self.ws_connections:
+        all_current_connections = self.ws_connections[conn_context.user_id]
+        all_current_connections.remove(conn_context.websocket)
+        if len(all_current_connections) == 0:
             del self.ws_connections[conn_context.user_id]
 
     async def broadcast(
@@ -104,8 +108,10 @@ class ChatConnectionManager:
     ):
         if message.receiver_id not in self.ws_connections:
             return
-
-        await self.ws_connections[message.receiver_id].send_json(message.to_dict())
+        
+        all_current_connections = self.ws_connections[message.receiver_id]
+        for ws in all_current_connections:
+            await ws.send_json(message.to_dict())
 
     async def start_listening(self, conn_context: ConnectionContext):
         while True:

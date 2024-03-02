@@ -28,7 +28,7 @@ class ConnectionContext:
 
 
 class OnlineConnectionManager:
-    ws_connections: dict[int, WebSocket] = {}
+    ws_connections: dict[int, set[WebSocket]] = {}
 
     def __init__(self):
         pass
@@ -56,8 +56,11 @@ class OnlineConnectionManager:
 
     async def connect(self, conn_context: ConnectionContext):
         await conn_context.websocket.accept()
-        self.ws_connections[conn_context.unique_id] = conn_context.websocket
-        
+        if conn_context.unique_id not in self.ws_connections:
+            self.ws_connections[conn_context.unique_id] = set()
+
+        self.ws_connections[conn_context.unique_id].add(conn_context.websocket)
+
         async with get_redis_client() as redis_client:
             if conn_context.is_auth_user:
                 await redis_client.sadd("online_users", conn_context.unique_id)
@@ -69,9 +72,11 @@ class OnlineConnectionManager:
             await self.broadcast(True, subscribers, conn_context)
 
     async def disconnect(self, conn_context: ConnectionContext):
-        # ! Временный костыль
-        if conn_context.unique_id in self.ws_connections:
+        all_current_connections = self.ws_connections[conn_context.unique_id]
+        all_current_connections.remove(conn_context.websocket)
+        if len(all_current_connections) == 0:
             del self.ws_connections[conn_context.unique_id]
+            
 
         async with get_redis_client() as redis_client:
             if conn_context.is_auth_user:
@@ -96,7 +101,8 @@ class OnlineConnectionManager:
         self, state: bool, subscribers: list[bytes], conn_context: ConnectionContext
     ):
         for client in subscribers:
-            if ws := self.ws_connections.get(int(client), None):
+            all_current_connections = self.ws_connections[int(client)]
+            for ws in all_current_connections:
                 await ws.send_json({int(conn_context.unique_id): state})
 
     async def start_listening(self, conn_context: ConnectionContext):
