@@ -67,7 +67,7 @@ async def send_telegram_message(
                 )
                 if (response.status_code == 200) and need_log:
                     tg_logger.info(f"Telegram message sent to {chat_id}")
-                elif response.status_code != 200:
+                elif response.status_code != 200 and need_log:
                     tg_logger.error(
                         f"Telegram message not sent?\n status: {response.status_code}\n response_text: {response.text}"
                     )
