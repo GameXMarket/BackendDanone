@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pydantic import ValidationError
 from fastapi import Depends, WebSocket, WebSocketException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 
 from core import depends as deps
 from core.database import context_get_session
@@ -26,11 +26,12 @@ async def get_by_id(db_session: AsyncSession, sender_id: int, message_id: int):
 async def get_with_offset_limit(
     db_session: AsyncSession, sender_id: int, receiver_id: int, offset: int, limit: int
 ):
+    # temp f, need rewriting
     stmt = (
         select(models_m.Message)
         .where(
-            models_m.Message.sender_id == sender_id
-            and models_m.Message.receiver_id == receiver_id
+                (models_m.Message.sender_id == sender_id and models_m.Message.receiver_id == receiver_id),
+                (models_m.Message.sender_id == receiver_id and models_m.Message.receiver_id == sender_id),
         )
         .offset(offset)
         .limit(limit)
@@ -110,6 +111,9 @@ class ChatConnectionManager:
         
         for ws in all_current_user_connections:
             await ws.send_json(message.to_dict())
+        
+        if message.receiver_id == conn_context.user_id:
+            return
         
         if message.receiver_id not in self.ws_connections:
             return
