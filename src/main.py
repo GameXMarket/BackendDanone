@@ -32,8 +32,6 @@ current_file_path = os.path.abspath(__file__)
 locales_path = os.path.join(os.path.dirname(current_file_path), "_locales")
 
 
-from app.attachment.models import Attachment, File
-
 """ # Temp dev sql
 INSERT INTO category_carcass (id, author_id, is_root, select_name, in_offer_name, admin_comment, is_last, created_at, updated_at)
 VALUES  
@@ -118,7 +116,7 @@ async def lifespan(app: FastAPI):
     async with get_redis_client() as client:
         logger.info(f"Redis ping returned with: {await client.ping()}.")
 
-    check_dir_exists(conf.DATA_PATH, auto_create=True)
+    await check_dir_exists(conf.DATA_PATH, auto_create=True)
         
     yield
     

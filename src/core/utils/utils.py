@@ -1,19 +1,22 @@
 from typing import Any
 import logging
-import os
+import aiofiles.os
 
 
 logger = logging.getLogger("uvicorn")
 
 
-def check_dir_exists(path: str | Any, auto_create: bool = True):
+async def check_dir_exists(path: str | Any, auto_create: bool = True):
     """
-    Проверяет существование директории, по умолчанию, если не нашлась, создаёт её 
+    Проверяет существование директории, по умолчанию, если не нашлась, создаёт её
     """
-    if os.path.exists(path):
+    
+    path_exist = await aiofiles.os.path.exists(path)
+    
+    if path_exist:
         return True
     elif auto_create:
-        os.mkdir(path)
+        await aiofiles.os.makedirs(path)
         logger.info(f"Directory {path} created.")
         return True
     
