@@ -137,6 +137,7 @@ async def auto_token_ban(
 
 
 class UserSession:
+    # TODO Добавить методы проверки существования, получения только id
     request_method: Literal[
         "http",
         "ws"
