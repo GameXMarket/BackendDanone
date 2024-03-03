@@ -1,1 +1,1 @@
-from .attachment import Attachment, File
+from .attachment import Attachment, File, OfferAttachment

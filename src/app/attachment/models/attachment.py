@@ -18,6 +18,7 @@ https://ru.stackoverflow.com/questions/1430715/Наследование-и-По�
 где дети ссылаются на родителя, и в идеале имеют одинаковый Primary Key. 
 В этом случае данные одного экземпляра класса будут физически разделены 
 в разных таблицах, и извлечение всех полей объекта потребует JOIN-запроса.
+# https://docs.sqlalchemy.org/en/14/orm/inheritance.html#joined-table-inheritance
 
 
 1.3. TPH: Table-Per-Hierarchy
@@ -41,13 +42,14 @@ class Attachment(Base):
 
     __tablename__ = "base_attachment"
     id = Column(Integer, primary_key=True)
+    author_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"))
     entity_type = Column(
         Enum(
             "base_attachment",
-            "user_attacment",
-            "message_attacment",
-            "offer_attacment",
-            "conflict_attacment",
+            "user_attachment",
+            "message_attachment",
+            "offer_attachment",
+            "conflict_attachment",
             name="attachment_types",
         )
     )
@@ -60,61 +62,110 @@ class Attachment(Base):
     }
 
 
+class OfferAttachment(Attachment):
+    __tablename__ = "offer_attachment"
+    id = Column(
+        Integer, ForeignKey("base_attachment.id", ondelete="CASCADE"), primary_key=True
+    )
+    offer_id = Column(Integer, ForeignKey("offer.id", ondelete="CASCADE"), unique=True)
+
+    __mapper_args__ = {
+        "polymorphic_identity": "offer_attachment",
+    }
+
+
 class UserAttachment(Attachment):
-    __tablename__ = "user_attacment"
-    id = Column(Integer, ForeignKey("base_attachment.id"), primary_key=True)
+    __tablename__ = "user_attachment"
+    id = Column(
+        Integer, ForeignKey("base_attachment.id", ondelete="CASCADE"), primary_key=True
+    )
     user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), unique=True)
 
     __mapper_args__ = {
-        "polymorphic_identity": "user_attacment",
+        "polymorphic_identity": "user_attachment",
     }
 
 
 class MessageAttachment(Attachment):
-    __tablename__ = "message_attacment"
-    id = Column(Integer, ForeignKey("base_attachment.id"), primary_key=True)
+    __tablename__ = "message_attachment"
+    id = Column(
+        Integer, ForeignKey("base_attachment.id", ondelete="CASCADE"), primary_key=True
+    )
     message_id = Column(
         Integer, ForeignKey("message.id", ondelete="CASCADE"), unique=True
     )
 
     __mapper_args__ = {
-        "polymorphic_identity": "message_attacment",
+        "polymorphic_identity": "message_attachment",
     }
-
-
-class OfferAttachment(Attachment):
-    __tablename__ = "offer_attacment"
-    id = Column(Integer, ForeignKey("base_attachment.id"), primary_key=True)
-    offer = Column(Integer, ForeignKey("offer.id", ondelete="CASCADE"), unique=True)
-
-    __mapper_args__ = {
-        "polymorphic_identity": "offer_attacment",
-    }
-
-
-"""
-class ConflictAttachment(Attachment):
-    __tablename__ = "conflict_attacment"
-    id = Column(Integer, ForeignKey("attachment.id"), primary_key=True)
-    conflict_id = Column(Integer, ForeignKey("conflict.id", ondelete="CASCADE"), unique=True)
-
-    __mapper_args__ = {
-        "polymorphic_identity": "conflict_attacment",
-    }
-"""
 
 
 class File(Base):
+    """
+    Путь файла находится через created_at параметр + hash
+    """
     __tablename__ = "file"
     id = Column(Integer, primary_key=True)
-    attachment_id = Column(Integer, ForeignKey("base_attachment.id", ondelete="CASCADE"))
-    file_name = Column(String)
-    file_type = Column(String)
+    attachment_id = Column(
+        Integer, ForeignKey("base_attachment.id", ondelete="CASCADE")
+    )
+    hash = Column(String)
+    name = Column(String)
+    type = Column(String)
     created_at = Column(Integer)
 
 
+delete_from_base_attachment_sql_func = """
+CREATE OR REPLACE FUNCTION delete_from_base_attachment()
+RETURNS TRIGGER AS $$
+BEGIN
+    DELETE FROM base_attachment WHERE id = OLD.id;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+"""
+
+
+def __create_trigger(
+    connection: sqlalchemy.engine.base.Connection, trigger_name: str, table_name: str
+):
+    trigger_sql = f"""
+    CREATE OR REPLACE TRIGGER {trigger_name}_trigger
+    AFTER DELETE ON {table_name}
+    FOR EACH ROW EXECUTE FUNCTION delete_from_base_attachment();
+    """
+    connection.execute(text(trigger_sql))
+
+
 @event.listens_for(Attachment.__table__, "after_create")
-def create_trigger(
+def create_attachment_trigger(
     target: Attachment.__table__, connection: sqlalchemy.engine.base.Connection, **kw
 ):
-    pass
+    connection.execute(text(delete_from_base_attachment_sql_func))
+
+
+@event.listens_for(OfferAttachment.__table__, "after_create")
+def create_offer_attachment_trigger(
+    target: OfferAttachment.__table__,
+    connection: sqlalchemy.engine.base.Connection,
+    **kw,
+):
+    __create_trigger(connection, "offer_attachment_delete", "offer_attachment")
+
+
+@event.listens_for(UserAttachment.__table__, "after_create")
+def create_user_attachment_trigger(
+    target: UserAttachment.__table__,
+    connection: sqlalchemy.engine.base.Connection,
+    **kw,
+):
+    __create_trigger(connection, "user_attachment_delete", "user_attachment")
+
+
+@event.listens_for(MessageAttachment.__table__, "after_create")
+def create_message_attachment_trigger(
+    target: MessageAttachment.__table__,
+    connection: sqlalchemy.engine.base.Connection,
+    **kw,
+):
+    __create_trigger(connection, "message_attachment_delete", "message_attachment")
