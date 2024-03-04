@@ -140,8 +140,10 @@ create_deleted_file_sql_func = """
 CREATE OR REPLACE FUNCTION create_deleted_file()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO deleted_file (hash, created_at)
-    VALUES (OLD.hash, OLD.created_at);
+    IF NOT EXISTS (SELECT 1 FROM file WHERE hash = OLD.hash) THEN
+        INSERT INTO deleted_file (hash, created_at)
+        VALUES (OLD.hash, OLD.created_at);
+    END IF;
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
