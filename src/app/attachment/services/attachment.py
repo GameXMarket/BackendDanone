@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Coroutine, Any
+from typing import Literal
 from urllib.parse import urljoin
 import hashlib
 import time
@@ -18,6 +18,16 @@ from core.utils import check_dir_exists
 
 class FileManager:
     # TODO Зачистка лишних метаданных
+    file_delete_mode: Literal[
+        "instantly",
+        "deferred",
+        "manual"
+    ] = ...
+    """
+     - instantly - Удаление по ивенту 
+     - deferred - Отложенное в определённый момент
+     - manual - Ручной запуск скрипта для очистки
+    """
     async def _write_file(self, file_data: bytes, file_name: str):
         current_data = datetime.now()
         unix_timestamp = int(time.mktime(current_data.date().timetuple()))

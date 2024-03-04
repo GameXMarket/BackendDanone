@@ -115,6 +115,16 @@ class File(Base):
     created_at = Column(Integer)
 
 
+class DeletedFile(Base):
+    """
+    Хранит записи файлов, которые требуется удалить
+    """
+    __tablename__ = "deleted_file"
+    id = Column(Integer, primary_key=True)
+    hash = Column(String)
+    created_at = Column(Integer)
+
+
 delete_from_base_attachment_sql_func = """
 CREATE OR REPLACE FUNCTION delete_from_base_attachment()
 RETURNS TRIGGER AS $$
@@ -126,13 +136,25 @@ $$ LANGUAGE plpgsql;
 """
 
 
+create_deleted_file_sql_func = """
+CREATE OR REPLACE FUNCTION create_deleted_file()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO deleted_file (hash, created_at)
+    VALUES (OLD.hash, OLD.created_at);
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+"""
+
+
 def __create_trigger(
-    connection: sqlalchemy.engine.base.Connection, trigger_name: str, table_name: str
+    connection: sqlalchemy.engine.base.Connection, trigger_name: str, table_name: str, function_name: str
 ):
     trigger_sql = f"""
     CREATE OR REPLACE TRIGGER {trigger_name}_trigger
     AFTER DELETE ON {table_name}
-    FOR EACH ROW EXECUTE FUNCTION delete_from_base_attachment();
+    FOR EACH ROW EXECUTE FUNCTION {function_name}();
     """
     connection.execute(text(trigger_sql))
 
@@ -144,13 +166,20 @@ def create_attachment_trigger(
     connection.execute(text(delete_from_base_attachment_sql_func))
 
 
+@event.listens_for(DeletedFile.__table__, "after_create")
+def create_attachment_trigger(
+    target: Attachment.__table__, connection: sqlalchemy.engine.base.Connection, **kw
+):
+    connection.execute(text(create_deleted_file_sql_func))
+
+
 @event.listens_for(OfferAttachment.__table__, "after_create")
 def create_offer_attachment_trigger(
     target: OfferAttachment.__table__,
     connection: sqlalchemy.engine.base.Connection,
     **kw,
 ):
-    __create_trigger(connection, "offer_attachment_delete", "offer_attachment")
+    __create_trigger(connection, "offer_attachment_after_delete", "offer_attachment", "delete_from_base_attachment")
 
 
 @event.listens_for(UserAttachment.__table__, "after_create")
@@ -159,7 +188,7 @@ def create_user_attachment_trigger(
     connection: sqlalchemy.engine.base.Connection,
     **kw,
 ):
-    __create_trigger(connection, "user_attachment_delete", "user_attachment")
+    __create_trigger(connection, "user_attachment_after_delete", "user_attachment", "delete_from_base_attachment")
 
 
 @event.listens_for(MessageAttachment.__table__, "after_create")
@@ -168,4 +197,13 @@ def create_message_attachment_trigger(
     connection: sqlalchemy.engine.base.Connection,
     **kw,
 ):
-    __create_trigger(connection, "message_attachment_delete", "message_attachment")
+    __create_trigger(connection, "message_attachment_after_delete", "message_attachment", "delete_from_base_attachment")
+
+
+@event.listens_for(File.__table__, "after_create")
+def create_message_attachment_trigger(
+    target: File.__table__,
+    connection: sqlalchemy.engine.base.Connection,
+    **kw,
+):
+    __create_trigger(connection, "file_after_delete", "file", "create_deleted_file")

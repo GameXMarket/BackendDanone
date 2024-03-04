@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+from typing import Literal
 import os
 
 # Загрузка переменных из .env файла
@@ -23,8 +24,18 @@ SERVER_IP: str = os.getenv("SERVER_IP")
 SERVER_PORT: int = int(os.getenv("SERVER_PORT"))
 NGINX_DATA_ENDPOINT: str = os.getenv("NGINX_DATA_ENDPOINT")
 
+# ATTACMENT
+
+DATA_PATH: str = os.path.join(root_path, "data")
+FILES_DELETE_MODE: str = os.getenv("FILES_DELETE_MODE")
+DEFERRED_HOUR_TO_DELETE: int = int(os.getenv("DEFERRED_HOUR_TO_DELETE"))
+
+# DATABASE
+
 DATABASE_URL: str = os.getenv("DATABASE_URL")
 REDIS_URL: str = os.getenv("REDIS_URL")
+
+# JWT
 
 ALGORITHM: str = os.getenv("ALGORITHM")
 ACCESS_SECRET_KEY: str = os.getenv("ACCESS_SECRET_KEY")
@@ -75,16 +86,15 @@ BASE_ADMIN_MAIL_PASSWORD: str = os.getenv("BASE_ADMIN_MAIL_PASSWORD")
 BASE_ADMIN_MARKET_LOGIN: str = os.getenv("BASE_ADMIN_MARKET_LOGIN")
 BASE_ADMIN_MARKET_PASSWORD: str = os.getenv("BASE_ADMIN_MARKET_PASSWORD")
 
+# DEBUG
+
 if DEBUG:
     BASE_DEBUG_USER_LOGIN: str = os.getenv("BASE_DEBUG_USER_LOGIN")
     BASE_DEBUG_USER_EMAIL: str = os.getenv("BASE_DEBUG_USER_EMAIL")
     BASE_DEBUG_USER_PASS: str = os.getenv("BASE_DEBUG_USER_PASS")
 
-# ATTACMENT
 
-DATA_PATH: str = os.path.join(root_path, "data")
-
-# logging
+# LOGGING
 
 TG_LOG_TOKEN: str = os.getenv("TG_LOG_TOKEN")
 TG_ERROR_LOG_CHANNEL: int = os.getenv("TG_ERROR_LOG_CHANNEL")
