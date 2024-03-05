@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Literal
 from urllib.parse import urljoin
 import hashlib
+import logging
 import time
 import json
 
@@ -16,6 +17,9 @@ from .. import models, schemas
 from core.settings import config
 from core.utils import check_dir_exists
 from core.database import event_listener, context_get_session
+
+
+logger = logging.getLogger("uvicorn")
 
 
 class FileManager:
@@ -33,6 +37,7 @@ class FileManager:
     """
     async def setup(self):
         await event_listener.add_listener("new_deleted_file", self.file_delete_callback)
+        logger.info("File manager setup completed!")
     
     def _get_hash_md5(self, file_data: bytes):
         return hashlib.md5(file_data).hexdigest()
