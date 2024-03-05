@@ -18,7 +18,7 @@ router = APIRouter()
 default_session = deps.UserSession()
 base_attachment_manager = BaseAttachmentManager()
 offer_attacment_manager = OfferAttachmentManager()
-setup_helper.add_new_coroutine_def(base_attachment_manager.setup())
+setup_helper.add_new_coroutine_def(base_attachment_manager.setup)
 
 
 @router.get("/")
