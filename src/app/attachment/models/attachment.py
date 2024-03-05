@@ -67,7 +67,7 @@ class OfferAttachment(Attachment):
     id = Column(
         Integer, ForeignKey("base_attachment.id", ondelete="CASCADE"), primary_key=True
     )
-    offer_id = Column(Integer, ForeignKey("offer.id", ondelete="CASCADE"), unique=True)
+    offer_id = Column(Integer, ForeignKey("offer.id", ondelete="CASCADE"), unique=True, nullable=False)
 
     __mapper_args__ = {
         "polymorphic_identity": "offer_attachment",
@@ -79,7 +79,7 @@ class UserAttachment(Attachment):
     id = Column(
         Integer, ForeignKey("base_attachment.id", ondelete="CASCADE"), primary_key=True
     )
-    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), unique=True)
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), unique=True, nullable=False)
 
     __mapper_args__ = {
         "polymorphic_identity": "user_attachment",
@@ -92,7 +92,7 @@ class MessageAttachment(Attachment):
         Integer, ForeignKey("base_attachment.id", ondelete="CASCADE"), primary_key=True
     )
     message_id = Column(
-        Integer, ForeignKey("message.id", ondelete="CASCADE"), unique=True
+        Integer, ForeignKey("message.id", ondelete="CASCADE"), unique=True, nullable=False
     )
 
     __mapper_args__ = {
@@ -139,10 +139,14 @@ $$ LANGUAGE plpgsql;
 create_deleted_file_sql_func = """
 CREATE OR REPLACE FUNCTION create_deleted_file()
 RETURNS TRIGGER AS $$
+DECLARE
+    payload TEXT;
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM file WHERE hash = OLD.hash) THEN
-        INSERT INTO deleted_file (hash, created_at)
-        VALUES (OLD.hash, OLD.created_at);
+        INSERT INTO deleted_file (id, hash, created_at)
+        VALUES (OLD.id, OLD.hash, OLD.created_at);
+		payload := json_build_object('unix', OLD.created_at, 'hash', OLD.hash);
+        PERFORM pg_notify('new_deleted_file', payload);
     END IF;
     RETURN NULL;
 END;

@@ -3,6 +3,7 @@ from typing import Literal
 from urllib.parse import urljoin
 import hashlib
 import time
+import json
 
 from fastapi.encoders import jsonable_encoder
 from fastapi import UploadFile
@@ -14,20 +15,28 @@ import os, aiofiles, aiofiles.os
 from .. import models, schemas
 from core.settings import config
 from core.utils import check_dir_exists
+from core.database import event_listener, context_get_session
 
 
 class FileManager:
     # TODO Зачистка лишних метаданных
+    # TODO Требуется настроить очередь для выполнения отложенного выполнения
     file_delete_mode: Literal[
         "instantly",
         "deferred",
         "manual"
-    ] = ...
+    ] = config.FILES_DELETE_MODE
     """
      - instantly - Удаление по ивенту 
      - deferred - Отложенное в определённый момент
      - manual - Ручной запуск скрипта для очистки
     """
+    async def setup(self):
+        await event_listener.add_listener("new_deleted_file", self.file_delete_callback)
+    
+    def _get_hash_md5(self, file_data: bytes):
+        return hashlib.md5(file_data).hexdigest()
+    
     async def _write_file(self, file_data: bytes, file_name: str):
         current_data = datetime.now()
         unix_timestamp = int(time.mktime(current_data.date().timetuple()))
@@ -42,8 +51,11 @@ class FileManager:
             await out_file.write(file_data)
 
     async def _delete_file(self, path_to_file: str):
+        path_to_file = os.path.join(config.DATA_PATH, path_to_file)
+        
         await aiofiles.os.remove(path_to_file)
 
+        # TODO вероятно временно на время отладки (для удобства)
         dir_path = os.path.dirname(path_to_file)
         files_in_dir = await aiofiles.os.listdir(dir_path)
 
@@ -56,6 +68,11 @@ class FileManager:
 
         return content
 
+    def _get_file_path_by_unix_hash(self, unix: str, hash: str):
+        timestamp_data = datetime.fromtimestamp(unix)
+        unix_timestamp = int(time.mktime(timestamp_data.date().timetuple()))
+        return f"{unix_timestamp}/{timestamp_data.hour}/{hash}"
+    
     async def _get_created_at_by_hash(
         self, db_session: AsyncSession, md5hash: str
     ) -> int:
@@ -66,7 +83,7 @@ class FileManager:
 
         return None
 
-    async def _get_path_by_file_id(self, db_session: AsyncSession, file_id: int, user_id: int) -> str:
+    async def _get_unix_hash_by_file_id(self, db_session: AsyncSession, file_id: int, user_id: int) -> str:
         stmt = (
             select(models.File.created_at, models.File.hash)
             .where(models.File.id == file_id)
@@ -76,13 +93,22 @@ class FileManager:
         )
         result = (await db_session.execute(stmt)).fetchone()
         
-        if result:
-            unix_time, file_hash = result
-            timestamp_data = datetime.fromtimestamp(unix_time)
-            unix_timestamp = int(time.mktime(timestamp_data.date().timetuple()))
-            return f"/{unix_timestamp}/{timestamp_data.hour}/{file_hash}"
+        if not result:
+            return None
 
-        return None
+        return result
+    
+    async def file_delete_callback(self, _, __, ___, payload: str):       
+        if self.file_delete_mode != "instantly":
+            return
+        
+        file_delete_data: dict = json.loads(payload)
+        file_path = self._get_file_path_by_unix_hash(**file_delete_data)
+        await self._delete_file(file_path)
+
+        stmt = delete(models.DeletedFile).where(models.DeletedFile.hash == file_delete_data["hash"])
+        async with context_get_session() as db_session:
+            await db_session.execute(stmt)
 
 
 class BaseAttachmentManager(FileManager):
@@ -93,9 +119,6 @@ class BaseAttachmentManager(FileManager):
 
     def __init__(self) -> None:
         pass
-
-    def _get_hash_md5(self, file_data: bytes):
-        return hashlib.md5(file_data).hexdigest()
 
     async def create_new_attachment(
         self, db_session: AsyncSession, attachment_id: int, files: list[UploadFile]
@@ -138,20 +161,21 @@ class BaseAttachmentManager(FileManager):
         user_id: int,
         nginx_data_endpoint: str,
     ):
-        in_data_path = await self._get_path_by_file_id(db_session, file_id, user_id)
-
-        if not in_data_path:
+        unix_hash = await self._get_unix_hash_by_file_id(db_session, file_id, user_id)
+        
+        if not unix_hash:
             return None
-
+        
+        in_data_path =  '/' + self._get_file_path_by_unix_hash(*unix_hash)
         file_x_accel_redirect_path = nginx_data_endpoint + in_data_path
         return file_x_accel_redirect_path
 
 
 class OfferAttachmentManager(BaseAttachmentManager):
     async def create_new_attachment(
-        self, db_session: AsyncSession, files: list[UploadFile], user_id: int
+        self, db_session: AsyncSession, files: list[UploadFile], user_id: int, offer_id: int
     ):
-        attachment = models.OfferAttachment(author_id=user_id)
+        attachment = models.OfferAttachment(author_id=user_id, offer_id=offer_id)
         db_session.add(attachment)
         await db_session.flush()
 

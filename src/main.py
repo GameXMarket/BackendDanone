@@ -5,6 +5,7 @@ import secrets
 from typing import Annotated
 from contextlib import asynccontextmanager
 
+import asyncpg
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -13,10 +14,10 @@ from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 
 import core.settings as conf
-from core.database import init_models, context_get_session
+from core.database import event_listener, init_models, context_get_session
 from core.redis import redis_pool, get_redis_client
 from core.logging import InfoHandlerTG, ErrorHandlerTG
-from core.utils import check_dir_exists
+from core.utils import check_dir_exists, setup_helper
 from app.users import users_routers
 from app.tokens import tokens_routers
 from app.offers import offers_routers
@@ -30,6 +31,16 @@ from app.users.services import get_by_email, create_user
 
 current_file_path = os.path.abspath(__file__)
 locales_path = os.path.join(os.path.dirname(current_file_path), "_locales")
+# ! Решение только на время разработки
+info_tg_handler = InfoHandlerTG()
+error_tg_handler = ErrorHandlerTG()
+
+uvi_access_logger = logging.getLogger("uvicorn.access")
+uvi_access_logger.addHandler(info_tg_handler)
+
+logger = logging.getLogger("uvicorn")
+logger.addHandler(info_tg_handler)
+logger.addHandler(error_tg_handler)
 
 
 """ # Temp dev sql
@@ -99,27 +110,22 @@ async def __init_base_db():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # ! Решение только на время разработки
-    info_tg_handler = InfoHandlerTG()
-    error_tg_handler = ErrorHandlerTG()
-    
-    uvi_access_logger = logging.getLogger("uvicorn.access")
-    uvi_access_logger.addHandler(info_tg_handler)
-    
-    logger = logging.getLogger("uvicorn")
-    logger.addHandler(info_tg_handler)
-    logger.addHandler(error_tg_handler)
-
     await init_models(drop_all=conf.DROP_TABLES)
     await __init_base_db()
+    
+    await event_listener.open_listener_connection(logger, conf.ASYNCPG_DB_URL)
+    await event_listener._PostgreListener__test__notify("test_main", "Ok")
 
     async with get_redis_client() as client:
         logger.info(f"Redis ping returned with: {await client.ping()}.")
 
     await check_dir_exists(conf.DATA_PATH, auto_create=True)
+    
+    setup_helper.start_setup()
         
     yield
     
+    await event_listener.close_listener_connection()
     await redis_pool.aclose()
     logger.info("RedisPool closed.")
 

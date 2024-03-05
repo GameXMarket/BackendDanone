@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import aiofiles
 
 from core import settings as conf
+from core.utils import setup_helper
 from core.database import get_session
 from core.depends import depends as deps
 from app.tokens import schemas as schemas_t
@@ -17,6 +18,7 @@ router = APIRouter()
 default_session = deps.UserSession()
 base_attachment_manager = BaseAttachmentManager()
 offer_attacment_manager = OfferAttachmentManager()
+setup_helper.add_new_coroutine_def(base_attachment_manager.setup())
 
 
 @router.get("/")
@@ -67,6 +69,7 @@ async def get_file_by_id(
 @router.post("/uploadfile/offer/")
 async def create_upload_file(
     files: list[UploadFile],
+    offer_id: int,
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
         default_session
     ),
@@ -76,5 +79,5 @@ async def create_upload_file(
     user = await user_context.get_current_active_user(db_session, token_data)
 
     return await offer_attacment_manager.create_new_attachment(
-        db_session, files, user.id
+        db_session, files, user.id, offer_id
     )

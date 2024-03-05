@@ -32,8 +32,15 @@ DEFERRED_HOUR_TO_DELETE: int = int(os.getenv("DEFERRED_HOUR_TO_DELETE"))
 
 # DATABASE
 
+DBASE_LOGIN: str = os.getenv("DBASE_LOGIN")
+DBASE_PASSWORD: str = os.getenv("DBASE_PASSWORD")
+DBASE_NAME: str = os.getenv("DBASE_NAME")
+DBASE_IP: str = os.getenv("DBASE_IP")
+DBASE_PORT: int = int(os.getenv("DBASE_PORT"))
 DATABASE_URL: str = os.getenv("DATABASE_URL")
+ASYNCPG_DB_URL: str = os.getenv("ASYNCPG_DB_URL")
 REDIS_URL: str = os.getenv("REDIS_URL")
+
 
 # JWT
 
