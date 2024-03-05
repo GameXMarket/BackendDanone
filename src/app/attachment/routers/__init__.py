@@ -1,1 +1,1 @@
-from .offer_attachment import *
+from .attachment import *
