@@ -47,16 +47,15 @@ The systemd file to run the application
 
 ```shell
 [Unit]
-Description=DanoneMarket systemd file
-After=nginx.target
+Description=DanoneBeckend
 
 [Service]
 Type=simple
-ExecStart=... #/bin/bash -c ''
-Restart=on-failure
+ExecStart=/bin/bash -c '/dir_to_proj/BackendDanone/Venv/bin/python /dir_to_proj/BackendDanone/main.py'
+Restart=always
 RestartSec=3
+User=danone
 
 [Install]
-WantedBy=... #multi-user.target
-```
+WantedBy=multi-user.target```
 

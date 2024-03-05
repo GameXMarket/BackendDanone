@@ -11,8 +11,13 @@ passlib[bcrypt]
 bcrypt==4.0.1
 pyotp
 email-validator
+coverage
 pytest
+anyio
 aiosmtplib
 Jinja2
+aiofiles
 python-dotenv
+colorlog
 redis
+ansible

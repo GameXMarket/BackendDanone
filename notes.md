@@ -1,90 +1,113 @@
 
 # Изменения
 
+```shell
+# Add Docker's official GPG key:
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
 
-Доделать реализацию из ендед категорий в категори
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
 
-Валуес есть только у из ласт категории
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+sudo docker run hello-world
+```
+
+
+```shell
+sudo docker run --name some-postgres -e POSTGRES_PASSWORD=postgres --restart always -p  5432:5432 -d postgres
+```
+
+
+```shell
+sudo docker run --name some-redis -d --restart always -p  6379:6379 redis redis-server --save  60  1 --loglevel warning
+```
+
+```shell
+useradd -s /bin/true -c Pseudo_user_for_ssh_rtunnel -m -r rtunnel
+sudo -u rtunnel -H ssh-keygen
+scp ~rtunnel/.ssh/id_rsa.pub central-server:/tmp/
+
+# ~rtunnel/.ssh/config
+
+Host rtunnel
+      Hostname publuc-server.example.org
+      User rtunnel
+      RemoteForward 0.0.0.0:9000 127.0.0.1:8000
+      RemoteForward 2222 127.0.0.1:22
+      ServerAliveInterval 30
+      ServerAliveCountMax 5
+      ExitOnForwardFailure yes
+
+useradd -s /bin/true -c Pseudo_user_for_ssh_rtunnel -m -r rtunnel
+mkdir ~rtunnel/.ssh
+cat /tmp/id_rsa.pub >> ~rtunnel/.ssh/authorized_keys
+chown -R rtunnel ~rtunnel
+
+# nat
+sudo -u rtunnel -H ssh -N rtunnel
+
+# pub
+netstat -ntlp | grep 2222
+ssh -p2222 127.0.0.1
+
+# systemctl daemon-reload
+
+```
+
+
+```shell
+root@lenovo:/etc/systemd/system# cat rtunnel.service
+[Unit]
+Description=SSH Tunnel to local over tunnel to remote
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=rtunnel
+Type=simple
+ExecStart=/usr/bin/ssh -N rtunnel
+Restart=always
+RestartSec=30s
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```shell
+root@lenovo:/etc/systemd/system# cat danone.service
+[Unit]
+Description=DanoneBeckend
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=yunikeil
+Type=simple
+ExecStart=/bin/bash -c '/home/yunikeil/python/BackendDanone/Venv/bin/python /home/yunikeil/python/BackendDanone/src/main.py'
+Restart=always
+RestartSec=15s
+
+[Install]
+WantedBy=multi-user.target
+```
+
+
+k6 для нагрузочного тестирования
+
 
 # !!! Доделать ограничения для полей во всех модулях !!!
 # Доделать документацию по нормальному
 # Доделать аннотации категорий
 
-
-
-
-
-ddos происходят только на 3, 4, 7 уровне osi
-
-3, 4, чистит провайдер, в нашем случае - бегет.Насколько я понял, мы ничего не сможем сделать в данной ситуации, если не справится провайдер - ляжем и мы.
-
---- 
-
-7, частично чистит провайдер.
-Редко, когда приносят глобавльный вред, как правило цель - конкретный сайт/сервер пользователя
-
-## http(s) флуд
-
-цель
-
-- превысить лимиты хостинга на количество одновременных запросов/процессорное время с целью спровоцировать отключение сайта
-- использовать уязвимости в CMS/фреймворках, чтобы выполнить какой-либо произвольный код
-
-автоматические решения хостера 
-
-## Блокировка подозрительных запросов по-умолчанию
-
-бегет блокирует запросы от уникальных user-agent, которые были замечены в массовом флуде, блокирует ряд ботов и сканеров, которые неадекватно себя ведут (игнорируют robots), ходят по сайтам в несколько потоков. Иногда на длительное время блокируются целые подсети, с которых практически нет легитимного трафика, но есть массовые автоматические запросы(в частности привет передавался поднебесной и сопредельным странам).
-
-сканеры в основном продолжают спамить если сервер ответил что то нормальное. если начать отвечать на мусорные запросы, после их поток будет только расти
-
-
-## Слежение за процессами пользователей (MCPU)
-
-Зачастую проблемы на сервере может создать не миллион http-запросов к одному сайту, а всего пару десятков, но очень “точных”
-
-Зачастую проблемы на сервере может создать не миллион http-запросов к одному сайту, а всего пару десятков, но очень “точных”. К таким запросам относятся различные уязвимые страницы на сайте, скрипты (как правило, в админках/плагинах), которых при определенных входных данных начинают “творить дичь”: уходить в бесконечные циклы с запросами к БД, генерацию превьюшек из полноразмерных картинок товаров, сбросу кеша.
-
-Бегет пошёл по пути активного мониторинга процессов на сервере. У них есть свой демон на Rust, который постоянно следит за всеми процессами пользователей и имеет постоянно пополняющийся набор правил для выставления ограничений (вплоть до убийства), для тех процессов, которые мы считаем неуместными. Он умеет смотреть на:
-
-Различные атрибуты процесса (uid, gid, cmdline, cgroup и т.п.).
-Объем потребляемой памяти.
-Затраченное процессорное время.
-Содержимое исполняемого файла.
-В случае совпадения, в зависимости от конкретной задачи, он может выполнять различные действия:
-
-Логирует событие (для дальнейшего анализа).
-Убивает процесс.
-Помещает в cgroup с заданными параметрами.
-Настраивает OOM Killer для этого процесса.
-… любое другое действие, которое нам потребуется.
-
-
-## Анализ и слежение за запросами к сайтам в реальном времени
-
-часто флудят вполне валидными на вид запросами к разным страницам с разными адресами.
-
-Чтобы работать с такими атаками можно использовать несколько уровней защиты:
-
-<img src="https://habrastorage.org/getpro/habr/upload_files/336/8a6/5cd/3368a65cdcc73e75b63130a17fe2fcd4.jpg">
-
-
-### На сервере (5) !
-
-Полезно будет анализировать лог входящих запросов, искать подозрительные паттерны, характерные тайминги и автоматически выставлять ограничения/rate-limit для тех src ip, user-agent, которые кажутся нам подозрительными. Подойдет против простых атак, которые может переварить сервер без ущерба для остальных. Но на самом деле простых атак —большинство и именно на этом уровне выполняется большая часть блокировок.
-
-### Внутри сети (4) !
-
-Если сервер не справляется, то уместно будет проксировать трафик к сайту/серверу через специальные серверы, которые могут переварить множество tls-хендшейков и отделить невалидные запросы от валидных, и выполнить еще какую-либо дополнительную фильтрацию. На сервер при этом прилетает уже только валидный HTTP-трафик. Подойдет, если флуд состоит из множества невалидных https-запросов и атака нацелена на перегрузку CPU.
-
->## В качестве заключения 
-
->По сути, ключевой способ защиты для любого хостинга — это накопленная экспертиза админов, которые систематизируют и внедряют защиту: где-то с помощью внешних решений, где-то с помощью “креатива и творчества” — например, иногда полезно вместо закрытия соединения отправить в ответ пару килобайт мусора, чтобы атакующая вас взломанная веб-камера надолго уходила в раздумья перед тем, как отправить следующий запрос =)
-
->Благодаря всему этому пользователи хостинга чувствуют последствия атак лишь изредка.
-
->Да пребудет с нами аптайм!
-
-
+https://www.nginx.com/resources/wiki/start/topics/examples/x-accel/
 
 
