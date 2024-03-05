@@ -31,16 +31,6 @@ from app.users.services import get_by_email, create_user
 
 current_file_path = os.path.abspath(__file__)
 locales_path = os.path.join(os.path.dirname(current_file_path), "_locales")
-# ! Решение только на время разработки
-info_tg_handler = InfoHandlerTG()
-error_tg_handler = ErrorHandlerTG()
-
-uvi_access_logger = logging.getLogger("uvicorn.access")
-uvi_access_logger.addHandler(info_tg_handler)
-
-logger = logging.getLogger("uvicorn")
-logger.addHandler(info_tg_handler)
-logger.addHandler(error_tg_handler)
 
 
 """ # Temp dev sql
@@ -110,6 +100,17 @@ async def __init_base_db():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # ! Решение только на время разработки
+    info_tg_handler = InfoHandlerTG()
+    error_tg_handler = ErrorHandlerTG()
+
+    uvi_access_logger = logging.getLogger("uvicorn.access")
+    uvi_access_logger.addHandler(info_tg_handler)
+
+    logger = logging.getLogger("uvicorn")
+    logger.addHandler(info_tg_handler)
+    logger.addHandler(error_tg_handler)
+
     await init_models(drop_all=conf.DROP_TABLES)
     await __init_base_db()
     
