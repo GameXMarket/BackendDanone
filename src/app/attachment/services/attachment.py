@@ -176,6 +176,7 @@ class BaseAttachmentManager(FileManager):
         return file_x_accel_redirect_path
 
 
+# TODO Добавить различные проверки на уровне кода, а не бд
 class OfferAttachmentManager(BaseAttachmentManager):
     async def create_new_attachment(
         self, db_session: AsyncSession, files: list[UploadFile], user_id: int, offer_id: int
@@ -190,13 +191,29 @@ class OfferAttachmentManager(BaseAttachmentManager):
 
 
 class UserAttachmentManager(BaseAttachmentManager):
+    async def create_new_attachment(
+        self, db_session: AsyncSession, file: UploadFile, user_id: int
+    ):
+        attachment = models.UserAttachment(author_id=user_id, user_id=user_id)
+        db_session.add(attachment)
+        await db_session.flush()
 
-    ...
+        await super().create_new_attachment(db_session, attachment.id, [file])
+
+        return attachment.to_dict()
 
 
 class MessageAttachmentManager(BaseAttachmentManager):
+    async def create_new_attachment(
+        self, db_session: AsyncSession, files: list[UploadFile], user_id: int, message_id: int
+    ):
+        attachment = models.MessageAttachment(author_id=user_id, message_id=message_id)
+        db_session.add(attachment)
+        await db_session.flush()
 
-    ...
+        await super().create_new_attachment(db_session, attachment.id, files)
+
+        return attachment.to_dict()
 
 
 """
