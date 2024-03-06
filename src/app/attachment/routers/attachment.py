@@ -1,7 +1,7 @@
 import logging
 
 from fastapi import Depends, APIRouter, HTTPException, File, UploadFile
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 import aiofiles
 
@@ -41,9 +41,7 @@ async def get_file_by_id(
     if not file_path:
         raise HTTPException(404)
 
-    response = JSONResponse(
-        {"detail": "File found"}, headers={"X-Accel-Redirect": file_path}
-    )
+    response = Response(headers={"X-Accel-Redirect": file_path})
     return response
 
 
