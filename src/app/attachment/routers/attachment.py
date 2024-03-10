@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import Depends, APIRouter, HTTPException, File, UploadFile
+from fastapi import Depends, Query, APIRouter, HTTPException, UploadFile
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 import aiofiles
@@ -22,22 +22,24 @@ user_attacment_manager = UserAttachmentManager()
 message_attacment_manager = MessageAttachmentManager()
 setup_helper.add_new_coroutine_def(base_attachment_manager.setup)
 
+from fastapi import responses
 
-@router.get("/getfile")
-async def get_file_by_id(
-    file_id: int,
-    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
-        default_session
-    ),
+@router.get("/getfile/{file_hash}")
+async def get_file_by_hash(
+    file_hash: str,
+    attachemnt_id: int = Query(alias="id"),
     db_session: AsyncSession = Depends(get_session),
 ):
-    token_data, user_context = current_session
-    user = await user_context.get_current_active_user(db_session, token_data)
 
-    file_path = await base_attachment_manager.get_x_accel_redirect_by_file_id(
-        db_session, file_id, user.id, conf.NGINX_DATA_ENDPOINT
+    print(attachemnt_id)
+    print(file_hash)
+    file_path = await base_attachment_manager.get_x_accel_redirect_by_file_hash(
+        db_session, file_hash, attachemnt_id, conf.NGINX_DATA_ENDPOINT
     )
 
+    
+    print(file_path)
+    
     if not file_path:
         raise HTTPException(404)
 

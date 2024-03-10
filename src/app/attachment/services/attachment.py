@@ -88,13 +88,11 @@ class FileManager:
 
         return None
 
-    async def _get_unix_hash_type_by_file_id(self, db_session: AsyncSession, file_id: int, user_id: int) -> str:
+    async def _get_unix_type_by_hash_attachment_id(self, db_session: AsyncSession, file_hash: str, attachment_id: int) -> str:
         stmt = (
-            select(models.File.created_at, models.File.hash, models.File.type)
-            .where(models.File.id == file_id)
-            .where(models.Attachment.id == models.File.attachment_id)
-            .where(models.Attachment.author_id == user_id)
-
+            select(models.File.created_at, models.File.type)
+            .where(models.File.hash == file_hash)
+            .where(models.File.attachment_id == attachment_id)
         )
         result = (await db_session.execute(stmt)).fetchone()
         
@@ -162,19 +160,19 @@ class BaseAttachmentManager(FileManager):
         files = (await db_session.execute(stmt)).scalars().all()
         return files
 
-    async def get_x_accel_redirect_by_file_id(
+    async def get_x_accel_redirect_by_file_hash(
         self,
         db_session: AsyncSession,
-        file_id: int,
-        user_id: int,
+        file_hash: str,
+        attachment_id: int,
         nginx_data_endpoint: str,
     ):
-        unix_hash_type = await self._get_unix_hash_type_by_file_id(db_session, file_id, user_id)
+        unix_type = await self._get_unix_type_by_hash_attachment_id(db_session, file_hash, attachment_id)
         
-        if not unix_hash_type:
+        if not unix_type:
             return None
         
-        in_data_path =  '/' + self._get_file_path_by_unix_hash_type(*unix_hash_type)
+        in_data_path =  '/' + self._get_file_path_by_unix_hash_type(unix_type[0], file_hash, unix_type[1])
         file_x_accel_redirect_path = nginx_data_endpoint + in_data_path
         return file_x_accel_redirect_path
 
