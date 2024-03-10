@@ -16,6 +16,7 @@ from core.security import create_jwt_token
 from core.mail_sender import *
 from core.depends import depends as deps 
 from app.tokens import schemas as schemas_t
+from app.attachment.services.user_attachment import user_attachment_manager
 
 
 logger = logging.getLogger("uvicorn")
@@ -75,8 +76,14 @@ async def sign_up(
 async def get_user(current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(default_session), db_session: AsyncSession = Depends(get_session)):
     token_data, user_context = current_session
     user: User = await user_context.get_current_active_user(db_session, token_data)
+    user_files = await user_attachment_manager.get_only_files(db_session, user.id)
     
-    return UserPreDB(**user.to_dict())
+    print(user_files)  
+    
+    user_dict = user.to_dict()
+    user_dict["files"] = user_files
+    
+    return user_dict
 
 
 @router.patch(path="/me/update/username")

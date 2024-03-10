@@ -10,19 +10,15 @@ from core.utils import setup_helper
 from core.database import get_session
 from core.depends import depends as deps
 from app.tokens import schemas as schemas_t
-from ..services import *
+from ..  import services
 
 
 logger = logging.getLogger("uvicorn")
 router = APIRouter()
 default_session = deps.UserSession()
-base_attachment_manager = BaseAttachmentManager()
-offer_attacment_manager = OfferAttachmentManager()
-user_attacment_manager = UserAttachmentManager()
-message_attacment_manager = MessageAttachmentManager()
+base_attachment_manager = services.BaseAttachmentManager()
 setup_helper.add_new_coroutine_def(base_attachment_manager.setup)
 
-from fastapi import responses
 
 @router.get("/getfile/{file_hash}")
 async def get_file_by_hash(
@@ -30,15 +26,11 @@ async def get_file_by_hash(
     attachemnt_id: int = Query(alias="id"),
     db_session: AsyncSession = Depends(get_session),
 ):
-
-    print(attachemnt_id)
-    print(file_hash)
+    # Несколько странное решение как по мне (сохранить менеджмент статических ссылок)
+    # После возможно нужно будет переделать, не думаю, что станет большой проблемой
     file_path = await base_attachment_manager.get_x_accel_redirect_by_file_hash(
         db_session, file_hash, attachemnt_id, conf.NGINX_DATA_ENDPOINT
     )
-
-    
-    print(file_path)
     
     if not file_path:
         raise HTTPException(404)
@@ -80,7 +72,7 @@ async def create_upload_files_offer(
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
 
-    return await offer_attacment_manager.create_new_attachment(
+    return await services.offer_attachment_manager.create_new_attachment(
         db_session, files, user.id, offer_id
     )
 
@@ -96,7 +88,7 @@ async def create_upload_files_user(
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
 
-    return await user_attacment_manager.create_new_attachment(
+    return await services.user_attachment_manager.create_new_attachment(
         db_session, file, user.id
     )
 
@@ -113,6 +105,6 @@ async def create_upload_files_message(
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
 
-    return await message_attacment_manager.create_new_attachment(
+    return await services.message_attachment_manager.create_new_attachment(
         db_session, files, user.id, message_id
     )
