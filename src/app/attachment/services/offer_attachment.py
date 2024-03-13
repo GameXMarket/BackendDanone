@@ -2,6 +2,7 @@ from fastapi import UploadFile
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.settings import BASE_FILE_URL
 from .base_attachment import BaseAttachmentManager
 from .. import models
 
@@ -36,6 +37,31 @@ class OfferAttachmentManager(BaseAttachmentManager):
         model = models.OfferAttachment
         whereclause = (models.OfferAttachment.offer_id == offer_id)
         return await super().get_attachment(db_session, model, whereclause)
+    
+    async def get_only_files(self, db_session: AsyncSession, offer_id: int):
+        # TODO После возможно нужен будет рефакторинг
+        # мб стоит перенести в бейс менеджер
+        
+        _result = []
+        
+        stmt = (
+            select(models.File.hash, models.File.attachment_id)
+            .where(models.OfferAttachment.id == models.File.attachment_id)
+            .where(models.OfferAttachment.offer_id == offer_id)
+        )
+        
+        result = (await db_session.execute(stmt)).all()
+        
+        if not result:
+            return None
+        
+        for file_hash, attachment_id in result:
+            _result.append(
+                BASE_FILE_URL.format(file_hash=file_hash, attachment_id=attachment_id)
+            )
+        
+        return _result
+
 
 
 offer_attachment_manager = OfferAttachmentManager()
