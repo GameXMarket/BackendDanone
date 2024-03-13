@@ -76,10 +76,7 @@ async def sign_up(
 async def get_user(current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(default_session), db_session: AsyncSession = Depends(get_session)):
     token_data, user_context = current_session
     user: User = await user_context.get_current_active_user(db_session, token_data)
-    user_files = await user_attachment_manager.get_only_files(db_session, user.id)
-    
-    print(user_files)  
-    
+    user_files = await user_attachment_manager.get_only_files(db_session, user.id)    
     user_dict = user.to_dict()
     user_dict["files"] = user_files
     

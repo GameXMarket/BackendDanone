@@ -2,6 +2,7 @@ from fastapi import UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.settings import BASE_FILE_URL
 from .base_attachment import BaseAttachmentManager
 from .. import models
 
@@ -24,11 +25,10 @@ class UserAttachmentManager(BaseAttachmentManager):
         return await super().get_attachment(db_session, model, whereclause)
     
     async def get_only_files(self, db_session: AsyncSession, user_id: int):
-        # TODO После нужен будет рефакторинг
+        # TODO После возможно нужен будет рефакторинг
         # мб стоит перенести в бейс менеджер
         
         _result = []
-        base_file_url = "/attacment/getfile/{file_hash}?id={attachment_id}"
         
         stmt = (
             select(models.File.hash, models.File.attachment_id)
@@ -43,7 +43,7 @@ class UserAttachmentManager(BaseAttachmentManager):
         
         for file_hash, attachment_id in result:
             _result.append(
-                base_file_url.format(file_hash=file_hash, attachment_id=attachment_id)
+                BASE_FILE_URL.format(file_hash=file_hash, attachment_id=attachment_id)
             )
         
         return _result
