@@ -16,44 +16,6 @@ base_session = deps.UserSession()
 base_manager = services.ChatConnectionManager()
 
 
-@router.get(path="/")
-async def get_messages(
-    receiver_id: int,
-    offset: int = 0,
-    limit: int = 10,
-    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
-        base_session
-    ),
-    db_session: AsyncSession = Depends(get_session),
-):
-    token_data, user_context = current_session
-    user = await user_context.get_current_active_user(db_session, token_data)
-
-    messages = await services.get_with_offset_limit(db_session, user.id, receiver_id, offset, limit)
-
-    if not messages:
-        raise HTTPException(404)
-
-    return messages
-
-
-@router.get(path="/{message_id}")
-async def get_message(
-    message_id: int,
-    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
-        base_session
-    ),
-    db_session: AsyncSession = Depends(get_session),
-):
-    token_data, user_context = current_session
-    user = await user_context.get_current_active_user(db_session, token_data)
-
-    message = await services.get_by_id(db_session, user.id, message_id)
-
-    if not message:
-        raise HTTPException(404)
-
-    return message
 
 
 @ws_router.websocket("/my")

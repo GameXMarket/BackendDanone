@@ -16,27 +16,6 @@ from app.messages import services as services_m
 from app.tokens import schemas as schemas_t
 
 
-async def get_by_id(db_session: AsyncSession, sender_id: int, message_id: int):
-    stmt = select(models_m.Message).where(
-        models_m.Message.sender_id == sender_id and models_m.Message.id == message_id
-    )
-    return (await db_session.execute(stmt)).scalar_one_or_none()
-
-
-async def get_with_offset_limit(
-    db_session: AsyncSession, sender_id: int, receiver_id: int, offset: int, limit: int
-):
-    # temp f, need rewriting
-    stmt = (
-        select(models_m.Message)
-        .where(
-                (models_m.Message.sender_id == sender_id and models_m.Message.receiver_id == receiver_id),
-                (models_m.Message.sender_id == receiver_id and models_m.Message.receiver_id == sender_id),
-        )
-        .offset(offset)
-        .limit(limit)
-    )
-    return (await db_session.execute(stmt)).scalars().all()
 
 
 async def create_message(
