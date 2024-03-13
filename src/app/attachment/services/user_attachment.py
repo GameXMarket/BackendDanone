@@ -1,5 +1,5 @@
 from fastapi import UploadFile
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.settings import BASE_FILE_URL
@@ -8,6 +8,19 @@ from .. import models
 
 
 class UserAttachmentManager(BaseAttachmentManager):
+    async def delete_attachment_by_user_id(
+        self, db_session: AsyncSession, user_id: int
+    ):
+        stmt = (
+            delete(models.UserAttachment)
+            .where(models.UserAttachment.user_id == user_id)
+            .returning(models.UserAttachment.id)
+        )
+        deleted_attachment_id = (await db_session.execute(stmt)).scalar_one_or_none()
+        await db_session.commit()
+
+        return {"attachment_id": deleted_attachment_id}
+
     async def create_new_attachment(
         self, db_session: AsyncSession, file: UploadFile, user_id: int
     ):
@@ -50,7 +63,3 @@ class UserAttachmentManager(BaseAttachmentManager):
 
 
 user_attachment_manager = UserAttachmentManager()
-
-
-
-

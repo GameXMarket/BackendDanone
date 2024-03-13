@@ -52,6 +52,7 @@ async def sign_up(
     )
 
     try:
+        # need fix this
         await user_auth_sender.send_email(
             sender_name="Danone Market",
             receiver_email=data.email,
@@ -74,7 +75,7 @@ async def sign_up(
 
 @router.get(path="/me", responses={**deps.build_response(deps.UserSession.get_current_active_user)})
 async def get_user(current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(default_session), db_session: AsyncSession = Depends(get_session)):
-    token_data, user_context = current_session
+    token_data, user_context = current_session  
     user: User = await user_context.get_current_active_user(db_session, token_data)
     user_files = await user_attachment_manager.get_only_files(db_session, user.id)    
     user_dict = user.to_dict()

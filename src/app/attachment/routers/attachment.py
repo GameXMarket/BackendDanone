@@ -10,7 +10,7 @@ from core.utils import setup_helper
 from core.database import get_session
 from core.depends import depends as deps
 from app.tokens import schemas as schemas_t
-from ..  import services
+from .. import services
 
 
 logger = logging.getLogger("uvicorn")
@@ -90,6 +90,21 @@ async def create_upload_files_user(
 
     return await services.user_attachment_manager.create_new_attachment(
         db_session, file, user.id
+    )
+
+
+@router.delete("/deletefiles/user/")
+async def delete_user_attachment(
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        default_session
+    ),
+    db_session: AsyncSession = Depends(get_session),
+):
+    token_data, user_context = current_session
+    user = await user_context.get_current_active_user(db_session, token_data)
+
+    return await services.user_attachment_manager.delete_attachment_by_user_id(
+        db_session, user.id
     )
 
 
