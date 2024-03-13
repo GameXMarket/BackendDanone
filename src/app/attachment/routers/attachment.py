@@ -77,6 +77,22 @@ async def create_upload_files_offer(
     )
 
 
+@router.delete("/deletefiles/offer/")
+async def delete_offer_attachment(
+    offer_id: int = Query(alias="id"),
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        default_session
+    ),
+    db_session: AsyncSession = Depends(get_session),
+):
+    token_data, user_context = current_session
+    user = await user_context.get_current_active_user(db_session, token_data)
+
+    return await services.offer_attachment_manager.delete_attachment_by_offer_id(
+        db_session, user.id, offer_id
+    )
+
+
 @router.post("/uploadfiles/user/")
 async def create_upload_files_user(
     file: UploadFile,

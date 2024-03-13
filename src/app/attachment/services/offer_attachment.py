@@ -1,4 +1,5 @@
 from fastapi import UploadFile
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .base_attachment import BaseAttachmentManager
@@ -6,6 +7,20 @@ from .. import models
 
 
 class OfferAttachmentManager(BaseAttachmentManager):
+    async def delete_attachment_by_offer_id(
+        self, db_session: AsyncSession, user_id: int, offer_id: int
+    ):
+        stmt = (
+            delete(models.OfferAttachment)
+            .where(models.OfferAttachment.offer_id == offer_id)
+            .where(models.OfferAttachment.author_id == user_id)
+            .returning(models.OfferAttachment.id)
+        )
+        deleted_attachment_id = (await db_session.execute(stmt)).scalar_one_or_none()
+        await db_session.commit()
+
+        return {"attachment_id": deleted_attachment_id}
+
     async def create_new_attachment(
         self, db_session: AsyncSession, files: list[UploadFile], user_id: int, offer_id: int
     ):
