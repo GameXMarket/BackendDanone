@@ -40,7 +40,7 @@ async def create_offfer(
         db_session, user_id=user.id, obj_in=offer
     )
 
-    return schemas_f.OfferPreDB(**offer.to_dict())
+    return offer
 
 
 @router.get(
@@ -69,9 +69,7 @@ async def get_mini_with_offset_limit(
     user: models_u.User = await user_context.get_current_active_user(
         db_session, token_data
     )
-    offers: list[
-        schemas_f.OfferMini
-    ] = await services_f.get_mini_by_user_id_offset_limit(
+    offers = await services_f.get_mini_by_user_id_offset_limit(
         db_session,
         user_id=user.id,
         offset=abs(offset),
@@ -156,7 +154,7 @@ async def get_by_id(
     if not offer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    return schemas_f.OfferPreDB(**offer.to_dict())
+    return offer
 
 
 @router.put(
@@ -192,7 +190,7 @@ async def update_offer(
         db_session, db_obj=offer_db, obj_in=offer_in
     )
 
-    return schemas_f.OfferPreDB(**new_offer.to_dict())
+    return new_offer
 
 
 @router.delete(
@@ -223,4 +221,4 @@ async def delete_offer(
     if not deleted_offer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    return schemas_f.OfferPreDB(**deleted_offer.to_dict())
+    return deleted_offer
