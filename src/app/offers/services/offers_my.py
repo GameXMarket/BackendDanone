@@ -38,7 +38,6 @@ async def get_mini_by_user_id_offset_limit(
     stmt = (
         select(
             models_f.Offer.id,
-            models_f.Offer.attachment_id,
             models_f.Offer.name,
             models_f.Offer.description,
             models_f.Offer.price,
@@ -49,27 +48,21 @@ async def get_mini_by_user_id_offset_limit(
         .limit(limit)
     )
 
-    offers = [
-        schemas_f.OfferMini(
-            id=offer[0],
-            attachment_id=offer[1],
-            name=offer[2],
-            description=offer[3],
-            price=offer[4],
-        )
-        for offer in (await db_session.execute(stmt)).all()
-    ]
+    rows = (await db_session.execute(stmt)).all()
     
-    # Как же это всё потом придётся переписывать)
-    r = []
-    for offer in offers:
-        files = await offer_attachment_manager.get_only_files(db_session, offer.id)
-        offer = offer.model_dump()
-        offer["files"] = files
+    r = [] # Уже лучше, но что-то не то
+    for row in rows:
+        files =  await offer_attachment_manager.get_only_files(db_session, row[0])
+        offer = {
+            "id": row[0],
+            "name": row[1],
+            "description": row[2],
+            "price": row[3],
+            "files": files,
+        }
         r.append(offer)
 
     return r
-
 
 async def get_root_categories_count_with_offset_limit(
     db_session: AsyncSession, user_id, offset, limit
