@@ -20,15 +20,17 @@ VERSION: str = os.getenv("VERSION")
 TITLE: str = os.getenv("TITLE")
 SUMMARY: str = os.getenv("SUMMARY")
 
+DOMEN: str = os.getenv("DOMEN")
 SERVER_IP: str = os.getenv("SERVER_IP")
 SERVER_PORT: int = int(os.getenv("SERVER_PORT"))
 NGINX_DATA_ENDPOINT: str = os.getenv("NGINX_DATA_ENDPOINT")
 
 # ATTACMENT
 
-DATA_PATH: str = os.path.join(root_path, "data")
 FILES_DELETE_MODE: str = os.getenv("FILES_DELETE_MODE")
+DATA_PATH: str = os.path.join(root_path, "data")
 DEFERRED_HOUR_TO_DELETE: int = int(os.getenv("DEFERRED_HOUR_TO_DELETE"))
+BASE_FILE_URL: str = os.getenv("BASE_FILE_URL")
 
 # DATABASE
 

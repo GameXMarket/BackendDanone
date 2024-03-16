@@ -30,9 +30,3 @@ class User(Base):
     def is_admin(self) -> bool:
         if self.role_id == 3:
             return True
-            
-    def to_dict(self):
-        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
-
-
-

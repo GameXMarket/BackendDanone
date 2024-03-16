@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Any
 from urllib.parse import urljoin
 import hashlib
 import logging
@@ -72,7 +72,7 @@ class FileManager:
             content = await f.read()
 
         return content
-
+   
     def _get_file_path_by_unix_hash_type(self, unix: str, hash: str, type: str):
         timestamp_data = datetime.fromtimestamp(unix)
         unix_timestamp = int(time.mktime(timestamp_data.date().timetuple()))
@@ -88,13 +88,11 @@ class FileManager:
 
         return None
 
-    async def _get_unix_hash_type_by_file_id(self, db_session: AsyncSession, file_id: int, user_id: int) -> str:
+    async def _get_unix_type_by_hash_attachment_id(self, db_session: AsyncSession, file_hash: str, attachment_id: int) -> str:
         stmt = (
-            select(models.File.created_at, models.File.hash, models.File.type)
-            .where(models.File.id == file_id)
-            .where(models.Attachment.id == models.File.attachment_id)
-            .where(models.Attachment.author_id == user_id)
-
+            select(models.File.created_at, models.File.type)
+            .where(models.File.hash == file_hash)
+            .where(models.File.attachment_id == attachment_id)
         )
         result = (await db_session.execute(stmt)).fetchone()
         
@@ -114,6 +112,8 @@ class FileManager:
         stmt = delete(models.DeletedFile).where(models.DeletedFile.hash == file_delete_data["hash"])
         async with context_get_session() as db_session:
             await db_session.execute(stmt)
+    
+
 
 
 class BaseAttachmentManager(FileManager):
@@ -124,7 +124,15 @@ class BaseAttachmentManager(FileManager):
 
     def __init__(self) -> None:
         pass
-
+    
+    async def get_attachment(self, db_session: AsyncSession, model: Any, whereclause: Any):
+        stmt = select(model).where(whereclause)
+        result = (
+            await db_session.execute(stmt)
+        ).scalar_one_or_none()
+        
+        return result
+    
     async def create_new_attachment(
         self, db_session: AsyncSession, attachment_id: int, files: list[UploadFile]
     ):
@@ -162,64 +170,20 @@ class BaseAttachmentManager(FileManager):
         files = (await db_session.execute(stmt)).scalars().all()
         return files
 
-    async def get_x_accel_redirect_by_file_id(
+    async def get_x_accel_redirect_by_file_hash(
         self,
         db_session: AsyncSession,
-        file_id: int,
-        user_id: int,
+        file_hash: str,
+        attachment_id: int,
         nginx_data_endpoint: str,
     ):
-        unix_hash_type = await self._get_unix_hash_type_by_file_id(db_session, file_id, user_id)
+        unix_type = await self._get_unix_type_by_hash_attachment_id(db_session, file_hash, attachment_id)
         
-        if not unix_hash_type:
+        if not unix_type:
             return None
         
-        in_data_path =  '/' + self._get_file_path_by_unix_hash_type(*unix_hash_type)
+        in_data_path =  '/' + self._get_file_path_by_unix_hash_type(unix_type[0], file_hash, unix_type[1])
         file_x_accel_redirect_path = nginx_data_endpoint + in_data_path
         return file_x_accel_redirect_path
+    
 
-
-# TODO Добавить различные проверки на уровне кода, а не бд
-class OfferAttachmentManager(BaseAttachmentManager):
-    async def create_new_attachment(
-        self, db_session: AsyncSession, files: list[UploadFile], user_id: int, offer_id: int
-    ):
-        attachment = models.OfferAttachment(author_id=user_id, offer_id=offer_id)
-        db_session.add(attachment)
-        await db_session.flush()
-
-        await super().create_new_attachment(db_session, attachment.id, files)
-
-        return attachment.to_dict()
-
-
-class UserAttachmentManager(BaseAttachmentManager):
-    async def create_new_attachment(
-        self, db_session: AsyncSession, file: UploadFile, user_id: int
-    ):
-        attachment = models.UserAttachment(author_id=user_id, user_id=user_id)
-        db_session.add(attachment)
-        await db_session.flush()
-
-        await super().create_new_attachment(db_session, attachment.id, [file])
-
-        return attachment.to_dict()
-
-
-class MessageAttachmentManager(BaseAttachmentManager):
-    async def create_new_attachment(
-        self, db_session: AsyncSession, files: list[UploadFile], user_id: int, message_id: int
-    ):
-        attachment = models.MessageAttachment(author_id=user_id, message_id=message_id)
-        db_session.add(attachment)
-        await db_session.flush()
-
-        await super().create_new_attachment(db_session, attachment.id, files)
-
-        return attachment.to_dict()
-
-
-"""
-class ConflictAttacmentManager(BaseAttacmentManager):
-    ...
-"""

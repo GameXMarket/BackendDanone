@@ -10,6 +10,7 @@ from .. import models as models_f
 from .. import schemas as schemas_f
 from app.users import models as models_u
 from . import __offer_category_value as __ocv
+from app.attachment.services import offer_attachment_manager
 
 
 # Дублирование кода, можно переписать по нормальному старые методы,
@@ -20,7 +21,10 @@ async def get_by_offer_id(
 ) -> models_f.Offer | None:
     stmt = select(models_f.Offer).where(models_f.Offer.id == id)
     offer: models_f.Offer | None = (await db_session.execute(stmt)).scalar()
-    
+    files =  await offer_attachment_manager.get_only_files(db_session, offer.id)
+    offer = offer.to_dict()
+    offer["files"] = files
+
     return offer
 
 
@@ -30,7 +34,6 @@ async def get_mini_by_offset_limit(
     stmt = (
         select(
             models_f.Offer.id,
-            models_f.Offer.attachment_id,
             models_f.Offer.name,
             models_f.Offer.description,
             models_f.Offer.price,
@@ -49,14 +52,20 @@ async def get_mini_by_offset_limit(
                 )
             )
 
-    offers = [
-        schemas_f.OfferMini(
-            id=offer[0],
-            attachment_id=offer[1], name=offer[2], description=offer[3], price=offer[4]
-        )
-        for offer in (await db_session.execute(stmt)).all()
-    ]
-
-    return offers
+    rows = (await db_session.execute(stmt)).all()
+    
+    r = [] # Уже лучше, но что-то не то
+    for row in rows:
+        files =  await offer_attachment_manager.get_only_files(db_session, row[0])
+        offer = {
+            "id": row[0],
+            "name": row[1],
+            "description": row[2],
+            "price": row[3],
+            "files": files,
+        }
+        r.append(offer)
+    
+    return r
 
 

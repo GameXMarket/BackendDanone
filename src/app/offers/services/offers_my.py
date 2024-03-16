@@ -14,6 +14,7 @@ from . import __offer_category_value as __ocv
 from app.categories.models import CategoryCarcass, CategoryValue
 from app.categories.services.categories_carcass import get_carcass_names
 from app.categories.services.categories_values import get_value_ids_by_carcass, get_root_values
+from app.attachment.services import offer_attachment_manager
 
 
 async def get_by_user_id_offer_id(
@@ -23,6 +24,11 @@ async def get_by_user_id_offer_id(
         models_f.Offer.user_id == user_id, models_f.Offer.id == id
     )
     offer: models_f.Offer | None = (await db_session.execute(stmt)).scalar()
+    
+    files = await offer_attachment_manager.get_only_files(db_session, offer.id)
+    offer = offer.to_dict()
+    offer["files"] = files
+    
     return offer
 
 
@@ -32,7 +38,6 @@ async def get_mini_by_user_id_offset_limit(
     stmt = (
         select(
             models_f.Offer.id,
-            models_f.Offer.attachment_id,
             models_f.Offer.name,
             models_f.Offer.description,
             models_f.Offer.price,
@@ -43,19 +48,21 @@ async def get_mini_by_user_id_offset_limit(
         .limit(limit)
     )
 
-    offers = [
-        schemas_f.OfferMini(
-            id=offer[0],
-            attachment_id=offer[1],
-            name=offer[2],
-            description=offer[3],
-            price=offer[4],
-        )
-        for offer in (await db_session.execute(stmt)).all()
-    ]
+    rows = (await db_session.execute(stmt)).all()
+    
+    r = [] # Уже лучше, но что-то не то
+    for row in rows:
+        files =  await offer_attachment_manager.get_only_files(db_session, row[0])
+        offer = {
+            "id": row[0],
+            "name": row[1],
+            "description": row[2],
+            "price": row[3],
+            "files": files,
+        }
+        r.append(offer)
 
-    return offers
-
+    return r
 
 async def get_root_categories_count_with_offset_limit(
     db_session: AsyncSession, user_id, offset, limit
@@ -116,8 +123,7 @@ async def get_offers_by_carcass_id(
         .where(CategoryValue.id == models_f.OfferCategoryValue.category_value_id)
     )
     results = (await db_session.execute(stmt)).all()
-
-    return list(
+    offers = list(
         map(
             lambda v: {
                 "offer_id": v[0],
@@ -131,6 +137,12 @@ async def get_offers_by_carcass_id(
             results,
         )
     )
+    
+    for offer in offers:
+        files =  await offer_attachment_manager.get_only_files(db_session, offer["offer_id"])
+        offer["files"] = files        
+    
+    return 
 
 
 async def create_offer(
