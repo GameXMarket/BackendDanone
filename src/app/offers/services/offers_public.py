@@ -10,6 +10,7 @@ from .. import models as models_f
 from .. import schemas as schemas_f
 from app.users import models as models_u
 from . import __offer_category_value as __ocv
+from app.attachment.services import offer_attachment_manager
 
 
 # Дублирование кода, можно переписать по нормальному старые методы,
@@ -20,7 +21,10 @@ async def get_by_offer_id(
 ) -> models_f.Offer | None:
     stmt = select(models_f.Offer).where(models_f.Offer.id == id)
     offer: models_f.Offer | None = (await db_session.execute(stmt)).scalar()
-    
+    files =  await offer_attachment_manager.get_only_files(db_session, offer.id)
+    offer = offer.to_dict()
+    offer["files"] = files
+
     return offer
 
 
@@ -57,6 +61,13 @@ async def get_mini_by_offset_limit(
         for offer in (await db_session.execute(stmt)).all()
     ]
 
-    return offers
+    r = [] # RIP
+    for offer in offers:
+        files =  await offer_attachment_manager.get_only_files(db_session, offer.id)
+        offer = offer.model_dump()
+        offer["files"] = files
+        r.append(offer)
+
+    return r
 
 

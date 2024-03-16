@@ -40,13 +40,13 @@ async def test_get_mini_with_offset_limit(
     if category_value_ids and not isinstance(category_value_ids, list):
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="example: [1,2]")
     
-    offers: list[schemas_f.OfferMini] = await services_f.get_mini_by_offset_limit(
+    offers = await services_f.get_mini_by_offset_limit(
         db_session,
         offset=abs(offset),
         limit=abs(limit),
         category_value_ids=category_value_ids,
     )
-    
+        
     return offers 
 
 
@@ -63,4 +63,4 @@ async def get_by_id(offer_id: int, db_session: AsyncSession = Depends(get_sessio
     if not offer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     
-    return schemas_f.OfferPreDB(**offer.to_dict())
+    return offer

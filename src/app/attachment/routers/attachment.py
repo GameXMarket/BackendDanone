@@ -1,7 +1,7 @@
 import logging
 
-from fastapi import Depends, APIRouter, HTTPException, File, UploadFile
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi import Depends, Query, APIRouter, HTTPException, UploadFile
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 import aiofiles
 
@@ -10,40 +10,32 @@ from core.utils import setup_helper
 from core.database import get_session
 from core.depends import depends as deps
 from app.tokens import schemas as schemas_t
-from ..services import *
+from .. import services
 
 
 logger = logging.getLogger("uvicorn")
 router = APIRouter()
 default_session = deps.UserSession()
-base_attachment_manager = BaseAttachmentManager()
-offer_attacment_manager = OfferAttachmentManager()
-user_attacment_manager = UserAttachmentManager()
-message_attacment_manager = MessageAttachmentManager()
+base_attachment_manager = services.BaseAttachmentManager()
 setup_helper.add_new_coroutine_def(base_attachment_manager.setup)
 
 
-@router.get("/getfile")
-async def get_file_by_id(
-    file_id: int,
-    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
-        default_session
-    ),
+@router.get("/getfile/{file_hash}")
+async def get_file_by_hash(
+    file_hash: str,
+    attachemnt_id: int = Query(alias="id"),
     db_session: AsyncSession = Depends(get_session),
 ):
-    token_data, user_context = current_session
-    user = await user_context.get_current_active_user(db_session, token_data)
-
-    file_path = await base_attachment_manager.get_x_accel_redirect_by_file_id(
-        db_session, file_id, user.id, conf.NGINX_DATA_ENDPOINT
+    # Несколько странное решение как по мне (сохранить менеджмент статических ссылок)
+    # После возможно нужно будет переделать, не думаю, что станет большой проблемой
+    file_path = await base_attachment_manager.get_x_accel_redirect_by_file_hash(
+        db_session, file_hash, attachemnt_id, conf.NGINX_DATA_ENDPOINT
     )
-
+    
     if not file_path:
         raise HTTPException(404)
 
-    response = JSONResponse(
-        {"detail": "File found"}, headers={"X-Accel-Redirect": file_path}
-    )
+    response = Response(headers={"X-Accel-Redirect": file_path})
     return response
 
 
@@ -80,8 +72,24 @@ async def create_upload_files_offer(
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
 
-    return await offer_attacment_manager.create_new_attachment(
+    return await services.offer_attachment_manager.create_new_attachment(
         db_session, files, user.id, offer_id
+    )
+
+
+@router.delete("/deletefiles/offer/")
+async def delete_offer_attachment(
+    offer_id: int = Query(alias="id"),
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        default_session
+    ),
+    db_session: AsyncSession = Depends(get_session),
+):
+    token_data, user_context = current_session
+    user = await user_context.get_current_active_user(db_session, token_data)
+
+    return await services.offer_attachment_manager.delete_attachment_by_offer_id(
+        db_session, user.id, offer_id
     )
 
 
@@ -96,8 +104,23 @@ async def create_upload_files_user(
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
 
-    return await user_attacment_manager.create_new_attachment(
+    return await services.user_attachment_manager.create_new_attachment(
         db_session, file, user.id
+    )
+
+
+@router.delete("/deletefiles/user/")
+async def delete_user_attachment(
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        default_session
+    ),
+    db_session: AsyncSession = Depends(get_session),
+):
+    token_data, user_context = current_session
+    user = await user_context.get_current_active_user(db_session, token_data)
+
+    return await services.user_attachment_manager.delete_attachment_by_user_id(
+        db_session, user.id
     )
 
 
@@ -113,6 +136,6 @@ async def create_upload_files_message(
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
 
-    return await message_attacment_manager.create_new_attachment(
+    return await services.message_attachment_manager.create_new_attachment(
         db_session, files, user.id, message_id
     )
