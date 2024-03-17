@@ -21,6 +21,10 @@ async def get_by_offer_id(
 ) -> models_f.Offer | None:
     stmt = select(models_f.Offer).where(models_f.Offer.id == id)
     offer: models_f.Offer | None = (await db_session.execute(stmt)).scalar()
+    
+    if not offer:
+        return None
+    
     files =  await offer_attachment_manager.get_only_files(db_session, offer.id)
     offer = offer.to_dict()
     offer["files"] = files
