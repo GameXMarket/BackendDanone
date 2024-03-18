@@ -16,13 +16,104 @@ from app.messages import services as services_m
 from app.tokens import schemas as schemas_t
 
 
+# Chats crud
+async def create_chat(db_session: AsyncSession) -> models_m.Chat:
+    new_chat = models_m.Chat()
+    db_session.add(new_chat)
+    await db_session.commit()
+    await db_session.refresh(new_chat)
+    return new_chat
 
 
+async def get_chat(db_session: AsyncSession, chat_id: int) -> models_m.Chat | None:
+    stmt = select(models_m.Chat).where(models_m.Chat.id == chat_id)
+    result = await db_session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def update_chat(db_session: AsyncSession, chat_id: int) -> None:
+    pass
+
+
+async def delete_chat(db_session: AsyncSession, chat_id: int) -> models_m.Chat | None:
+    chat = await db_session.get(models_m.Chat, chat_id)
+    if chat:
+        await db_session.delete(chat)
+        await db_session.commit()
+    
+    return chat
+
+
+# ChatMember crud
+async def create_chat_member(db_session: AsyncSession, user_id: int, chat_id: int) -> models_m.ChatMember:
+    new_member = models_m.ChatMember(user_id=user_id, chat_id=chat_id)
+    db_session.add(new_member)
+    await db_session.commit()
+    await db_session.refresh(new_member)
+    return new_member
+
+
+async def get_chat_member(db_session: AsyncSession, member_id: int) -> models_m.ChatMember | None:
+    stmt = select(models_m.ChatMember).where(models_m.ChatMember.id == member_id)
+    result = await db_session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def update_chat_member(db_session: AsyncSession, member_id: int, new_user_id: int, new_chat_id: int) -> models_m.ChatMember | None:
+    member = await db_session.get(models_m.ChatMember, member_id)
+    if member:
+        member.user_id = new_user_id
+        member.chat_id = new_chat_id
+        await db_session.commit()
+        return member
+
+
+async def delete_chat_member(db_session: AsyncSession, member_id: int) -> models_m.ChatMember | None:
+    member = await db_session.get(models_m.ChatMember, member_id)
+    if member:
+        await db_session.delete(member)
+        await db_session.commit()
+        return member
+
+
+# Message crud
+async def create_message(db_session: AsyncSession, chat_member_id: int, content: str, created_at: int) -> models_m.Message:
+    new_message = models_m.Message(chat_member=chat_member_id, content=content, created_at=created_at)
+    db_session.add(new_message)
+    await db_session.commit()
+    await db_session.refresh(new_message)
+    return new_message
+
+
+async def get_message(db_session: AsyncSession, message_id: int) -> models_m.Message | None:
+    stmt = select(models_m.Message).where(models_m.Message.id == message_id)
+    result = await db_session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def update_message(db_session: AsyncSession, message_id: int, new_content: str, new_created_at: int) -> models_m.Message | None:
+    message = await db_session.get(models_m.Message, message_id)
+    if message:
+        message.content = new_content
+        message.created_at = new_created_at
+        await db_session.commit()
+        return message
+
+
+async def delete_message(db_session: AsyncSession, message_id: int) -> models_m.Message | None:
+    message = await db_session.get(models_m.Message, message_id)
+    if message:
+        await db_session.delete(message)
+        await db_session.commit()
+        return message
+
+
+# Old functions
 async def create_message(
     db_session: AsyncSession,
     sender_id: int,
     obj_in: schemas_m.Message,
-):
+) -> models_m.Message:
     db_obj = models_m.Message(
         **obj_in.model_dump(), sender_id=sender_id, created_at=int(time.time())
     )

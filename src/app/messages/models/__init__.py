@@ -1,1 +1,1 @@
-from .message import Message
+from .message import Chat, ChatMember, Message
