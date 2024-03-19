@@ -53,7 +53,7 @@ async def get_mini_by_user_id_offset_limit(
             models_f.Offer.description,
             models_f.Offer.price,
         )
-        .where(models_f.Offer.user_id == user_id)
+        .where(and_(models_f.Offer.user_id == user_id, models_f.Offer.status == status))
         .order_by(
             desc(models_f.Offer.created_at)
             if is_descending is None
@@ -95,6 +95,7 @@ async def get_mini_by_user_id_offset_limit(
         result.append(offer)
 
     return result
+
 
 
 async def get_root_categories_count_with_offset_limit(

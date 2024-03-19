@@ -46,6 +46,9 @@ async def get_mini_by_offset_limit(
             models_f.Offer.description,
             models_f.Offer.price,
         )
+        .where(
+            models_f.Offer.status == status
+        )
         .order_by(
             desc(models_f.Offer.created_at)
             if is_descending is None
@@ -69,8 +72,6 @@ async def get_mini_by_offset_limit(
 
     if search_query:
         stmt = stmt.where(models_f.Offer.name.ilike(f"%{search_query}%"))
-
-    stmt = stmt.where(models_f.Offer.status == status)
 
     rows = await db_session.execute(stmt)
 
