@@ -5,6 +5,7 @@ from fastapi import Depends
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, exists, delete, and_, asc, func
+from sqlalchemy.orm import selectinload
 
 from .. import models as models_f
 from .. import schemas as schemas_f
@@ -28,22 +29,37 @@ async def get_by_offer_id(
     return offer
 
 
-async def get_offers_by_price_filter(
-        db_session: AsyncSession, price_min: int, price_max: int,
-        status: models_f.Offer.status = "active"
+async def get_offers_by_price_name_filter(
+    db_session: AsyncSession,
+    is_descending=False,
+    search_query=None,
+    status: models_f.Offer.status = "active",
+    category_values_ids: list[int] = None,
 ) -> list[models_f.Offer]:
-    stmt = select(models_f.Offer). \
-        filter(models_f.Offer.price.between(price_min, price_max)). \
-        filter(models_f.Offer.status == status)
-    results = await db_session.execute(stmt)
-    offers = results.scalars().all()
+    query = select(models_f.Offer)
 
-    filtered_offers = []
-    for offer in offers:
-        offer_info = await get_by_offer_id(db_session, id=offer.id)
-        filtered_offers.append(offer_info)
+    query = query.filter(models_f.Offer.status == status)
 
-    return filtered_offers
+    if category_values_ids:
+        subquery = (
+            select(models_f.OfferCategoryValue.offer_id)
+            .where(
+                models_f.OfferCategoryValue.category_value_id.in_(category_values_ids)
+            )
+            .distinct()
+        )
+        query = query.where(models_f.Offer.id.in_(subquery))
+    if search_query:
+        query = query.where(models_f.Offer.name.ilike(f"%{search_query}%"))
+
+    if is_descending:
+        query = query.order_by(models_f.Offer.price.desc())
+    else:
+        query = query.order_by(models_f.Offer.price.asc())
+
+    res = await db_session.execute(query)
+    return res.scalars().all()
+
 
 
 async def get_mini_by_offset_limit(

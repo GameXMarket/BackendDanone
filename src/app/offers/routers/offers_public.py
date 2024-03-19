@@ -2,7 +2,7 @@ import logging
 import json
 
 import fastapi
-from fastapi import Depends, APIRouter, HTTPException, status
+from fastapi import Depends, APIRouter, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -16,6 +16,34 @@ from app.users import models as models_u
 
 logger = logging.getLogger("uvicorn")
 router = APIRouter(responses={200: {"model": schemas_f.OfferPreDB}})
+
+
+@router.get(
+    "/get_offers_by_price_and_name",
+    responses={
+        200: {"model": schemas_f.OfferPreDB},
+        404: {"model": schemas_f.OfferError}
+    },
+)
+async def get_active_offers(
+    search_query: str = None,
+    category_values_ids: list[int] = Query(
+        None, description="Список идентификаторов категорий"
+    ),
+    is_descending: bool = False,
+    db_session: AsyncSession = Depends(get_session),
+):
+    offers = await services_f.get_offers_by_price_name_filter(
+        db_session=db_session,
+        is_descending=is_descending,
+        search_query=search_query,
+        category_values_ids=category_values_ids,
+    )
+    if not offers:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    return offers
+
 
 
 @router.get(
