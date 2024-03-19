@@ -46,7 +46,6 @@ async def get_mini_by_user_id_offset_limit(
     search_query: str = None,
     status: models_f.Offer.status = "active",
 ) -> list[models_f.Offer]:
-    print(is_descending)
     stmt = (
         select(
             models_f.Offer.id,
