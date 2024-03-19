@@ -38,10 +38,6 @@ async def test_get_mini_with_offset_limit(
 
     Соритрует результат по дате создания от старых к новым (id могут идти не по порядку)
     """
-    if category_value_ids and not isinstance(category_value_ids, list):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="example: [1,2]"
-        )
 
     offers = await services_f.get_mini_by_offset_limit(
         db_session,
