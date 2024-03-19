@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, ForeignKey
+from sqlalchemy import Column, String, Integer, Boolean, ForeignKey
 from sqlalchemy.orm import relationship, Mapped
 
 from core.database import Base
@@ -9,6 +9,7 @@ class Chat(Base):
     __tablename__ = 'chat'
     
     id = Column(Integer, primary_key=True)
+    is_dialog = Column(Boolean, default=True)
 
 
 class ChatMember(Base):
@@ -23,8 +24,6 @@ class Message(Base):
     __tablename__ = 'message'
 
     id = Column(Integer, primary_key=True)
-    chat_member = Column(Integer, ForeignKey('chat_member.id', ondelete="CASCADE"), nullable=False)
+    chat_member_id = Column(Integer, ForeignKey('chat_member.id', ondelete="CASCADE"), nullable=False)
     content = Column(String)
     created_at = Column(Integer)
-
-
