@@ -19,7 +19,7 @@ class Offer(Base):
     description = Column(Text, nullable=False)
     price = Column(Integer, nullable=False)
     count = Column(Integer, nullable=False)
-    status = Column(Enum('active', 'hidden', 'deleted', name="offer_statuses"), nullable=False)
+    status = Column(Enum('active', 'hidden', 'deleted', name="offer_statuses"), nullable=False, default="active")
     created_at = Column(Integer, nullable=False)
     updated_at = Column(Integer, nullable=False)
     upped_at = Column(Integer, nullable=False)
