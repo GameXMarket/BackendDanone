@@ -24,6 +24,7 @@ class UserAttachmentManager(BaseAttachmentManager):
     async def create_new_attachment(
         self, db_session: AsyncSession, file: UploadFile, user_id: int
     ):
+        await self.delete_attachment_by_user_id(db_session, user_id)
         attachment = models.UserAttachment(author_id=user_id, user_id=user_id)
         db_session.add(attachment)
         await db_session.flush()
