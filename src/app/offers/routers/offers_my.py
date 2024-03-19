@@ -13,7 +13,6 @@ from core.depends import depends as deps
 from app.users import models as models_u
 from app.tokens import schemas as schemas_t
 
-
 logger = logging.getLogger("uvicorn")
 router = APIRouter()
 base_session = deps.UserSession()
@@ -23,11 +22,11 @@ base_session = deps.UserSession()
     path="/my/", responses=deps.build_response(deps.UserSession.get_current_active_user)
 )
 async def create_offfer(
-    offer: schemas_f.CreateOffer,
-    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
-        base_session
-    ),
-    db_session: AsyncSession = Depends(get_session),
+        offer: schemas_f.CreateOffer,
+        current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+            base_session
+        ),
+        db_session: AsyncSession = Depends(get_session),
 ):
     """
     Создаётся новый оффер у авторизованного пользователя
@@ -44,6 +43,21 @@ async def create_offfer(
 
 
 @router.get(
+    path="/get_active_offers_by_price",
+    responses={
+        200: {"model": list[schemas_f.OfferPreDB]},
+        404: {"model": schemas_f.OfferError}
+    }
+)
+async def get_offers_by_price(min_price: int, max_price: int, db_session: AsyncSession = Depends(get_session)):
+    offers = await services_f.get_offers_by_price_filter(db_session=db_session, price_min=min_price,
+                                                         price_max=max_price)
+    if not offers:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return offers
+
+
+@router.get(
     path="/my/getall/",
     responses={
         **{200: {"model": list[schemas_f.OfferMini]}},
@@ -51,12 +65,12 @@ async def create_offfer(
     },
 )
 async def get_mini_with_offset_limit(
-    offset: int = 0,
-    limit: int = 10,
-    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
-        base_session
-    ),
-    db_session: AsyncSession = Depends(get_session),
+        offset: int = 0,
+        limit: int = 10,
+        current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+            base_session
+        ),
+        db_session: AsyncSession = Depends(get_session),
 ):
     """
     Получает мини офферы авторизованного пользователя, требуется два паметра: offset, limit<br>
@@ -81,12 +95,12 @@ async def get_mini_with_offset_limit(
 
 @router.get(path="/my/bycategories")
 async def get_root_categories_count_with_offset_limit(
-    offset: int = 0,
-    limit: int = 10,
-    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
-        base_session
-    ),
-    db_session: AsyncSession = Depends(get_session),
+        offset: int = 0,
+        limit: int = 10,
+        current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+            base_session
+        ),
+        db_session: AsyncSession = Depends(get_session),
 ):
     """
     Возвращает ваши категории + кол-во лотов
@@ -105,13 +119,13 @@ async def get_root_categories_count_with_offset_limit(
 
 @router.get(path="/my/bycarcassid")
 async def get_offers_by_category(
-    carcass_id: int,
-    offset: int = 0,
-    limit: int = 10,
-    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
-        base_session
-    ),
-    db_session: AsyncSession = Depends(get_session),
+        carcass_id: int,
+        offset: int = 0,
+        limit: int = 10,
+        current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+            base_session
+        ),
+        db_session: AsyncSession = Depends(get_session),
 ):
     """
     Возвращает ваши категории + кол-во лотов
@@ -136,11 +150,11 @@ async def get_offers_by_category(
     },
 )
 async def get_by_id(
-    offer_id: int,
-    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
-        base_session
-    ),
-    db_session: AsyncSession = Depends(get_session),
+        offer_id: int,
+        current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+            base_session
+        ),
+        db_session: AsyncSession = Depends(get_session),
 ):
     token_data, user_context = current_session
     user: models_u.User = await user_context.get_current_active_user(
@@ -165,12 +179,12 @@ async def get_by_id(
     },
 )
 async def update_offer(
-    offer_id: int,
-    offer_in: schemas_f.CreateOffer,
-    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
-        base_session
-    ),
-    db_session: AsyncSession = Depends(get_session),
+        offer_id: int,
+        offer_in: schemas_f.CreateOffer,
+        current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+            base_session
+        ),
+        db_session: AsyncSession = Depends(get_session),
 ):
     """
     Обновляется оффер у авторизованного пользователя по его id
@@ -201,11 +215,11 @@ async def update_offer(
     },
 )
 async def delete_offer(
-    offer_id: int,
-    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
-        base_session
-    ),
-    db_session: AsyncSession = Depends(get_session),
+        offer_id: int,
+        current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+            base_session
+        ),
+        db_session: AsyncSession = Depends(get_session),
 ):
     """
     Удаляется оффер у авторизованного пользователя по его id

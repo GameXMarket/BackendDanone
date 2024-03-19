@@ -14,7 +14,6 @@ from core.database import get_session
 from core.depends import depends as deps
 from app.users import models as models_u
 
-
 logger = logging.getLogger("uvicorn")
 router = APIRouter(responses={200: {"model": schemas_f.OfferPreDB}})
 
@@ -24,10 +23,10 @@ router = APIRouter(responses={200: {"model": schemas_f.OfferPreDB}})
     responses={200: {"model": list[schemas_f.OfferMini]}},
 )
 async def test_get_mini_with_offset_limit(
-    offset: int = 0,
-    limit: int = 10,
-    category_value_ids: list[int] = fastapi.Query(default=None, examples=["[1, 2]"]),
-    db_session: AsyncSession = Depends(get_session),
+        offset: int = 0,
+        limit: int = 10,
+        category_value_ids: list[int] = fastapi.Query(default=None, examples=["[1, 2]"]),
+        db_session: AsyncSession = Depends(get_session),
 ):
     """
     <mark>ФУНКЦИЯ ДЛЯ ТЕСТОВ</mark><br>
@@ -39,15 +38,15 @@ async def test_get_mini_with_offset_limit(
     """
     if category_value_ids and not isinstance(category_value_ids, list):
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="example: [1,2]")
-    
+
     offers = await services_f.get_mini_by_offset_limit(
         db_session,
         offset=abs(offset),
         limit=abs(limit),
         category_value_ids=category_value_ids,
     )
-        
-    return offers 
+
+    return offers
 
 
 @router.get(
@@ -57,10 +56,10 @@ async def test_get_mini_with_offset_limit(
         404: {"model": schemas_f.OfferError}
     },
 )
-async def get_by_id(offer_id: int, db_session: AsyncSession = Depends(get_session),):
+async def get_by_id(offer_id: int, db_session: AsyncSession = Depends(get_session), ):
     offer = await services_f.get_by_offer_id(db_session, id=offer_id)
-    
+
     if not offer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    
+
     return offer
