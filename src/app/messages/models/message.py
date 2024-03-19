@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Boolean, ForeignKey
+from sqlalchemy import Column, String, Integer, Boolean, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship, Mapped
 
 from core.database import Base
@@ -18,6 +18,8 @@ class ChatMember(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False)
     chat_id = Column(Integer, ForeignKey('chat.id', ondelete="CASCADE"), nullable=False)
+
+    __table_args__ = (UniqueConstraint('user_id', 'chat_id', name='uq_user_chat'),)
 
 
 class Message(Base):
