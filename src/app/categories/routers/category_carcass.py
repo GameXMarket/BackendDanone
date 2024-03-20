@@ -18,9 +18,9 @@ base_session = deps.UserSession()
 
 @router.get(path="/gettall/")
 async def get_root_with_offset_limit(
-        offset: int = 0,
-        limit: int = 1,
-        db_session: AsyncSession = Depends(get_session),
+    offset: int = 0,
+    limit: int = 1,
+    db_session: AsyncSession = Depends(get_session),
 ):
     """
     Получаем список всех root каркасов, без наследников
@@ -56,9 +56,9 @@ async def get_by_id(category_id: int, db_session: AsyncSession = Depends(get_ses
 
 @router.post(path="/")
 async def create_category_carcass(
-        new_category: schemas.CategoryCarcassCreate,
-        current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(base_session),
-        db_session: AsyncSession = Depends(get_session),
+    new_category: schemas.CategoryCarcassCreate,
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(base_session),
+    db_session: AsyncSession = Depends(get_session),
 ):
     """
     Создаёт новый каркасс (игру, платформу и т.д.) <br>
@@ -86,10 +86,10 @@ async def create_category_carcass(
 
 @router.put(path="/{category_id}")
 async def update_category_carcass(
-        category_id: int,
-        new_category: schemas.CategoryCarcassUpdate,
-        current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(base_session),
-        db_session: AsyncSession = Depends(get_session),
+    category_id: int,
+    new_category: schemas.CategoryCarcassUpdate,
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(base_session),
+    db_session: AsyncSession = Depends(get_session),
 ):
     """
     Обновляет каркасс по его id <br>
@@ -115,9 +115,9 @@ async def update_category_carcass(
 
 @router.delete(path="/{category_id}")
 async def delete_category_carcass(
-        category_id: int,
-        current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(base_session),
-        db_session: AsyncSession = Depends(get_session),
+    category_id: int,
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(base_session),
+    db_session: AsyncSession = Depends(get_session),
 ):
     """
     Удаляет каркасс по его id <br>
