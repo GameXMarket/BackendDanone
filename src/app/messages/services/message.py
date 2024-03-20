@@ -1,3 +1,4 @@
+import time
 from typing import cast, Any, NoReturn, Sequence
 from json.decoder import JSONDecodeError
 from dataclasses import dataclass
@@ -10,6 +11,7 @@ from sqlalchemy.orm import aliased
 
 from core import depends as deps
 from core.database import context_get_session
+from core.redis import get_redis_client, get_redis_pipeline
 from app.messages import models as models_m
 from app.messages import schemas as schemas_m
 from app.messages import services as services_m
@@ -103,9 +105,9 @@ class BaseChatMemberManager(BaseChatManager):
         return new_member
 
     async def get_chat_member(
-        self, db_session: AsyncSession, member_id: int
+        self, db_session: AsyncSession, chat_member_id: int
     ) -> models_m.ChatMember | None:
-        stmt = select(models_m.ChatMember).where(models_m.ChatMember.id == member_id)
+        stmt = select(models_m.ChatMember).where(models_m.ChatMember.id == chat_member_id)
         result = await db_session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -119,22 +121,31 @@ class BaseChatMemberManager(BaseChatManager):
         pass
 
     async def delete_chat_member(
-        self, db_session: AsyncSession, member_id: int
+        self, db_session: AsyncSession, chat_member_id: int
     ) -> models_m.ChatMember | None:
-        member = await db_session.get(models_m.ChatMember, member_id)
+        member = await db_session.get(models_m.ChatMember, chat_member_id)
         if member:
             await db_session.delete(member)
             await db_session.commit()
             return member
 
     async def create_new_chat_with_members(
-        self, db_session: AsyncSession, *members_ids: int
+        self, db_session: AsyncSession, *users_ids: int
     ):
         chat = await self.create_chat(db_session)
-        for member_id in members_ids:
-            await self.create_chat_member(db_session, member_id, chat.id)
+        for user_id in users_ids:
+            await self.create_chat_member(db_session, user_id, chat.id)
 
         return chat.id
+
+    async def get_chat_member_id_by_chat_user_ids(self, db_session: AsyncSession, chat_id: int, user_id: int) -> int | None:
+        stmt = (
+            select(models_m.ChatMember.id)
+            .where(models_m.ChatMember.chat_id == chat_id)
+            .where(models_m.ChatMember.user_id == user_id)
+        )
+        result = await db_session.execute(stmt)
+        return result.scalar_one_or_none()
 
 
 class BaseMessageManager(BaseChatMemberManager):
@@ -146,10 +157,9 @@ class BaseMessageManager(BaseChatMemberManager):
         db_session: AsyncSession,
         chat_member_id: int,
         content: str,
-        created_at: int,
     ) -> models_m.Message:
         new_message = models_m.Message(
-            chat_member=chat_member_id, content=content, created_at=created_at
+            chat_member_id=chat_member_id, content=content, created_at=int(time.time())
         )
         db_session.add(new_message)
         await db_session.commit()
@@ -214,8 +224,16 @@ class BaseMessageManager(BaseChatMemberManager):
             {**cast(models_m.Message, message).to_dict(), "user_id": cast(int, user_id)}
             for message, user_id in messages
         ]
-
-
+    
+    async def send_message(
+        self,
+        db_session: AsyncSession,
+        sender_id: int,
+        message: schemas_m.MessageCreate
+    ):
+        chat_member_id = await self.get_chat_member_id_by_chat_user_ids(db_session, message.chat_id, sender_id)
+        await self.create_message(db_session, chat_member_id, message.content)
+        
 message_manager = BaseMessageManager()
 
 
@@ -230,9 +248,8 @@ class ConnectionContext:
     user_id: int
 
 
-# TODO проверку на существавание юзера и тд
-# Пока просто будут исключения из-за ограничений на бд
 class ChatConnectionManager:
+    #ws_connections: {user_id, set[ws_connection]}
     ws_connections: dict[int, set[WebSocket]] = {}
 
     def __init__(self) -> None:
@@ -281,11 +298,14 @@ class ChatConnectionManager:
 
         ...
 
-    async def send_message(
-        self, conn_context: ConnectionContext, message_create: schemas_m.MessageCreate
+    async def __send_message(
+        self, conn_context: ConnectionContext, message: schemas_m.MessageCreate
     ):
-        print(message_create.model_dump())
-        ...
+        print(message.model_dump())
+        async with context_get_session() as db_session:
+            await message_manager.send_message(db_session, conn_context.user_id, message)
+        
+        
 
     async def start_listening(self, conn_context: ConnectionContext):
         while True:
@@ -311,4 +331,4 @@ class ChatConnectionManager:
                     code=status.WS_1003_UNSUPPORTED_DATA,
                 )
 
-            await self.send_message(conn_context, new_message)
+            await self.__send_message(conn_context, new_message)
