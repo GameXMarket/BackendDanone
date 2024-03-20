@@ -28,6 +28,9 @@ async def get_by_user_id_offer_id(
     )
     offer: models_f.Offer | None = (await db_session.execute(stmt)).scalar()
 
+    if not offer:
+        return None
+    
     files = await offer_attachment_manager.get_only_files(db_session, offer.id)
     offer = offer.to_dict()
     offer["files"] = files
@@ -154,29 +157,25 @@ async def get_offers_by_carcass_id(
         .where(models_f.OfferCategoryValue.category_value_id.in_(next_value_ids))
         .where(CategoryValue.id == models_f.OfferCategoryValue.category_value_id)
     )
-    results = (await db_session.execute(stmt)).all()
-    offers = list(
-        map(
-            lambda v: {
-                "offer_id": v[0],
-                "name": v[1],
-                "price": v[2],
-                "count": v[3],
-                "carcass_select_name": carcass_names[0],
-                "carcass_in_offer_name": carcass_names[1],
-                "carcass_in_offer_value": v[4],
-            },
-            results,
-        )
-    )
 
-    for offer in offers:
-        files = await offer_attachment_manager.get_only_files(
-            db_session, offer["offer_id"]
-        )
-        offer["files"] = files
+    rows = await db_session.execute(stmt)
 
-    return
+    result = []
+    for row in rows:
+        files = await offer_attachment_manager.get_only_files(db_session, row[0])
+        offer = {
+            "id": row[0],
+            "name": row[1],
+            "price": row[2],
+            "count": row[3],
+            "files": files,
+            "carcass_select_name": carcass_names[0],
+            "carcass_in_offer_name": carcass_names[1],
+            "carcass_in_offer_value": row[4],
+        }
+        result.append(offer)
+
+    return result
 
 
 async def create_offer(
