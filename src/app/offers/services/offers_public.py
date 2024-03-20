@@ -4,7 +4,8 @@ from typing import List
 from fastapi import Depends
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, exists, delete, and_, asc, func
+from sqlalchemy import select, update, exists, delete, and_, asc, func, desc
+from sqlalchemy.orm import selectinload
 
 from .. import models as models_f
 from .. import schemas as schemas_f
@@ -21,7 +22,7 @@ async def get_by_offer_id(
 ) -> models_f.Offer | None:
     stmt = select(models_f.Offer).where(models_f.Offer.id == id)
     offer: models_f.Offer | None = (await db_session.execute(stmt)).scalar()
-    
+
     if not offer:
         return None
     
@@ -33,8 +34,15 @@ async def get_by_offer_id(
 
 
 async def get_mini_by_offset_limit(
-    db_session: AsyncSession, *, offset: int, limit: int, category_value_ids: list[int] = None
-):
+    db_session: AsyncSession,
+    *,
+    offset: int,
+    limit: int,
+    category_value_ids: list[int] = None,
+    is_descending: bool = None,
+    search_query: str = None,
+    status: models_f.Offer.status = "active",
+) -> list[models_f.Offer]:
     stmt = (
         select(
             models_f.Offer.id,
@@ -42,25 +50,38 @@ async def get_mini_by_offset_limit(
             models_f.Offer.description,
             models_f.Offer.price,
         )
-        .order_by(asc(models_f.Offer.created_at))
+        .where(
+            models_f.Offer.status == status
+        )
+        .order_by(
+            desc(models_f.Offer.created_at)
+            if is_descending is None
+            else desc(models_f.Offer.price)
+            if is_descending
+            else asc(models_f.Offer.price)
+        )
         .offset(offset)
         .limit(limit)
     )
 
-    # сортировка по ids
     if category_value_ids:
         stmt = stmt.where(
-                and_(
-                    models_f.Offer.category_values.any(models_f.OfferCategoryValue.category_value_id == cv_id)
-                    for cv_id in category_value_ids
+            and_(
+                models_f.Offer.category_values.any(
+                    models_f.OfferCategoryValue.category_value_id == cv_id
                 )
+                for cv_id in category_value_ids
             )
+        )
 
-    rows = (await db_session.execute(stmt)).all()
-    
-    r = [] # Уже лучше, но что-то не то
+    if search_query:
+        stmt = stmt.where(models_f.Offer.name.ilike(f"%{search_query}%"))
+
+    rows = await db_session.execute(stmt)
+
+    result = []
     for row in rows:
-        files =  await offer_attachment_manager.get_only_files(db_session, row[0])
+        files = await offer_attachment_manager.get_only_files(db_session, row[0])
         offer = {
             "id": row[0],
             "name": row[1],
@@ -68,8 +89,6 @@ async def get_mini_by_offset_limit(
             "price": row[3],
             "files": files,
         }
-        r.append(offer)
-    
-    return r
+        result.append(offer)
 
-
+    return result

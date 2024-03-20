@@ -5,7 +5,7 @@ from fastapi import Depends
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from sqlalchemy import select, update, exists, delete, and_, asc, func
+from sqlalchemy import select, update, exists, delete, and_, asc, func, desc
 
 from .. import models as models_f
 from .. import schemas as schemas_f
@@ -13,7 +13,10 @@ from app.users import models as models_u
 from . import __offer_category_value as __ocv
 from app.categories.models import CategoryCarcass, CategoryValue
 from app.categories.services.categories_carcass import get_carcass_names
-from app.categories.services.categories_values import get_value_ids_by_carcass, get_root_values
+from app.categories.services.categories_values import (
+    get_value_ids_by_carcass,
+    get_root_values,
+)
 from app.attachment.services import offer_attachment_manager
 
 
@@ -24,17 +27,25 @@ async def get_by_user_id_offer_id(
         models_f.Offer.user_id == user_id, models_f.Offer.id == id
     )
     offer: models_f.Offer | None = (await db_session.execute(stmt)).scalar()
-    
+
     files = await offer_attachment_manager.get_only_files(db_session, offer.id)
     offer = offer.to_dict()
     offer["files"] = files
-    
+
     return offer
 
 
 async def get_mini_by_user_id_offset_limit(
-    db_session: AsyncSession, user_id, offset: int, limit: int
-):
+    db_session: AsyncSession,
+    *,
+    offset: int,
+    limit: int,
+    category_value_ids: list[int] = None,
+    user_id: int,
+    is_descending: bool = None,
+    search_query: str = None,
+    status: models_f.Offer.status = "active",
+) -> list[models_f.Offer]:
     stmt = (
         select(
             models_f.Offer.id,
@@ -42,17 +53,38 @@ async def get_mini_by_user_id_offset_limit(
             models_f.Offer.description,
             models_f.Offer.price,
         )
-        .where(models_f.Offer.user_id == user_id)
-        .order_by(asc(models_f.Offer.created_at))
+        .where(and_(models_f.Offer.user_id == user_id, models_f.Offer.status == status))
+        .order_by(
+            desc(models_f.Offer.created_at)
+            if is_descending is None
+            else desc(models_f.Offer.price)
+            if is_descending
+            else asc(models_f.Offer.price)
+        )
         .offset(offset)
         .limit(limit)
     )
 
-    rows = (await db_session.execute(stmt)).all()
-    
-    r = [] # Уже лучше, но что-то не то
+    if category_value_ids:
+        stmt = stmt.where(
+            and_(
+                models_f.Offer.category_values.any(
+                    models_f.OfferCategoryValue.category_value_id == cv_id
+                )
+                for cv_id in category_value_ids
+            )
+        )
+
+    if search_query:
+        stmt = stmt.where(models_f.Offer.name.ilike(f"%{search_query}%"))
+
+    stmt = stmt.where(models_f.Offer.status == status)
+
+    rows = await db_session.execute(stmt)
+
+    result = []
     for row in rows:
-        files =  await offer_attachment_manager.get_only_files(db_session, row[0])
+        files = await offer_attachment_manager.get_only_files(db_session, row[0])
         offer = {
             "id": row[0],
             "name": row[1],
@@ -60,9 +92,11 @@ async def get_mini_by_user_id_offset_limit(
             "price": row[3],
             "files": files,
         }
-        r.append(offer)
+        result.append(offer)
 
-    return r
+    return result
+
+
 
 async def get_root_categories_count_with_offset_limit(
     db_session: AsyncSession, user_id, offset, limit
@@ -71,7 +105,7 @@ async def get_root_categories_count_with_offset_limit(
     root_values = await get_root_values(db_session)
     if not root_values:
         return None
-    
+
     for value in root_values:
         stmt = (
             select(func.count())
@@ -82,9 +116,7 @@ async def get_root_categories_count_with_offset_limit(
             .offset(offset)
             .limit(limit)
         )
-        offer_count = (
-            await db_session.execute(stmt)
-        ).scalar_one_or_none()
+        offer_count = (await db_session.execute(stmt)).scalar_one_or_none()
         if offer_count:
             result.append(
                 {
@@ -137,12 +169,14 @@ async def get_offers_by_carcass_id(
             results,
         )
     )
-    
+
     for offer in offers:
-        files =  await offer_attachment_manager.get_only_files(db_session, offer["offer_id"])
-        offer["files"] = files        
-    
-    return 
+        files = await offer_attachment_manager.get_only_files(
+            db_session, offer["offer_id"]
+        )
+        offer["files"] = files
+
+    return
 
 
 async def create_offer(

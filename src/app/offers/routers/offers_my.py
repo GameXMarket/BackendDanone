@@ -1,5 +1,6 @@
 import logging
 
+import fastapi
 from fastapi import Depends, APIRouter, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -12,7 +13,6 @@ from core.database import get_session
 from core.depends import depends as deps
 from app.users import models as models_u
 from app.tokens import schemas as schemas_t
-
 
 logger = logging.getLogger("uvicorn")
 router = APIRouter()
@@ -53,6 +53,9 @@ async def create_offfer(
 async def get_mini_with_offset_limit(
     offset: int = 0,
     limit: int = 10,
+    search_query: str = None,
+    is_descending: bool = None,
+    category_value_ids: list[int] = fastapi.Query(default=None, examples=["[1, 2]"]),
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
         base_session
     ),
