@@ -105,7 +105,6 @@ async def token_delete(banned: None = Depends(deps.auto_token_ban)):
         401: {"model": schemas_t.TokenError},
         404: {"model": schemas_u.UserError},
         409: {"model": schemas_u.UserError},
-        200: {"model": schemas_u.UserPreDB},
     },
 )
 async def verify_user_email(token: str, db_session: Session = Depends(get_session)):
@@ -141,7 +140,15 @@ async def verify_user_email(token: str, db_session: Session = Depends(get_sessio
         db_session, db_obj=user, obj_in={"is_verified": True}
     )
     
-    return schemas_u.UserPreDB(**user.to_dict())
+    access, refresh = TokenSecurity.create_new_token_set(user.email, user.id)
+
+    response = JSONResponse({"access": access, "refresh": refresh})
+    response.set_cookie(key="refresh", value=refresh)
+    
+    if conf.DEBUG:
+        response.set_cookie(key="access", value=access)
+    
+    return response
 
 
 @router.post(

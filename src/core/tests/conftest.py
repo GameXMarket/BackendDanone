@@ -1,3 +1,4 @@
+from typing import Any, AsyncGenerator
 import pytest
 from httpx import AsyncClient
 
@@ -10,7 +11,7 @@ def anyio_backend():
 
 
 @pytest.fixture
-async def async_client() -> AsyncClient:
+async def async_client() -> AsyncGenerator[AsyncClient, Any, None]:
     async with AsyncClient(app=app, base_url="http://testserver") as async_client:
         yield async_client 
 
