@@ -32,6 +32,9 @@ async def get_dialog_id_by_user_id(
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
 
+    if user.id == interlocutor_id:
+        raise HTTPException(404)
+
     chat_id = await services.message_manager.get_dialog_id_by_user_id(
         db_session, user.id, interlocutor_id
     )
@@ -45,8 +48,8 @@ async def get_dialog_id_by_user_id(
 
 @router.get("/my/getall")
 async def get_all_chats_with_offset_limit(
-    offset: int,
-    limit: int,
+    offset: int = 0,
+    limit: int = 10,
     db_session: AsyncSession = Depends(get_session),
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
         base_session
@@ -71,8 +74,8 @@ async def get_all_chats_with_offset_limit(
 @router.get("/my/getmessages")
 async def get_all_messages_with_offset_limit(
     chat_id: int,
-    offset: int,
-    limit: int,
+    offset: int = 0,
+    limit: int = 10,
     db_session: AsyncSession = Depends(get_session),
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
         base_session

@@ -67,7 +67,7 @@ class BaseChatManager:
     ) -> int | None:
         """
         Публичный метод для получения чата с данным пользователем
-        author_id - тот, кто запрашивает чат
+        user_id - тот, кто запрашивает чат
         """
         FirstChatMember = aliased(models_m.ChatMember)
         SecondChatMember = aliased(models_m.ChatMember)
@@ -284,7 +284,7 @@ class ChatConnectionManager:
     async def send_message(
         self, conn_context: ConnectionContext, message_create: schemas_m.MessageCreate
     ):
-
+        print(message_create.model_dump())
         ...
 
     async def start_listening(self, conn_context: ConnectionContext):
