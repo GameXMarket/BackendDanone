@@ -24,13 +24,14 @@ async def get_by_id(
 async def get_many_by_ids(
     db_session: AsyncSession, ids: list[int], options: List[Tuple[Any]] = None
 ):
-    stmt = select(models.CategoryValue).where(models.CategoryValue.id.in_(ids))
-    if options:
-        for option in options:
-            stmt = stmt.options(option[0](option[1]))    
-    values = (await db_session.execute(stmt)).scalars().all()
-    
-    return [v.to_dict("carcass") for v in values]
+    if ids is not None:
+        stmt = select(models.CategoryValue).where(models.CategoryValue.id.in_(ids))
+        if options:
+            for option in options:
+                stmt = stmt.options(option[0](option[1]))
+        values = (await db_session.execute(stmt)).scalars().all()
+        return [v.to_dict("carcass") for v in values]
+    return []
 
 
 async def get_associated_by_id(
