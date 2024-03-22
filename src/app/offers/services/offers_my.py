@@ -18,6 +18,7 @@ from app.categories.services.categories_values import (
     get_root_values,
 )
 from app.attachment.services import offer_attachment_manager
+from app.attachment.services import category_value_attachment_manager
 
 
 async def get_by_user_id_offer_id(
@@ -100,7 +101,6 @@ async def get_mini_by_user_id_offset_limit(
     return result
 
 
-
 async def get_root_categories_count_with_offset_limit(
     db_session: AsyncSession, user_id, offset, limit
 ):
@@ -121,12 +121,14 @@ async def get_root_categories_count_with_offset_limit(
         )
         offer_count = (await db_session.execute(stmt)).scalar_one_or_none()
         if offer_count:
+            files = await category_value_attachment_manager.get_only_files(db_session, value[0])
             result.append(
                 {
                     "value_id": value[0],
                     "value_name": value[1],
                     "next_carcass_id": value[2],
                     "offer_count": offer_count,
+                    "files": files,
                 }
             )
 
