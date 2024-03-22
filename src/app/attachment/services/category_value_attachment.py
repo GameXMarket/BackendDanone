@@ -1,7 +1,7 @@
 from typing import Any
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, delete
 
 from core.settings import BASE_FILE_URL
 from .base_attachment import BaseAttachmentManager
@@ -9,14 +9,27 @@ from .. import models
 
 
 class CategoryValueAttachmentManager(BaseAttachmentManager):
+    async def delete_attachment_by_category_value_id(
+        self, db_session: AsyncSession, category_value_id: int
+    ):
+        stmt = (
+            delete(models.CategoryValueAttachemnt)
+            .where(models.CategoryValueAttachemnt.category_value_id == category_value_id)
+            .returning(models.CategoryValueAttachemnt.id)
+        )
+        deleted_attachment_id = (await db_session.execute(stmt)).scalar_one_or_none()
+        await db_session.commit()
+
+        return {"attachment_id": deleted_attachment_id}
+
     async def create_new_attachment(
-        self, db_session: AsyncSession, files: list[UploadFile], user_id: int, category_value_id: int
+        self, db_session: AsyncSession, file: UploadFile, user_id: int, category_value_id: int
     ):
         attachment = models.CategoryValueAttachemnt(author_id=user_id, category_value_id=category_value_id)
         db_session.add(attachment)
         await db_session.flush()
 
-        await super().create_new_attachment(db_session, attachment.id, files)
+        await super().create_new_attachment(db_session, attachment.id, [file])
 
         return attachment.to_dict()
     
