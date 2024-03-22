@@ -22,27 +22,33 @@ from app.users.services import get_by_id
 #  однако пока не понятно как именно всё будет использоваться, потому
 #  сейчас данный код будет дублироваться, до момента рефакторинга
 async def get_by_offer_id(
-        db_session: AsyncSession, *, id: int
+    db_session: AsyncSession, *, id: int
 ) -> models_f.Offer | None:
     stmt = select(models_f.Offer).where(models_f.Offer.id == id)
     offer: models_f.Offer | None = (await db_session.execute(stmt)).scalar()
 
     if not offer:
         return None
+
     user = await get_by_id(db_session=db_session, id=offer.user_id)
-    username = user.username
-    user_files = await user_attachment_manager.get_only_files(db_session=db_session, user_id=user.id)
-    stmt = select(models_f.OfferCategoryValue.category_value_id).where(models_f.OfferCategoryValue.offer_id == offer.id)
+    user_files = await user_attachment_manager.get_only_files(
+        db_session=db_session, user_id=user.id
+    )
+    stmt = select(models_f.OfferCategoryValue.category_value_id).where(
+        models_f.OfferCategoryValue.offer_id == offer.id
+    )
     values = await db_session.execute(stmt)
     category_value_ids = [row[0] for row in values.fetchall()]
-    categories = await get_many_by_ids(db_session=db_session, ids=category_value_ids,
-                                       options=[(selectinload, models_c.CategoryValue.carcass)],
-                                       )
-    category_value = [{"id": category["id"], "value": category["value"]} for category in categories]
+    categories = await get_many_by_ids(
+        db_session=db_session, ids=category_value_ids, lazy_load_v=None
+    )
+    category_value = [
+        {"id": category["id"], "value": category["value"]} for category in categories
+    ]
     files = await offer_attachment_manager.get_only_files(db_session, offer.id)
     offer = offer.to_dict()
     offer["offer_files"] = files
-    offer["username"] = username
+    offer["username"] = user.username
     offer["user_files"] = user_files
     offer["category_values"] = category_value
 
@@ -50,14 +56,14 @@ async def get_by_offer_id(
 
 
 async def get_mini_by_offset_limit(
-        db_session: AsyncSession,
-        *,
-        offset: int,
-        limit: int,
-        category_value_ids: list[int] = None,
-        is_descending: bool = None,
-        search_query: str = None,
-        status: models_f.Offer.status = "active",
+    db_session: AsyncSession,
+    *,
+    offset: int,
+    limit: int,
+    category_value_ids: list[int] = None,
+    is_descending: bool = None,
+    search_query: str = None,
+    status: models_f.Offer.status = "active",
 ) -> list[models_f.Offer]:
     stmt = (
         select(
@@ -67,9 +73,7 @@ async def get_mini_by_offset_limit(
             models_f.Offer.price,
             models_f.Offer.user_id,
         )
-        .where(
-            models_f.Offer.status == status
-        )
+        .where(models_f.Offer.status == status)
         .order_by(
             desc(models_f.Offer.created_at)
             if is_descending is None
@@ -95,10 +99,15 @@ async def get_mini_by_offset_limit(
         stmt = stmt.where(models_f.Offer.name.ilike(f"%{search_query}%"))
 
     rows = await db_session.execute(stmt)
-    categories = await get_many_by_ids(db_session=db_session, ids=category_value_ids,
-                                            options=[(selectinload, models_c.CategoryValue.carcass)],
-                                            )
-    category_value = [{"id": category["id"], "value": category["value"]} for category in categories]
+    if category_value_ids:
+        categories = await get_many_by_ids(
+            db_session=db_session, ids=category_value_ids, lazy_load_v=None
+        )
+    else:
+        categories = []
+    category_value = [
+        {"id": category["id"], "value": category["value"]} for category in categories
+    ]
     result = []
     for row in rows:
         files_offer = await offer_attachment_manager.get_only_files(db_session, row[0])
@@ -112,7 +121,7 @@ async def get_mini_by_offset_limit(
             "files_offer": files_offer,
             "files_user": files_user,
             "username": user.username,
-            "category_values": category_value
+            "category_values": category_value,
         }
         result.append(offer)
 
