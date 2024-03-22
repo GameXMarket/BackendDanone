@@ -19,12 +19,19 @@ class MessageInDB(BaseModel):
 
 
 class MessageCreate(BaseModel):
-    """
-    author_id - user_id, not chat_member
-    """
     chat_id: int
     content: str = Field(min_length=1, max_length=4096)
+    need_wait: int = 0
 
     @field_validator("content", mode="before")
     def process_text(cls, v: str) -> str:
         return v.strip().replace("  ", " ")
+
+
+class MessageBroadcast(BaseModel):
+    id: int
+    chat_id: int
+    user_id: int
+    content: str
+    files: list[str] | None = None
+    created_at: int

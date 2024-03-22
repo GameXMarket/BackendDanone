@@ -1,4 +1,5 @@
 import time
+import asyncio
 from typing import cast, Any, NoReturn, Sequence
 from json.decoder import JSONDecodeError
 from dataclasses import dataclass
@@ -16,16 +17,22 @@ from app.messages import models as models_m
 from app.messages import schemas as schemas_m
 from app.messages import services as services_m
 from app.tokens import schemas as schemas_t
+from app.attachment.services import message_attachment_manager
 
 
 class BaseChatManager:
     def __init__(self) -> None:
         pass
 
-    async def create_chat(self, db_session: AsyncSession) -> models_m.Chat:
+    async def create_chat(self, db_session: AsyncSession, need_commit: bool = True) -> models_m.Chat:
         new_chat = models_m.Chat()
         db_session.add(new_chat)
-        await db_session.commit()
+        
+        if need_commit:
+            await db_session.commit()
+        else:
+            await db_session.flush()
+        
         await db_session.refresh(new_chat)
         return new_chat
 
@@ -96,11 +103,16 @@ class BaseChatMemberManager(BaseChatManager):
         super().__init__()
 
     async def create_chat_member(
-        self, db_session: AsyncSession, user_id: int, chat_id: int
+        self, db_session: AsyncSession, user_id: int, chat_id: int, need_commit: bool = True
     ) -> models_m.ChatMember:
         new_member = models_m.ChatMember(user_id=user_id, chat_id=chat_id)
         db_session.add(new_member)
-        await db_session.commit()
+        
+        if need_commit:
+            await db_session.commit()
+        else:
+            await db_session.flush()
+        
         await db_session.refresh(new_member)
         return new_member
 
@@ -132,10 +144,11 @@ class BaseChatMemberManager(BaseChatManager):
     async def create_new_chat_with_members(
         self, db_session: AsyncSession, *users_ids: int
     ):
-        chat = await self.create_chat(db_session)
+        chat = await self.create_chat(db_session, need_commit=False)
         for user_id in users_ids:
-            await self.create_chat_member(db_session, user_id, chat.id)
+            await self.create_chat_member(db_session, user_id, chat.id, need_commit=False)
 
+        await db_session.commit()
         return chat.id
 
     async def get_chat_member_id_by_chat_user_ids(self, db_session: AsyncSession, chat_id: int, user_id: int) -> int | None:
@@ -146,6 +159,14 @@ class BaseChatMemberManager(BaseChatManager):
         )
         result = await db_session.execute(stmt)
         return result.scalar_one_or_none()
+    
+    async def get_users_ids_by_chat_id(self, db_session: AsyncSession, chat_id: int) -> Sequence[int]:        
+        stmt = (
+            select(models_m.ChatMember.user_id)
+            .where(models_m.ChatMember.chat_id == chat_id)
+        )
+        result = await db_session.execute(stmt)
+        return result.scalars().all()
 
 
 class BaseMessageManager(BaseChatMemberManager):
@@ -157,9 +178,10 @@ class BaseMessageManager(BaseChatMemberManager):
         db_session: AsyncSession,
         chat_member_id: int,
         content: str,
+        need_wait: int = 0,
     ) -> models_m.Message:
         new_message = models_m.Message(
-            chat_member_id=chat_member_id, content=content, created_at=int(time.time())
+            chat_member_id=chat_member_id, content=content, created_at=int(time.time()) + need_wait
         )
         db_session.add(new_message)
         await db_session.commit()
@@ -225,14 +247,14 @@ class BaseMessageManager(BaseChatMemberManager):
             for message, user_id in messages
         ]
     
-    async def send_message(
+    async def create_message_by_sender_id(
         self,
         db_session: AsyncSession,
         sender_id: int,
         message: schemas_m.MessageCreate
     ):
         chat_member_id = await self.get_chat_member_id_by_chat_user_ids(db_session, message.chat_id, sender_id)
-        await self.create_message(db_session, chat_member_id, message.content)
+        return await self.create_message(db_session, chat_member_id, message.content, message.need_wait)
         
 message_manager = BaseMessageManager()
 
@@ -293,21 +315,43 @@ class ChatConnectionManager:
             del self.ws_connections[conn_context.user_id]
 
     async def broadcast(
-        self, conn_context: ConnectionContext, message: models_m.Message
+        self, message: schemas_m.MessageBroadcast, target_users_ids: list[int | bytes]
     ):
-
-        ...
+        for user_id in target_users_ids:
+            if not (user_websockets := self.ws_connections.get(int(user_id))):
+                continue
+            
+            msg_json = message.model_dump()
+            for ws in user_websockets:
+                await ws.send_json(msg_json)
 
     async def __send_message(
-        self, conn_context: ConnectionContext, message: schemas_m.MessageCreate
-    ):
-        print(message.model_dump())
-        async with context_get_session() as db_session:
-            await message_manager.send_message(db_session, conn_context.user_id, message)
+        self, conn_context: ConnectionContext, new_message: schemas_m.MessageCreate
+    ):        
+        users_ids = None
+        files = None
         
-        
+        async with get_redis_client() as redis:
+            users_ids = await redis.smembers(f"chat_members:{new_message.chat_id}")
 
-    async def start_listening(self, conn_context: ConnectionContext):
+            async with context_get_session() as db_session:
+                message = await message_manager.create_message_by_sender_id(db_session, conn_context.user_id, new_message)
+                if new_message.need_wait:
+                    await conn_context.websocket.send_json({"message_id": message.id, "waiting": new_message.need_wait})
+                    await asyncio.sleep(new_message.need_wait)
+                    files = await message_attachment_manager.get_only_files(db_session, message.id)
+
+                if not users_ids:
+                    users_ids = await message_manager.get_users_ids_by_chat_id(db_session, new_message.chat_id)
+                    await redis.sadd(f"chat_members:{new_message.chat_id}", *users_ids)
+                    await redis.expire(f"chat_members:{new_message.chat_id}", 60 * 10)
+        
+        message_broadcast = schemas_m.MessageBroadcast(
+            **{**message.to_dict(), "chat_id": new_message.chat_id, "user_id": conn_context.user_id, "files": files}
+        )
+        await self.broadcast(message_broadcast, users_ids)
+
+    async def start_listening(self, conn_context: ConnectionContext) -> NoReturn:
         while True:
             try:
                 new_message: schemas_m.MessageCreate = (
