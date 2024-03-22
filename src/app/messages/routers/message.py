@@ -64,10 +64,10 @@ async def get_all_chats_with_offset_limit(
     chats_ids = await services.message_manager.get_all_user_chats_ids_by_user_id(
         db_session, user.id, offset, limit
     )
-    
+
     if not chats_ids:
         raise HTTPException(404)
-    
+
     return JSONResponse({"chats_ids": chats_ids})
 
 
@@ -87,10 +87,10 @@ async def get_all_messages_with_offset_limit(
     messages = await services.message_manager.get_messages_by_chat_id_user_id(
         db_session, chat_id, user.id, offset, limit
     )
-    
+
     if not messages:
         raise HTTPException(404)
-    
+
     return messages
 
 

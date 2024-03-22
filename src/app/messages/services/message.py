@@ -361,6 +361,10 @@ class ChatConnectionManager:
                 message = await message_manager.create_message_by_sender_id(
                     db_session, conn_context.user_id, new_message
                 )
+                # todo сюда можно придумать решение получше, конечно
+                #  а-ля проверять появился ли файл или нет или
+                #  добавить pg listener на таблицу и уже там чекать
+                #  но в pg listener могут быть проблемы, а проверка создаст ненужные? запросы
                 if new_message.need_wait:
                     await conn_context.websocket.send_json(
                         {"message_id": message.id, "waiting": new_message.need_wait}
