@@ -99,17 +99,19 @@ async def get_mini_by_offset_limit(
         stmt = stmt.where(models_f.Offer.name.ilike(f"%{search_query}%"))
 
     rows = await db_session.execute(stmt)
-    if category_value_ids:
+    result = []
+    for row in rows:
+        stmt = select(models_f.OfferCategoryValue.category_value_id).where(
+            models_f.OfferCategoryValue.offer_id == row[0]
+        )
+        values = await db_session.execute(stmt)
+        category_value_ids = [row_[0] for row_ in values.fetchall()]
         categories = await get_many_by_ids(
             db_session=db_session, ids=category_value_ids, lazy_load_v=None
         )
-    else:
-        categories = []
-    category_value = [
-        {"id": category["id"], "value": category["value"]} for category in categories
-    ]
-    result = []
-    for row in rows:
+        category_value = [
+            {"id": category["id"], "value": category["value"]} for category in categories
+        ]
         files_offer = await offer_attachment_manager.get_only_files(db_session, row[0])
         files_user = await user_attachment_manager.get_only_files(db_session, row[4])
         user = await get_by_id(db_session=db_session, id=row[4])
