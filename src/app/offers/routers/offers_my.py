@@ -77,6 +77,9 @@ async def get_mini_with_offset_limit(
         user_id=user.id,
         offset=abs(offset),
         limit=abs(limit),
+        search_query=search_query,
+        is_descending=is_descending,
+        category_value_ids=category_value_ids,
     )
 
     return offers
