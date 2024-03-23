@@ -24,6 +24,7 @@ from app.offers import offers_routers
 from app.categories import category_routers
 from app.messages import message_routers
 from app.attachment import attachment_routers
+from app.purchase import purchase_routers
 # ниже импорты, для инит дб, лучше вынести в отдельный файл вместе с методом.
 from app.users import models as models_u, schemas as schemas_u
 from app.users.services import get_by_email, create_user
@@ -178,6 +179,7 @@ app.include_router(offers_routers)
 app.include_router(category_routers)
 app.include_router(message_routers)
 app.include_router(attachment_routers)
+app.include_router(purchase_routers)
 
 
 def __temp_get_current_username(

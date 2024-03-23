@@ -22,5 +22,9 @@
     {
         "name": "attacment",
         "description": "Attacment base endpoints"
+    },
+    {
+        "name": "purchase",
+        "description": "Purchase base endpoints"
     }
 ]
