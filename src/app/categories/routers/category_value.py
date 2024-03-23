@@ -103,6 +103,7 @@ async def get_many_by_ids(
         db_session,
         ids=value_ids,
         options=[(selectinload, models.CategoryValue.carcass)],
+        lazy_load_v="carcass"
     )
 
     if not values:

@@ -23,7 +23,10 @@ async def get_by_id(
 
 
 async def get_many_by_ids(
-    db_session: AsyncSession, ids: list[int], options: List[Tuple[Any]] = None
+    db_session: AsyncSession,
+    ids: list[int],
+    options: List[Tuple[Any]] = None,
+    lazy_load_v: str = None,
 ):
     stmt = select(models.CategoryValue).where(models.CategoryValue.id.in_(ids))
     if options:
@@ -31,7 +34,8 @@ async def get_many_by_ids(
             stmt = stmt.options(option[0](option[1]))
     values = (await db_session.execute(stmt)).scalars().all()
     
-    return [{**v.to_dict("carcass"), "files": await category_value_attachment_manager.get_only_files(db_session, v.id)} for v in values]
+    return [{**v.to_dict(lazy_load_v), "files": await category_value_attachment_manager.get_only_files(db_session, v.id)} for v in values]
+
 
 
 async def get_associated_by_id(
@@ -54,7 +58,8 @@ async def get_associated_by_id(
         select(models.CategoryValue)
         .where(models.CategoryValue.id.not_in(root_ids))
         .order_by(models.CategoryValue.id)
-        .distinct().join(stmt, models.CategoryValue.id == stmt.c.id)
+        .distinct()
+        .join(stmt, models.CategoryValue.id == stmt.c.id)
     )
     
     return [{**m.to_dict(), "files": await category_value_attachment_manager.get_only_files(db_session, m.id)} for m in result.scalars().all()]
@@ -126,9 +131,14 @@ async def delete_value(
 
     return value
 
+
 async def get_root_values(db_session: AsyncSession):
     stmt = (
-        select(models.CategoryValue.id, models.CategoryValue.value, models.CategoryValue.next_carcass_id)
+        select(
+            models.CategoryValue.id,
+            models.CategoryValue.value,
+            models.CategoryValue.next_carcass_id,
+        )
         .where(models.CategoryCarcass.is_root == True)
         .where(models.CategoryValue.carcass_id == models.CategoryCarcass.id)
     )
@@ -137,8 +147,11 @@ async def get_root_values(db_session: AsyncSession):
         return root_values
     return None
 
+
 async def get_value_ids_by_carcass(db_session: AsyncSession, carcass_id: int):
-    stmt = select(models.CategoryValue.id).where(models.CategoryValue.carcass_id == carcass_id)
+    stmt = select(models.CategoryValue.id).where(
+        models.CategoryValue.carcass_id == carcass_id
+    )
     value_ids = (await db_session.execute(stmt)).scalars().all()
     if value_ids:
         return value_ids
