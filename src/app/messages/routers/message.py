@@ -68,7 +68,7 @@ async def get_all_chats_with_offset_limit(
     if not chats_ids:
         raise HTTPException(404)
 
-    return JSONResponse({"chats_ids": chats_ids})
+    return chats_ids
 
 
 @router.get("/my/getmessages")

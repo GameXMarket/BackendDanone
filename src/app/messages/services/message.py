@@ -71,7 +71,7 @@ class BaseChatManager:
             .limit(limit)
         )
         result = await db_session.execute(stmt)
-        return result.scalars().all()
+        return [{"chat_id": chat_id} for chat_id in result.scalars().all()]
 
     async def get_dialog_id_by_user_id(
         self, db_session: AsyncSession, user_id: int, interlocutor_id: int
