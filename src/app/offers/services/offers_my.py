@@ -13,11 +13,13 @@ from app.users import models as models_u
 from . import __offer_category_value as __ocv
 from app.categories.models import CategoryCarcass, CategoryValue
 from app.categories.services.categories_carcass import get_carcass_names
+from app.categories.services.categories_values import get_many_by_ids
 from app.categories.services.categories_values import (
     get_value_ids_by_carcass,
     get_root_values,
 )
 from app.attachment.services import offer_attachment_manager
+from app.attachment.services import category_value_attachment_manager
 
 
 async def get_by_user_id_offer_id(
@@ -30,10 +32,23 @@ async def get_by_user_id_offer_id(
 
     if not offer:
         return None
-    
+
+    stmt = select(models_f.OfferCategoryValue.category_value_id).where(
+        models_f.OfferCategoryValue.offer_id == offer.id
+    )
+    values = await db_session.execute(stmt)
+    category_value_ids = [row[0] for row in values.fetchall()]
+    categories = await get_many_by_ids(
+        db_session=db_session, ids=category_value_ids, lazy_load_v=None
+    )
+    category_value = [
+        {"id": category["id"], "value": category["value"]} for category in categories
+    ]
+
     files = await offer_attachment_manager.get_only_files(db_session, offer.id)
     offer = offer.to_dict()
     offer["files"] = files
+    offer["category_values"] = category_value
 
     return offer
 
@@ -87,18 +102,29 @@ async def get_mini_by_user_id_offset_limit(
 
     result = []
     for row in rows:
-        files = await offer_attachment_manager.get_only_files(db_session, row[0])
+        stmt = select(models_f.OfferCategoryValue.category_value_id).where(
+            models_f.OfferCategoryValue.offer_id == row[0]
+        )
+        values = await db_session.execute(stmt)
+        category_value_ids = [row_[0] for row_ in values.fetchall()]
+        categories = await get_many_by_ids(
+            db_session=db_session, ids=category_value_ids, lazy_load_v=None
+        )
+        category_value = [
+            {"id": category["id"], "value": category["value"]} for category in categories
+        ]
+        files_offer = await offer_attachment_manager.get_only_files(db_session, row[0])
         offer = {
             "id": row[0],
             "name": row[1],
             "description": row[2],
             "price": row[3],
-            "files": files,
+            "files_offer": files_offer,
+            "category_values": category_value,
         }
         result.append(offer)
 
     return result
-
 
 
 async def get_root_categories_count_with_offset_limit(
@@ -121,12 +147,14 @@ async def get_root_categories_count_with_offset_limit(
         )
         offer_count = (await db_session.execute(stmt)).scalar_one_or_none()
         if offer_count:
+            files = await category_value_attachment_manager.get_only_files(db_session, value[0])
             result.append(
                 {
                     "value_id": value[0],
                     "value_name": value[1],
                     "next_carcass_id": value[2],
                     "offer_count": offer_count,
+                    "files": files,
                 }
             )
 
