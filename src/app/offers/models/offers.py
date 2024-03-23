@@ -14,11 +14,14 @@ class Offer(Base):
     # About ondelete arg:
     # https://docs.sqlalchemy.org/en/20/core/constraints.html#sqlalchemy.schema.ForeignKey.params.ondelete
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'))  # ForeignKey to user_id
+    attachment_id = Column(Integer)  # ForeignKey to attachment_id
     name = Column(String, nullable=False)
     description = Column(Text, nullable=False)
     price = Column(Integer, nullable=False)
     count = Column(Integer, nullable=False)
     status = Column(Enum('active', 'hidden', 'deleted', name="offer_statuses"), nullable=False, default="active")
+    created_at = Column(Integer, nullable=False)
+    updated_at = Column(Integer, nullable=False)
     upped_at = Column(Integer, nullable=False)
     
     user: Mapped["User"] = relationship(back_populates="offers", lazy="noload")

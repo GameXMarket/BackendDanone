@@ -27,6 +27,8 @@ class CategoryValue(Base):
         Integer, ForeignKey("user.id", ondelete="SET NULL"), nullable=True
     )
     value = Column(VARCHAR(length=17), nullable=False)
+    created_at = Column(Integer, nullable=False)
+    updated_at = Column(Integer, nullable=False)
 
     carcass: Mapped["CategoryCarcass"] = relationship(
         lazy="noload", back_populates="values", foreign_keys=[carcass_id]

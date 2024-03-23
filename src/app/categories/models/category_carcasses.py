@@ -25,6 +25,8 @@ class CategoryCarcass(Base):
     in_offer_name = Column(String, nullable=False)
     admin_comment = Column(String, nullable=True)
     is_last = Column(Boolean, default=False, nullable=False)
+    created_at = Column(Integer, nullable=False)
+    updated_at = Column(Integer, nullable=False)
 
     values: Mapped[List[CategoryValue]] = relationship(lazy="noload", back_populates="carcass", foreign_keys=[CategoryValue.carcass_id])
     author: Mapped[User] = relationship(lazy="noload")
