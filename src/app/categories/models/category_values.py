@@ -44,6 +44,7 @@ class CategoryValue(Base):
         for var_name in args:
             if var_name is None:
                 continue
+
             var_value = getattr(self, var_name)
             base_dict[var_name] = (
                 var_value.to_dict() if var_name in lazy_load_v else var_value

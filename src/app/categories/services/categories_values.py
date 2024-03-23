@@ -25,7 +25,7 @@ async def get_many_by_ids(
     db_session: AsyncSession,
     ids: list[int],
     options: List[Tuple[Any]] = None,
-    lazy_load_v: str = "carcass",
+    lazy_load_v: str = None,
 ):
     stmt = select(models.CategoryValue).where(models.CategoryValue.id.in_(ids))
     if options:
