@@ -9,7 +9,6 @@ class Message(Base):
     __tablename__ = 'message'
 
     id = Column(Integer, primary_key=True)
-    attachment_id = Column(Integer, nullable=True)
     sender_id = Column(Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False)
     receiver_id = Column(Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False)
     reply_to = Column(Integer, ForeignKey('message.id', ondelete="SET NULL"), nullable=True)

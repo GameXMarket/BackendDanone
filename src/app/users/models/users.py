@@ -20,8 +20,6 @@ class User(Base):
         Integer, default=0, nullable=False
     )  # 0-user, 1-mod, 2-arbit, 3-admin
     last_online = Column(Integer)  # Unix - time # ! need ms
-    created_at = Column(Integer, nullable=False)  # Unix - time # ! need ms
-    updated_at = Column(Integer, nullable=False)  # Unix - time # ! need ms
 
     # Read about lazy arg more here:
     #  https://docs.sqlalchemy.org/en/14/orm/loading_relationships.html
