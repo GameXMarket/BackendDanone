@@ -1,20 +1,31 @@
-from sqlalchemy import Column, String, Integer, ForeignKey
+from sqlalchemy import Column, String, Integer, Boolean, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship, Mapped
 
 from core.database import Base
 from app.users.models import User
 
 
+class Chat(Base):
+    __tablename__ = 'chat'
+    
+    id = Column(Integer, primary_key=True)
+    is_dialog = Column(Boolean, default=True)
+
+
+class ChatMember(Base):
+    __tablename__ = 'chat_member'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False)
+    chat_id = Column(Integer, ForeignKey('chat.id', ondelete="CASCADE"), nullable=False)
+
+    __table_args__ = (UniqueConstraint('user_id', 'chat_id', name='uq_user_chat'),)
+
+
 class Message(Base):
     __tablename__ = 'message'
 
     id = Column(Integer, primary_key=True)
-    attachment_id = Column(Integer, nullable=True)
-    sender_id = Column(Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False)
-    receiver_id = Column(Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False)
-    reply_to = Column(Integer, ForeignKey('message.id', ondelete="SET NULL"), nullable=True)
+    chat_member_id = Column(Integer, ForeignKey('chat_member.id', ondelete="CASCADE"), nullable=False)
     content = Column(String)
     created_at = Column(Integer)
-    
-    sender: Mapped[User] = relationship(lazy="noload", foreign_keys=[sender_id])
-    receiver: Mapped[User] = relationship(lazy="noload", foreign_keys=[receiver_id])

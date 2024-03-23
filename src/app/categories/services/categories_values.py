@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload, aliased
 from sqlalchemy import select, distinct, union_all, update, exists, delete, and_, text
 
 from .. import models, schemas
+from app.attachment.services import category_value_attachment_manager
 
 
 async def get_by_id(
@@ -32,7 +33,9 @@ async def get_many_by_ids(
         for option in options:
             stmt = stmt.options(option[0](option[1]))
     values = (await db_session.execute(stmt)).scalars().all()
-    return [v.to_dict(lazy_load_v) for v in values]
+    
+    return [{**v.to_dict(lazy_load_v), "files": await category_value_attachment_manager.get_only_files(db_session, v.id)} for v in values]
+
 
 
 async def get_associated_by_id(
@@ -58,8 +61,8 @@ async def get_associated_by_id(
         .distinct()
         .join(stmt, models.CategoryValue.id == stmt.c.id)
     )
-
-    return [m.to_dict() for m in result.scalars().all()]
+    
+    return [{**m.to_dict(), "files": await category_value_attachment_manager.get_only_files(db_session, m.id)} for m in result.scalars().all()]
 
 
 async def get_by_carcass_id(
