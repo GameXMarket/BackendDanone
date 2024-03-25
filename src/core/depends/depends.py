@@ -47,7 +47,7 @@ async def get_refresh(
 ) -> schemas_t.JwtPayload:
     if not refresh_t:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not authenticated"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
         )
 
     token_data: schemas_t.JwtPayload = await TokenSecurity.verify_jwt_token(
@@ -73,7 +73,7 @@ async def get_access(
 ) -> schemas_t.JwtPayload:
     if not access_t:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not authenticated"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
         )
 
     if isinstance(access_token_scheme, APIKeyHeader):
@@ -190,7 +190,7 @@ class UserSession:
 
         if not is_active:
             self.__raise(
-                code=status.HTTP_404_NOT_FOUND, comment="User is not active"
+                code=status.HTTP_401_UNAUTHORIZED, comment="User is not active"
             )
 
         return current_user

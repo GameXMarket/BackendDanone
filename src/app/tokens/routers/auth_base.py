@@ -20,7 +20,7 @@ logger = logging.getLogger("uvicorn")
 router = APIRouter(responses={200: {"model": schemas_t.TokenSet}})
 # ! Need refactoring
 
-@router.post(path="/login", responses={401: {"model": schemas_t.TokenError}})
+@router.post(path="/login")
 async def token_set(
     form_data: schemas_u.UserLogin,
     db_session: Session = Depends(get_session),
@@ -35,12 +35,12 @@ async def token_set(
 
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="Incorrect email/username or password",
         )
     elif not UserService.is_active(user):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user"
         )
 
     access, refresh = TokenSecurity.create_new_token_set(form_data.email, user.id)
@@ -102,7 +102,6 @@ async def token_delete(banned: None = Depends(deps.auto_token_ban)):
 @router.get(
     path="/verify-user",
     responses={
-        401: {"model": schemas_t.TokenError},
         404: {"model": schemas_u.UserError},
         409: {"model": schemas_u.UserError},
     },
@@ -117,7 +116,7 @@ async def verify_user_email(token: str, db_session: Session = Depends(get_sessio
 
     if not token_data:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token not found"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Token not found"
         )
 
     banned_token = await BannedTokensService.ban_token(
@@ -154,7 +153,6 @@ async def verify_user_email(token: str, db_session: Session = Depends(get_sessio
 @router.post(
     path="/password-reset",
     responses={
-        401: {"model": schemas_t.TokenError},
         404: {"model": schemas_u.UserError},
         409: {"model": schemas_u.UserError},
         200: {"model": schemas_u.UserPreDB},
@@ -175,7 +173,7 @@ async def verify_password_reset(
 
     if not token_data:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token not found"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Token not found"
         )
     
     banned_token = await BannedTokensService.ban_token(
@@ -204,7 +202,6 @@ async def verify_password_reset(
 @router.post(
     path="/email-change",
     responses={
-        401: {"model": schemas_t.TokenError},
         404: {"model": schemas_u.UserError},
         409: {"model": schemas_u.UserError},
         200: {"model": schemas_u.UserPreDB},
@@ -224,7 +221,7 @@ async def verify_password_reset(
 
     if not token_data:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token not found"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Token not found"
         )
     
     banned_token = await BannedTokensService.ban_token(
