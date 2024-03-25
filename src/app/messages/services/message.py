@@ -16,8 +16,9 @@ from core.redis import get_redis_client, get_redis_pipeline
 from app.messages import models as models_m
 from app.messages import schemas as schemas_m
 from app.messages import services as services_m
+from app.users import models as models_u
+from app.attachment.services import message_attachment_manager, user_attachment_manager
 from app.tokens import schemas as schemas_t
-from app.attachment.services import message_attachment_manager
 
 
 class BaseChatManager:
@@ -58,20 +59,41 @@ class BaseChatManager:
 
         return chat
 
-    async def get_all_user_chats_ids_by_user_id(
+    async def get_all_user_dialogs_ids_by_user_id(
         self, db_session: AsyncSession, user_id: int, offset: int, limit: int
     ) -> Sequence[int]:
         """
-        Непубличный метод для подгрузки чатов пользователя
+        Непубличный метод для подгрузки диалогов пользователя
         """
+        FirstChatMember = aliased(models_m.ChatMember)
+        SecondChatMember = aliased(models_m.ChatMember)
+
         stmt = (
-            select(models_m.ChatMember.chat_id)
-            .where(models_m.ChatMember.user_id == user_id)
+            select(FirstChatMember.chat_id, models_u.User.username, models_u.User.id)
+            .join(SecondChatMember, FirstChatMember.chat_id == SecondChatMember.chat_id)
+            .join(models_u.User, models_u.User.id == SecondChatMember.id)
+            .join(models_m.Chat, FirstChatMember.chat_id == models_m.Chat.id)
+            .where(
+                and_(
+                    models_m.Chat.is_dialog == True,
+                    FirstChatMember.user_id == user_id,
+                    SecondChatMember.user_id != user_id
+                )
+            )
             .offset(offset)
             .limit(limit)
         )
-        result = await db_session.execute(stmt)
-        return [{"chat_id": chat_id} for chat_id in result.scalars().all()]
+        rows = (await db_session.execute(stmt)).fetchall()
+        return [
+            {
+                "chat_id": row[0],
+                "interlocutor_username": row[1],
+                "interlocutor_files": await user_attachment_manager.get_only_files(
+                    db_session, row[2]
+                ),
+            }
+            for row in rows
+        ]
 
     async def get_dialog_id_by_user_id(
         self, db_session: AsyncSession, user_id: int, interlocutor_id: int
