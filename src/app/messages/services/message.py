@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pydantic import ValidationError
 from fastapi import Depends, WebSocket, WebSocketException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, and_
+from sqlalchemy import select, or_, and_, func
 from sqlalchemy.orm import aliased
 
 from core import depends as deps
@@ -68,16 +68,27 @@ class BaseChatManager:
         FirstChatMember = aliased(models_m.ChatMember)
         SecondChatMember = aliased(models_m.ChatMember)
 
+        message_count_subq_stmt = (
+            select(func.count(models_m.Message.id))
+            .where(
+                or_(
+                    models_m.Message.chat_member_id == FirstChatMember.id,
+                    models_m.Message.chat_member_id == SecondChatMember.id,
+                ),
+            )
+            .scalar_subquery()
+        )
         stmt = (
             select(FirstChatMember.chat_id, models_u.User.username, models_u.User.id)
-            .join(SecondChatMember, FirstChatMember.chat_id == SecondChatMember.chat_id)
+            .join(SecondChatMember, SecondChatMember.chat_id == FirstChatMember.chat_id)
             .join(models_u.User, models_u.User.id == SecondChatMember.id)
-            .join(models_m.Chat, FirstChatMember.chat_id == models_m.Chat.id)
+            .join(models_m.Chat, models_m.Chat.id == FirstChatMember.chat_id)
             .where(
                 and_(
                     models_m.Chat.is_dialog == True,
                     FirstChatMember.user_id == user_id,
-                    SecondChatMember.user_id != user_id
+                    SecondChatMember.user_id != user_id,
+                    message_count_subq_stmt > 0,
                 )
             )
             .offset(offset)
