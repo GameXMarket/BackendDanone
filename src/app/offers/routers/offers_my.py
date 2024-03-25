@@ -185,8 +185,8 @@ async def update_offer(
     user: models_u.User = await user_context.get_current_active_user(
         db_session, token_data
     )
-    offer_db = await services_f.get_by_user_id_offer_id(
-        db_session, user_id=user.id, id=offer_id
+    offer_db = await services_f.get_raw_offer_by_user_id(
+        db_session, user_id=user.id, offer_id=offer_id
     )
 
     if not offer_db:
