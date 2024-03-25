@@ -111,7 +111,7 @@ async def update_user_password(
     
     if not verify_password(data_form.auth.password, user.hashed_password):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
         )
 
@@ -178,7 +178,7 @@ async def remove_user(
         db_session, email=user.email, password=old_password.password
     ):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
         )
 
