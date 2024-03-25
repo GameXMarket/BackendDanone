@@ -11,7 +11,6 @@ from core.database import get_session
 from .. import models, schemas, services
 from app.tokens import schemas as schemas_t
 
-
 logger = logging.getLogger("uvicorn")
 router = APIRouter()
 base_session = deps.UserSession()
@@ -45,7 +44,8 @@ async def get_by_id(category_id: int, db_session: AsyncSession = Depends(get_ses
     </pre>
     """
     category: models.CategoryCarcass = await services.categories_carcass.get_by_id(
-        db_session, id=category_id, options=([(selectinload, models.CategoryCarcass.values), (selectinload, models.CategoryCarcass.values)])
+        db_session, id=category_id,
+        options=([(selectinload, models.CategoryCarcass.values), (selectinload, models.CategoryCarcass.values)])
     )
 
     if not category:
@@ -57,7 +57,7 @@ async def get_by_id(category_id: int, db_session: AsyncSession = Depends(get_ses
 @router.post(path="/")
 async def create_category_carcass(
     new_category: schemas.CategoryCarcassCreate,
-    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
@@ -76,7 +76,7 @@ async def create_category_carcass(
 
     if not user.is_admin():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
-    
+
     category = await services.categories_carcass.create_category(
         db_session, author_id=user.id, obj_in=new_category
     )
@@ -88,7 +88,7 @@ async def create_category_carcass(
 async def update_category_carcass(
     category_id: int,
     new_category: schemas.CategoryCarcassUpdate,
-    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
     """
@@ -116,7 +116,7 @@ async def update_category_carcass(
 @router.delete(path="/{category_id}")
 async def delete_category_carcass(
     category_id: int,
-    current_session: tuple[schemas_t.JwtPayload ,deps.UserSession] = Depends(base_session),
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(base_session),
     db_session: AsyncSession = Depends(get_session),
 ):
     """

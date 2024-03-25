@@ -139,3 +139,40 @@ async def create_upload_files_message(
     return await services.message_attachment_manager.create_new_attachment(
         db_session, files, user.id, message_id
     )
+
+
+@router.post("/uploadfiles/category_value/")
+async def create_upload_files_category_value(
+    file: UploadFile,
+    category_value_id: int,
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        default_session
+    ),
+    db_session: AsyncSession = Depends(get_session),
+):
+    token_data, user_context = current_session
+    user = await user_context.get_current_active_user(db_session, token_data)
+    if not user.is_admin():
+        raise HTTPException(403)
+
+    return await services.category_value_attachment_manager.create_new_attachment(
+        db_session, file, user.id, category_value_id
+    )
+
+
+@router.delete("/deletefiles/category_value/")
+async def delete_category_value_attachment(
+    category_value_id: int,
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        default_session
+    ),
+    db_session: AsyncSession = Depends(get_session),
+):
+    token_data, user_context = current_session
+    user = await user_context.get_current_active_user(db_session, token_data)
+    if not user.is_admin():
+        raise HTTPException(403)
+
+    return await services.category_value_attachment_manager.delete_attachment_by_category_value_id(
+        db_session, category_value_id
+    )

@@ -154,6 +154,8 @@ origins = [
     "https://fronted-danone-k7l2.vercel.app",
     "https://test.yunikeil.ru",
     "https://fronted-danone-git-front-logic-dydecs-projects.vercel.app",
+    "https://fronted-danone-git-development-dydecs-projects.vercel.app",
+    "https://fronted-danone.vercel.app",
 ]
 
 app.add_middleware(

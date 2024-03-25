@@ -1,20 +1,21 @@
+from typing import Any
 from fastapi import UploadFile
-from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, delete
 
 from core.settings import BASE_FILE_URL
 from .base_attachment import BaseAttachmentManager
 from .. import models
 
 
-class UserAttachmentManager(BaseAttachmentManager):
-    async def delete_attachment_by_user_id(
-        self, db_session: AsyncSession, user_id: int
+class CategoryValueAttachmentManager(BaseAttachmentManager):
+    async def delete_attachment_by_category_value_id(
+        self, db_session: AsyncSession, category_value_id: int
     ):
         stmt = (
-            delete(models.UserAttachment)
-            .where(models.UserAttachment.user_id == user_id)
-            .returning(models.UserAttachment.id)
+            delete(models.CategoryValueAttachemnt)
+            .where(models.CategoryValueAttachemnt.category_value_id == category_value_id)
+            .returning(models.CategoryValueAttachemnt.id)
         )
         deleted_attachment_id = (await db_session.execute(stmt)).scalar_one_or_none()
         await db_session.commit()
@@ -22,23 +23,22 @@ class UserAttachmentManager(BaseAttachmentManager):
         return {"attachment_id": deleted_attachment_id}
 
     async def create_new_attachment(
-        self, db_session: AsyncSession, file: UploadFile, user_id: int
+        self, db_session: AsyncSession, file: UploadFile, user_id: int, category_value_id: int
     ):
-        await self.delete_attachment_by_user_id(db_session, user_id)
-        attachment = models.UserAttachment(author_id=user_id, user_id=user_id)
+        attachment = models.CategoryValueAttachemnt(author_id=user_id, category_value_id=category_value_id)
         db_session.add(attachment)
         await db_session.flush()
 
         await super().create_new_attachment(db_session, attachment.id, [file])
 
         return attachment.to_dict()
-
-    async def get_attachment(self, db_session: AsyncSession, user_id: int):
-        model = models.UserAttachment
-        whereclause = (models.UserAttachment.user_id == user_id)
-        return await super().get_attachment(db_session, model, whereclause)
     
-    async def get_only_files(self, db_session: AsyncSession, user_id: int):
+    async def get_attachment(self, db_session: AsyncSession, category_value_id: int):
+        model = models.CategoryValueAttachemnt
+        whereclause = (models.CategoryValueAttachemnt.category_value_id == category_value_id)
+        return await super().get_attachment(db_session, model, whereclause)
+
+    async def get_only_files(self, db_session: AsyncSession, category_value_id: int):
         # TODO После возможно нужен будет рефакторинг
         # мб стоит перенести в бейс менеджер
         
@@ -46,8 +46,8 @@ class UserAttachmentManager(BaseAttachmentManager):
         
         stmt = (
             select(models.File.hash, models.File.attachment_id)
-            .where(models.UserAttachment.id == models.File.attachment_id)
-            .where(models.UserAttachment.user_id == user_id)   
+            .where(models.CategoryValueAttachemnt.id == models.File.attachment_id)
+            .where(models.CategoryValueAttachemnt.category_value_id == category_value_id)
         )
         
         result = (await db_session.execute(stmt)).all()
@@ -62,5 +62,4 @@ class UserAttachmentManager(BaseAttachmentManager):
         
         return _result
 
-
-user_attachment_manager = UserAttachmentManager()
+category_value_attachment_manager = CategoryValueAttachmentManager()
