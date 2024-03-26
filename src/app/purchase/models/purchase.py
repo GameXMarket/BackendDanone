@@ -4,7 +4,8 @@ from sqlalchemy import Column, Integer, String, Text, Enum, ForeignKey
 from sqlalchemy.orm import relationship, Mapped
 
 from core.database import Base
-
+from app.users.models import User
+from app.offers.models import Offer
 
 # После нужно будет фиксить из-за того, что
 #  сейчас не совсем понятно что полностью удалять, а что
@@ -23,4 +24,5 @@ class Purchase(Base):
     created_at = Column(Integer, nullable=False, default=int(time()))
     updated_at = Column(Integer, nullable=False, default=int(time()), onupdate=int(time()))
 
-
+    buyer: Mapped["User"] = relationship(lazy="noload")
+    offer: Mapped["Offer"] = relationship(lazy="noload")

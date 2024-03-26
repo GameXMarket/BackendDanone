@@ -45,7 +45,7 @@ async def get_all_purchases(
 
 @router.post("/my/create")
 async def create_purchase(
-    offer_id: int,
+    new_purchase_data: schemas.PurchaseCreate,
     db_session: AsyncSession = Depends(get_session),
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
         base_session
@@ -54,4 +54,4 @@ async def create_purchase(
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
 
-    ...
+    purchase = await purchase_manager.create_purchase()

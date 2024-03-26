@@ -1,7 +1,7 @@
 from enum import StrEnum
 
 from pydantic import BaseModel
-
+from ..models import Purchase
 
 class PurchaseStatus(StrEnum):
     completed = "completed"
@@ -21,3 +21,7 @@ class PurchaseInDB(BaseModel):
     created_at: int
     updated_at : int
 
+
+class PurchaseCreate(BaseModel):
+    offer_id: int
+    count: int
