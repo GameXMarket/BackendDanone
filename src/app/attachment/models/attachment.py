@@ -156,8 +156,8 @@ DECLARE
     payload TEXT;
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM file WHERE hash = OLD.hash) THEN
-        INSERT INTO deleted_file (id, hash, created_at)
-        VALUES (OLD.id, OLD.hash, OLD.created_at);
+        INSERT INTO deleted_file (id, hash, created_at, updated_at)
+        VALUES (OLD.id, OLD.hash, OLD.created_at, -1);
 		payload := json_build_object('unix', OLD.created_at, 'hash', OLD.hash, 'type', OLD.type);
         PERFORM pg_notify('new_deleted_file', payload);
     END IF;
