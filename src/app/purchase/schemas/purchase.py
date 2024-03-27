@@ -1,9 +1,10 @@
-from enum import StrEnum
+from enum import Enum
 
 from pydantic import BaseModel
 from ..models import Purchase
 
-class PurchaseStatus(StrEnum):
+
+class PurchaseStatus(str, Enum):
     completed = "completed"
     process = "process"
     refund = "refund"
