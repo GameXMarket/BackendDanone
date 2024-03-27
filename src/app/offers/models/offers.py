@@ -1,3 +1,5 @@
+from typing import List
+
 from sqlalchemy import Column, Integer, String, Text, Enum, ForeignKey
 from sqlalchemy.orm import relationship, Mapped
 
@@ -23,9 +25,11 @@ class Offer(Base):
     
     user: Mapped["User"] = relationship(back_populates="offers", lazy="noload")
     category_values: Mapped[list["OfferCategoryValue"]] = relationship(cascade="all, delete-orphan", lazy="selectin")
-    
+    delivery = relationship("Delivery", back_populates="offer")
+
 
 class OfferCategoryValue(Base):
     __tablename__ = "offer_category_value"
     category_value_id = Column(Integer, ForeignKey('category_value.id'), primary_key=True)
     offer_id = Column(Integer, ForeignKey('offer.id', ondelete="CASCADE"), primary_key=True)
+    #deliveries: Mapped[List["Delivery"]] = relationship(cascade="all, delete-orphan", lazy="selectin")
