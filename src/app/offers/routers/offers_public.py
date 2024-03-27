@@ -62,7 +62,7 @@ async def get_by_id(
     offer_id: int,
     db_session: AsyncSession = Depends(get_session),
 ):
-    offer = await services_f.get_by_offer_id(db_session, id=offer_id)
+    offer = await services_f.get_offer_by_id(db_session, id=offer_id)
 
     if not offer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)

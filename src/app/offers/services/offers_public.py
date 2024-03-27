@@ -17,9 +17,21 @@ from app.attachment.services import offer_attachment_manager
 # Дублирование кода, можно переписать по нормальному старые методы,
 #  однако пока не понятно как именно всё будет использоваться, потому
 #  сейчас данный код будет дублироваться, до момента рефакторинга
-async def get_by_offer_id(
-    db_session: AsyncSession, *, id: int
-) -> models_f.Offer | None:
+async def get_raw_offer_by_id(
+    db_session: AsyncSession, id: int,
+):
+    stmt = select(models_f.Offer).where(models_f.Offer.id == id)
+    offer: models_f.Offer | None = (await db_session.execute(stmt)).scalar()
+
+    if not offer:
+        return None
+
+    return offer
+
+
+async def get_offer_by_id(
+    db_session: AsyncSession, id: int,
+) -> None | dict:
     stmt = select(models_f.Offer).where(models_f.Offer.id == id)
     offer: models_f.Offer | None = (await db_session.execute(stmt)).scalar()
 
