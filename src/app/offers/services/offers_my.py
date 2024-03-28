@@ -206,24 +206,24 @@ async def create_offer(
 
 # ! need refactor...
 async def update_offer(
-    db_session: AsyncSession, db_obj: models_f.Offer, obj_in: schemas_f.OfferBase
+    db_session: AsyncSession, db_obj: models_f.Offer, obj_in: schemas_f.OfferBase, need_commit: bool = True
 ):
-    db_obj.updated_at = int(time.time())
-
     obj_data = jsonable_encoder(db_obj)
     if isinstance(obj_in, dict):
         update_data = obj_in
+        category_ids_in = []
+        current_category_ids = set()
     else:
+        category_ids_in: List[int] = obj_in.category_value_ids
+        current_category_ids = {
+            offer_category.category_value_id for offer_category in db_obj.category_values
+        }
+
         update_data = obj_in.model_dump(exclude_unset=True)
 
     for field in obj_data:
         if field in update_data:
             setattr(db_obj, field, update_data[field])
-
-    category_ids_in: List[int] = obj_in.category_value_ids
-    current_category_ids = {
-        offer_category.category_value_id for offer_category in db_obj.category_values
-    }
 
     # Create new associations
     for category_id in category_ids_in:
@@ -241,8 +241,12 @@ async def update_offer(
         current_category_ids.remove(category_id)
 
     db_session.add(db_obj)
-    await db_session.commit()
+    if need_commit:
+        await db_session.commit()
+    else:
+        await db_session.flush()
 
+    await db_session.refresh(db_obj)
     return db_obj
 
 

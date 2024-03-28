@@ -3,10 +3,12 @@ import time
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, and_
 
-from app.offers.services import get_raw_offer_by_id
+from app.offers.services import get_raw_offer_by_id, update_offer
 from .. import schemas, models
 
 
+#  мб нужно начать писать более сложные обработчики ошибок, 
+#   а не просто возвращать None в любое удобном случае
 class PurchaseManager:
     def __init__(self) -> None:
         pass
@@ -22,21 +24,39 @@ class PurchaseManager:
         if not offer:
             return None
         
+        if new_purchase_data.count > offer.count:
+            return None
+        
+        await update_offer(db_session, offer, {"count": offer.count - new_purchase_data.count}, need_commit=False)
+
         purchase = models.Purchase(
             buyer_id=user_id,
             offer_id=offer.id,
             name=offer.name,
             description=offer.description,
-            price=offer.price
+            price=offer.price,
+            count=new_purchase_data.count,
         )
         
+        db_session.add(purchase)
+        await db_session.commit()
+        await db_session.refresh(purchase)
+        
+        return purchase
 
     async def get_purchase(
         self,
         db_session: AsyncSession,
-        user_id: int,
+        purchase_id: int,
+        buyer_id: int,
     ):
-        ...
+        stmt = (
+            select(models.Purchase)
+            .where(models.Purchase.id == purchase_id)
+            .where(models.Purchase.buyer_id == buyer_id)
+        )
+        result = await db_session.execute(stmt)
+        return result.scalars()
 
     async def update_purchase(
         self,
@@ -50,7 +70,28 @@ class PurchaseManager:
         db_session: AsyncSession,
         user_id: int,
     ):
+        """
+        Только для внутреннего использования
+        """
         ...
+    
+    async def get_all_purchases(
+        self,
+        db_session: AsyncSession,
+        buyer_id: int,
+        offset: int,
+        limit: int
+
+    ):
+        stmt = (
+            select(models.Purchase)
+            .where(models.Purchase.buyer_id == buyer_id)
+            .offset(offset)
+            .limit(limit)
+        )
+        
+        result = await db_session.execute(stmt)
+        return result.scalars()
 
 
 purchase_manager = PurchaseManager()
