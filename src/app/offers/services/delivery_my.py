@@ -6,6 +6,32 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 
+async def get_deliveries_by_offer_id(
+        db_session: AsyncSession,
+        offer_id: int,
+        offset: int,
+        limit: int
+) -> list[schemas_f.Delivery]:
+    stmt = select(models_f.Delivery).filter_by(
+        offer_id=offer_id
+    ).offset(offset).limit(limit)
+    result = await db_session.execute(stmt)
+    deliveries = [schemas_f.Delivery.from_orm(delivery) for delivery in result.scalars()]
+
+    return deliveries
+
+
+async def is_user_delivery(
+        db_session: AsyncSession,
+        user_id: int,
+        delivery: models_f.Delivery
+) -> bool:
+    if not delivery:
+        return False
+    offer = await db_session.get(models_f.Offer, delivery.offer_id)
+    return offer.user_id == user_id if offer else False
+
+
 async def create_delivery(
         db_session: AsyncSession, obj_in: schemas_f.Delivery
 ) -> models_f.Delivery:
