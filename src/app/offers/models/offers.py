@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship, Mapped
 
 from core.database import Base
 from app.users.models import User
+from .delivery import Delivery
 
 
 ## Добавить ограничения стринга на длину (varchar) относится не только к данной таблице
@@ -22,14 +23,14 @@ class Offer(Base):
     count = Column(Integer, nullable=False)
     status = Column(Enum('active', 'hidden', 'deleted', name="offer_statuses"), nullable=False, default="active")
     upped_at = Column(Integer, nullable=False)
-    
+
     user: Mapped["User"] = relationship(back_populates="offers", lazy="noload")
     category_values: Mapped[list["OfferCategoryValue"]] = relationship(cascade="all, delete-orphan", lazy="selectin")
-    delivery = relationship("Delivery", back_populates="offer")
+    delivery: Mapped["Delivery"] = relationship(back_populates="offer", lazy="noload")
 
 
 class OfferCategoryValue(Base):
     __tablename__ = "offer_category_value"
     category_value_id = Column(Integer, ForeignKey('category_value.id'), primary_key=True)
     offer_id = Column(Integer, ForeignKey('offer.id', ondelete="CASCADE"), primary_key=True)
-    #deliveries: Mapped[List["Delivery"]] = relationship(cascade="all, delete-orphan", lazy="selectin")
+    # deliveries: Mapped[List["Delivery"]] = relationship(cascade="all, delete-orphan", lazy="selectin")

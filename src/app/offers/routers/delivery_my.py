@@ -14,6 +14,25 @@ router = APIRouter()
 base_session = deps.UserSession()
 
 
+@router.get(
+    path="/my/get/{delivery_id}"
+)
+async def get_delivery_by_id(
+        delivery_id: int,
+        current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+            base_session
+        ),
+        db_session: AsyncSession = Depends(get_session),
+):
+    delivery = await services_f.get_delivery_by_id(db_session, delivery_id=delivery_id)
+
+    if not delivery:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    return delivery
+
+
+
 @router.post(
     path="/my/", responses=deps.build_response(deps.UserSession.get_current_active_user)
 )
@@ -36,7 +55,7 @@ async def create_delivery(
         **deps.build_response(deps.UserSession.get_current_active_user),
     },
 )
-async def update_offer(
+async def update_delivery(
         delivery_id: int,
         delivery_in: schemas_f.Delivery,
         current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
@@ -63,13 +82,12 @@ async def update_offer(
     },
 )
 async def delete_delivery(
-    delivery_id: int,
-    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
-        base_session
-    ),
-    db_session: AsyncSession = Depends(get_session),
+        delivery_id: int,
+        current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+            base_session
+        ),
+        db_session: AsyncSession = Depends(get_session),
 ):
-
     deleted_delivery = await services_f.delete_delivery(
         db_session, delivery_id=delivery_id
     )
@@ -78,5 +96,3 @@ async def delete_delivery(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
     return deleted_delivery
-
-

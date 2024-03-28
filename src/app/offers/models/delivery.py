@@ -12,8 +12,8 @@ if TYPE_CHECKING:
 class Delivery(Base):
     __tablename__ = "delivery"
     id = Column(Integer, primary_key=True, index=True)
-    offer_id = Column(Integer, ForeignKey('offer.id'))
+    offer_id = Column(Integer, ForeignKey('offer.id', ondelete="CASCADE"))
     value = Column(Integer)
     created_at = Column(Integer)
 
-    offer = relationship("Offer", back_populates="delivery", lazy="noload")
+    offer: Mapped["Offer"] = relationship(back_populates="delivery", lazy="noload")
