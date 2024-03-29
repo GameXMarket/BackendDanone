@@ -16,7 +16,7 @@ async def get_deliveries_by_offer_id(
         offer_id=offer_id
     ).offset(offset).limit(limit)
     result = await db_session.execute(stmt)
-    deliveries = [schemas_f.Delivery.from_orm(delivery) for delivery in result.scalars()]
+    deliveries = [schemas_f.Delivery.model_validate(delivery) for delivery in result.scalars()]
 
     return deliveries
 
