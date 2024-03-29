@@ -1,6 +1,8 @@
-from fastapi import Depends, APIRouter, HTTPException, status
 import logging
+
+from fastapi import Depends, APIRouter, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from core.database import get_session
 from app.users import models as models_u
 from app.tokens import schemas as schemas_t
