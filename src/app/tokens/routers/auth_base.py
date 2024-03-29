@@ -202,7 +202,7 @@ async def verify_password_reset(
 
 
 @router.post(
-    path="password-change",
+    path="/password-change",
     responses={
         404: {"model": schemas_u.UserError},
         409: {"model": schemas_u.UserError},
