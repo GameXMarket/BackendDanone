@@ -1,10 +1,10 @@
 from fastapi import Depends, APIRouter, HTTPException, status
 import logging
-from core.depends import depends as deps
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import get_session
 from app.users import models as models_u
 from app.tokens import schemas as schemas_t
+from core.depends import depends as deps
 from .. import models as models_f
 from .. import services as services_f
 from .. import schemas as schemas_f
