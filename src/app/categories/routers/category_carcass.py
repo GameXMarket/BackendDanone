@@ -44,7 +44,7 @@ async def get_by_id(category_id: int, db_session: AsyncSession = Depends(get_ses
     </pre>
     """
     category: models.CategoryCarcass = await services.categories_carcass.get_by_id(
-        db_session, id=category_id,
+        db_session, id=category_id, need_subvalues=True,
         options=([(selectinload, models.CategoryCarcass.values), (selectinload, models.CategoryCarcass.values)])
     )
 
