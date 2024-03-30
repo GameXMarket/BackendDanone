@@ -13,7 +13,7 @@ class Delivery(Base):
     __tablename__ = "delivery"
     id = Column(Integer, primary_key=True, index=True)
     offer_id = Column(Integer, ForeignKey('offer.id', ondelete="CASCADE"))
-    value = Column(Integer)
+    value = Column(String)
     created_at = Column(Integer)
 
     offer: Mapped["Offer"] = relationship(back_populates="delivery", lazy="noload")

@@ -22,5 +22,13 @@
     {
         "name": "attacment",
         "description": "Attacment base endpoints"
+    },
+        {
+        "name": "offers",
+        "description": "Offers base endpoints"
+    },
+    {
+        "name": "delivery",
+        "description": "Delivery base endpoints"
     }
 ]

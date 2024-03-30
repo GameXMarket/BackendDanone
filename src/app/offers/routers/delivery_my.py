@@ -17,7 +17,7 @@ base_session = deps.UserSession()
 
 
 @router.get(
-    path="/my/getall/{offer_id}"
+    "/my/getall"
 )
 async def get_all_by_offer_id(
         offer_id: int,
@@ -37,11 +37,13 @@ async def get_all_by_offer_id(
 
     deliveries = await services_f.get_deliveries_by_offer_id(db_session=db_session, offer_id=offer_id,
                                                              limit=limit, offset=offset)
+    if not deliveries:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return deliveries
 
 
 @router.get(
-    path="/my/get/{delivery_id}"
+    path="/my"
 )
 async def get_delivery_by_id(
         delivery_id: int,
@@ -67,7 +69,7 @@ async def get_delivery_by_id(
     path="/my/", responses=deps.build_response(deps.UserSession.get_current_active_user)
 )
 async def create_delivery(
-        delivery: schemas_f.Delivery,
+        deliveries: list[schemas_f.Delivery],
         current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
             base_session
         ),
@@ -77,13 +79,16 @@ async def create_delivery(
     user: models_u.User = await user_context.get_current_active_user(
         db_session, token_data
     )
-    if not await services_f.get_by_user_id_offer_id(db_session, user.id, delivery.offer_id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    created_deliveries = []
+    for delivery in deliveries:
+        if not await services_f.get_by_user_id_offer_id(db_session, user.id, delivery.offer_id):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    delivery: models_f.delivery = await services_f.create_delivery(
-        db_session, obj_in=delivery
-    )
-    return delivery
+        created_delivery: models_f.Delivery = await services_f.create_delivery(
+            db_session, obj_in=delivery
+        )
+        created_deliveries.append(created_delivery)
+    return created_deliveries
 
 
 @router.put(

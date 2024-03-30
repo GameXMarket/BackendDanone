@@ -11,12 +11,12 @@ async def get_deliveries_by_offer_id(
         offer_id: int,
         offset: int,
         limit: int
-) -> list[schemas_f.Delivery]:
+) -> list:
     stmt = select(models_f.Delivery).filter_by(
         offer_id=offer_id
     ).offset(offset).limit(limit)
     result = await db_session.execute(stmt)
-    deliveries = [schemas_f.Delivery.model_validate(delivery) for delivery in result.scalars()]
+    deliveries = list(map(lambda delivery: delivery.to_dict(), result.scalars()))
 
     return deliveries
 

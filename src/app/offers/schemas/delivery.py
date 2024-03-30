@@ -6,5 +6,5 @@ class Delivery(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     offer_id: int
-    value: int
+    value: str
 
