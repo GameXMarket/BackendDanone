@@ -35,10 +35,13 @@ async def get_all_by_offer_id(
     if not await services_f.get_by_user_id_offer_id(db_session, user.id, offer_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    deliveries = await services_f.get_deliveries_by_offer_id(db_session=db_session, offer_id=offer_id,
-                                                             limit=limit, offset=offset)
+    deliveries = await services_f.get_deliveries_by_offer_id(
+        db_session=db_session, offer_id=offer_id, limit=limit, offset=offset
+    )
+    
     if not deliveries:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    
     return deliveries
 
 
@@ -79,6 +82,7 @@ async def create_delivery(
     user: models_u.User = await user_context.get_current_active_user(
         db_session, token_data
     )
+    
     created_deliveries = []
     for delivery in deliveries:
         if not await services_f.get_by_user_id_offer_id(db_session, user.id, delivery.offer_id):
@@ -88,6 +92,7 @@ async def create_delivery(
             db_session, obj_in=delivery
         )
         created_deliveries.append(created_delivery)
+    
     return created_deliveries
 
 
