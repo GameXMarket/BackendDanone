@@ -144,8 +144,8 @@ async def update_user_email(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
-    code = await utils.generate_secret_number()
-    await utils.add_code_to_redis(user_id=user.id, code=code, context="verify_email")
+    code = await generate_secret_number()
+    await add_code_to_redis(user_id=user.id, code=code, context="verify_email")
     try:
         await user_auth_sender.send_email(
             sender_name="Danone Market",

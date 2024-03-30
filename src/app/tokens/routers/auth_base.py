@@ -239,7 +239,7 @@ async def verify_password_change(
         db_session, db_obj=user, obj_in={"password": form_data.password}
     )
     await delete_code_from_redis(user_id, "verify_password")
-    return schemas_u.UserUpdatePassword(**user.to_dict())
+    return status.HTTP_200_OK
 
 
 @router.post(
