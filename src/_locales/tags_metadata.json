@@ -12,8 +12,8 @@
         "description": "Offers base endpoints"
     },
     {
-        "name": "categories",
-        "description": "Categories base endpoints"
+        "name": "delivery",
+        "description": "Delivery base endpoints"
     },
     {
         "name": "chat",
@@ -23,12 +23,8 @@
         "name": "attacment",
         "description": "Attacment base endpoints"
     },
-        {
-        "name": "offers",
-        "description": "Offers base endpoints"
-    },
     {
-        "name": "delivery",
-        "description": "Delivery base endpoints"
+        "name": "categories",
+        "description": "Categories base endpoints"
     }
 ]
