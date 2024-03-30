@@ -5,10 +5,11 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from core.security import tokens as TokenSecurity
+from core.security.codes import (verify_code, add_code_to_redis,
+                           delete_code_from_redis, get_code_from_redis, generate_secret_number)
 from core.database import get_session
 import core.depends as deps
 import core.settings as conf
-import core.utils as utils
 import app.users.schemas as schemas_u
 import app.users.models as models_u
 import app.users.services as UserService
@@ -215,9 +216,9 @@ async def verify_password_change(
         form_data: schemas_u.PasswordField,
         db_session: Session = Depends(get_session),
 ):
-    reidis_code = await utils.get_code_from_redis(user_id,
-                                                  context="verify_password")  # контекст куда - нибудь перенести в enums допустим
-    if reidis_code != code:
+    valid = await verify_code(user_id=user_id, context="verify_password", code=code)
+
+    if not valid:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Wrong code"
         )
@@ -237,7 +238,7 @@ async def verify_password_change(
     user = await UserService.update_user(
         db_session, db_obj=user, obj_in={"password": form_data.password}
     )
-    await utils.delete_code_from_redis(user_id, "verify_password")
+    await delete_code_from_redis(user_id, "verify_password")
     return schemas_u.UserUpdatePassword(**user.to_dict())
 
 
@@ -258,9 +259,9 @@ async def verify_email_change(
     """
     Метод используется для верификации пользователей, через почту
     """
+    valid = await verify_code(user_id=user_id, context="verify_email", code=code)
 
-    reidis_code = await utils.get_code_from_redis(user_id, context="verify_email") #контекст куда - нибудь перенести в enums допустим
-    if reidis_code != code:
+    if not valid:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Wrong code"
         )
@@ -280,5 +281,5 @@ async def verify_email_change(
     user = await UserService.update_user(
         db_session, db_obj=user, obj_in={"email": form_data.email}
     )
-    await utils.delete_code_from_redis(user_id, "verify_email")
+    await delete_code_from_redis(user_id, "verify_email")
     return schemas_u.UserPreDB(**user.to_dict())

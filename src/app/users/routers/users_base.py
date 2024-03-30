@@ -11,6 +11,7 @@ from ..models import *
 from ..services import users_base as UserService
 from core import settings as conf
 from core.database import get_session
+from core.security.codes import generate_secret_number, add_code_to_redis, delete_code_from_redis
 from core.security import verify_password
 from core.security import create_jwt_token
 from core.mail_sender import *
@@ -101,28 +102,28 @@ async def update_user_username(
     return updated_user
 
 
-@router.patch(path="/me/update/password")
+@router.post(path="/me/update/password")
 async def update_user_password(
         current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(default_session),
         db_session: AsyncSession = Depends(get_session),
 ):
     token_data, user_context = current_session
     user: User = await user_context.get_current_active_user(db_session, token_data)
-    code = await utils.generate_secret_number()
-    await utils.add_code_to_redis(user_id=user.id, code=code, context="verify_password")
+    code = await generate_secret_number()
+    await add_code_to_redis(user_id=user.id, code=code, context="verify_password")
     try:
         await user_auth_sender.send_email(
             sender_name="Danone Market",
             receiver_email=user.email,
-            subject="Email change",
+            subject="Password change",
             body=await render_auth_template(
-                template_file="email-change.html", data={"code": code}
+                template_file="code_send.html", data={"code": code}
             ),
         )
     except BaseException as ex:
         logger.error(type(ex))
         logger.exception(ex)
-        await utils.delete_code_from_redis(user_id=user.id, context="verify_password")
+        await delete_code_from_redis(user_id=user.id, context="verify_password")
         raise HTTPException(
             detail="email not sended", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
@@ -151,13 +152,13 @@ async def update_user_email(
             receiver_email=user.email,
             subject="Email change",
             body=await render_auth_template(
-                template_file="email-change.html", data={"code": code}
+                template_file="code_send.html", data={"code": code}
             ),
         )
     except BaseException as ex:
         logger.error(type(ex))
         logger.exception(ex)
-        await utils.delete_code_from_redis(user_id=user.id, context="verify_email")
+        await delete_code_from_redis(user_id=user.id, context="verify_email")
         raise HTTPException(
             detail="email not sended", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
