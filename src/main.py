@@ -20,7 +20,7 @@ from core.logging import InfoHandlerTG, ErrorHandlerTG
 from core.utils import check_dir_exists, setup_helper
 from app.users import users_routers
 from app.tokens import tokens_routers
-from app.offers import offers_routers
+from app.offers import offers_routers, delivery_routers
 from app.categories import category_routers
 from app.messages import message_routers
 from app.attachment import attachment_routers
@@ -179,6 +179,7 @@ app.include_router(offers_routers)
 app.include_router(category_routers)
 app.include_router(message_routers)
 app.include_router(attachment_routers)
+app.include_router(delivery_routers)
 
 
 def __temp_get_current_username(

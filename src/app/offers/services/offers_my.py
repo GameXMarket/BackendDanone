@@ -22,6 +22,20 @@ from app.attachment.services import offer_attachment_manager
 from app.attachment.services import category_value_attachment_manager
 
 
+async def get_raw_offer_by_user_id(
+    db_session: AsyncSession, user_id: int, offer_id: int
+):
+    stmt = select(models_f.Offer).where(
+        models_f.Offer.user_id == user_id, models_f.Offer.id == offer_id
+    )
+    offer: models_f.Offer | None = (await db_session.execute(stmt)).scalar()
+
+    if not offer:
+        return None
+    
+    return offer
+
+
 async def get_by_user_id_offer_id(
     db_session: AsyncSession, user_id: int, id: int
 ) -> models_f.Offer | None:
@@ -236,8 +250,6 @@ async def create_offer(
 async def update_offer(
     db_session: AsyncSession, db_obj: models_f.Offer, obj_in: schemas_f.OfferBase
 ):
-    db_obj.updated_at = int(time.time())
-
     obj_data = jsonable_encoder(db_obj)
     if isinstance(obj_in, dict):
         update_data = obj_in
@@ -275,7 +287,7 @@ async def update_offer(
 
 
 async def delete_offer(db_session: AsyncSession, user_id: int, offer_id: int):
-    offer = await get_by_user_id_offer_id(db_session, user_id=user_id, id=offer_id)
+    offer = await get_raw_offer_by_user_id(db_session, user_id=user_id, offer_id=offer_id)
 
     if not offer:
         return None
