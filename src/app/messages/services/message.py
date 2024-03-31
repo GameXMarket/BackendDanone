@@ -67,44 +67,46 @@ class BaseChatManager:
         """
         FirstChatMember = aliased(models_m.ChatMember)
         SecondChatMember = aliased(models_m.ChatMember)
-
-        message_count_subq_stmt = (
-            select(func.count(models_m.Message.id))
-            .where(
-                or_(
-                    models_m.Message.chat_member_id == FirstChatMember.id,
-                    models_m.Message.chat_member_id == SecondChatMember.id,
-                ),
-            )
-            .scalar_subquery()
-        )
+        
         stmt = (
             select(FirstChatMember.chat_id, models_u.User.username, models_u.User.id)
             .join(SecondChatMember, SecondChatMember.chat_id == FirstChatMember.chat_id)
-            .join(models_u.User, models_u.User.id == SecondChatMember.id)
+            .join(models_u.User, models_u.User.id == SecondChatMember.user_id)
             .join(models_m.Chat, models_m.Chat.id == FirstChatMember.chat_id)
             .where(
                 and_(
                     models_m.Chat.is_dialog == True,
                     FirstChatMember.user_id == user_id,
                     SecondChatMember.user_id != user_id,
-                    message_count_subq_stmt > 0,
                 )
             )
             .offset(offset)
             .limit(limit)
         )
         rows = (await db_session.execute(stmt)).fetchall()
-        return [
-            {
+        
+        dialogs_data = []
+        for row in rows:
+            count_msg_stmt = (
+                select(func.count(models_m.Message.id))
+                .join(models_m.ChatMember, models_m.ChatMember.id == models_m.Message.chat_member_id)
+                .where(models_m.ChatMember.chat_id == row[0])
+            )
+            
+            if (msg_count := (await db_session.execute(count_msg_stmt)).scalar()) == 0:
+                continue
+            
+            dialog_data = {
                 "chat_id": row[0],
+                "message_count": msg_count,
                 "interlocutor_username": row[1],
                 "interlocutor_files": await user_attachment_manager.get_only_files(
                     db_session, row[2]
                 ),
             }
-            for row in rows
-        ]
+            dialogs_data.append(dialog_data)
+        
+        return dialogs_data
 
     async def get_dialog_id_by_user_id(
         self, db_session: AsyncSession, user_id: int, interlocutor_id: int
@@ -307,6 +309,10 @@ class BaseMessageManager(BaseChatMemberManager):
         chat_member_id = await self.get_chat_member_id_by_chat_user_ids(
             db_session, message.chat_id, sender_id
         )
+        
+        if not chat_member_id:
+            return None
+        
         return await self.create_message(
             db_session, chat_member_id, message.content, message.need_wait
         )
@@ -394,6 +400,10 @@ class ChatConnectionManager:
                 message = await message_manager.create_message_by_sender_id(
                     db_session, conn_context.user_id, new_message
                 )
+                
+                if not message:
+                    await self.__raise(conn_context, status.WS_1002_PROTOCOL_ERROR, "Not real chat_id")
+                
                 # todo сюда можно придумать решение получше, конечно
                 #  а-ля проверять появился ли файл или нет или
                 #  добавить pg listener на таблицу и уже там чекать
@@ -447,5 +457,5 @@ class ChatConnectionManager:
                     conn_context,
                     code=status.WS_1003_UNSUPPORTED_DATA,
                 )
-
-            await self.__send_message(conn_context, new_message)
+            else:
+                await self.__send_message(conn_context, new_message)
