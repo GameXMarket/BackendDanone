@@ -109,8 +109,7 @@ async def update_user_password(
 ):
     token_data, user_context = current_session
     user: User = await user_context.get_current_active_user(db_session, token_data)
-    code = await generate_secret_number()
-    await add_code_to_redis(user_id=user.id, code=code, context="verify_password")
+    code = await add_code_to_redis(user_id=user.id, context="verify_password")
     try:
         await user_auth_sender.send_email(
             sender_name="Danone Market",
@@ -143,9 +142,7 @@ async def update_user_email(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
-
-    code = await generate_secret_number()
-    await add_code_to_redis(user_id=user.id, code=code, context="verify_email")
+    code = await add_code_to_redis(user_id=user.id, context="verify_email")
     try:
         await user_auth_sender.send_email(
             sender_name="Danone Market",

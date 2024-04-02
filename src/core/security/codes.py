@@ -4,12 +4,17 @@ import random
 
 async def verify_code(user_id: int, context: str, code: int) -> bool:
     right_code = await get_code_from_redis(user_id=user_id, context=context)
-    return code == right_code
+    if code == right_code:
+        await delete_code_from_redis(user_id, context)
+        return True
+    return False
 
 
-async def add_code_to_redis(user_id: int, code: int, context: str, ttl: int = 900):
+async def add_code_to_redis(user_id: int, context: str, ttl: int = 900):
     async with get_redis_client() as redis:
+        code = await generate_secret_number()
         await redis.setex(f"{user_id}:{context}", ttl, code)
+        return code
 
 
 async def delete_code_from_redis(user_id: int, context: str):

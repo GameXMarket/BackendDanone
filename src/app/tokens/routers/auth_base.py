@@ -238,7 +238,6 @@ async def verify_password_change(
     user = await UserService.update_user(
         db_session, db_obj=user, obj_in={"password": form_data.password}
     )
-    await delete_code_from_redis(user_id, "verify_password")
     return status.HTTP_200_OK
 
 
@@ -281,5 +280,4 @@ async def verify_email_change(
     user = await UserService.update_user(
         db_session, db_obj=user, obj_in={"email": form_data.email}
     )
-    await delete_code_from_redis(user_id, "verify_email")
     return schemas_u.UserPreDB(**user.to_dict())
