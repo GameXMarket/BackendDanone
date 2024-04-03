@@ -26,7 +26,7 @@ import app.tokens.services as BannedTokensService
 
 logger = logging.getLogger("uvicorn")
 router = APIRouter(responses={200: {"model": schemas_t.TokenSet}})
-
+default_session = deps.UserSession()
 
 # ! Need refactoring
 
@@ -223,39 +223,29 @@ async def verify_password_reset(
 )
 async def verify_password_change(
     code: int,
-    token: str,
     form_data: schemas_u.PasswordField,
     db_session: Session = Depends(get_session),
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+            default_session
+    ),
 ):
-    token_data = await TokenSecurity.verify_jwt_token(
-        token=token, secret=conf.PASSWORD_RESET_SECRET_KEY, db_session=db_session
-    )
+    token_data, user_context = current_session
+    user: models_u.User = await user_context.get_current_active_user(db_session, token_data)
 
-    if not token_data:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Token not found"
-        )
-
-    banned_token = await BannedTokensService.ban_token(
-        db_session, token=token, payload=token_data
-    )
-
-    user = await UserService.get_by_email(db_session, email=token_data.sub)
-    valid = await verify_code(user_id=user.id, context="verify_password", code=code)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
-    if not valid:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Wrong code")
-
-    user = await UserService.get_by_id(db_session, id=user.id)
-
     if not UserService.is_active(user):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="User not active"
         )
+
+    valid = await verify_code(user_id=user.id, context="verify_password", code=code)
+
+    if not valid:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Wrong code")
 
     user = await UserService.update_user(
         db_session, db_obj=user, obj_in={"password": form_data.password}
@@ -272,28 +262,17 @@ async def verify_password_change(
     },
 )
 async def verify_email_change(
-    token: str,
     code: int,
-    user_id: int,
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+            default_session
+    ),
     db_session: Session = Depends(get_session),
 ):
     """
     Метод используется для верификации пользователей, через почту
     """
-    token_data = await TokenSecurity.verify_jwt_token(
-        token=token, secret=conf.PASSWORD_RESET_SECRET_KEY, db_session=db_session
-    )
-
-    if not token_data:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Token not found"
-        )
-
-    banned_token = await BannedTokensService.ban_token(
-        db_session, token=token, payload=token_data
-    )
-
-    user = await UserService.get_by_email(db_session, email=token_data.sub)
+    token_data, user_context = current_session
+    user: models_u.User = await user_context.get_current_active_user(db_session, token_data)
 
     if not user:
         raise HTTPException(
@@ -305,14 +284,14 @@ async def verify_email_change(
             status_code=status.HTTP_409_CONFLICT, detail="User not active"
         )
 
-    valid = await verify_code(user_id=user_id, context="verify_email", code=code)
+    valid = await verify_code(user_id=user.id, context="verify_email", code=code)
 
     if not valid:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Wrong code")
 
-    new_mail = await get_mail_from_redis(user_id)
+    new_mail = await get_mail_from_redis(user.id)
     user = await UserService.update_user(
         db_session, db_obj=user, obj_in={"email": new_mail}
     )
-    await delete_mail_from_redis(user_id)
+    await delete_mail_from_redis(user.id)
     return schemas_u.UserPreDB(**user.to_dict())
