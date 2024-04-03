@@ -1,7 +1,14 @@
 import logging
 
 import fastapi
-from fastapi import Depends, APIRouter, WebSocket, WebSocketDisconnect, HTTPException, status
+from fastapi import (
+    Depends,
+    APIRouter,
+    WebSocket,
+    WebSocketDisconnect,
+    HTTPException,
+    status,
+)
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import noload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,8 +18,13 @@ from ..models import *
 from ..services import users_base as UserService
 from core import settings as conf
 from core.database import get_session
-from core.security.codes import (generate_secret_number,
-                                 generate_and_add_code_to_redis, delete_code_from_redis, verify_code, add_mail_to_redis)
+from core.security.codes import (
+    generate_secret_number,
+    generate_and_add_code_to_redis,
+    delete_code_from_redis,
+    verify_code,
+    add_mail_to_redis,
+)
 from core.security import verify_password
 from core.security import create_jwt_token
 from core.mail_sender import *
@@ -29,9 +41,7 @@ default_session = deps.UserSession()
 @router.post(
     path="/me", responses={409: {"model": UserError}, 500: {"model": UserInfo}}
 )
-async def sign_up(
-        data: UserSignUp, db_session: AsyncSession = Depends(get_session)
-):
+async def sign_up(data: UserSignUp, db_session: AsyncSession = Depends(get_session)):
     """
     Используется для регистрации новых пользователей
     """
@@ -75,9 +85,16 @@ async def sign_up(
     return UserPreDB(**user.to_dict())
 
 
-@router.get(path="/me", responses={**deps.build_response(deps.UserSession.get_current_active_user)})
-async def get_user(current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(default_session),
-                   db_session: AsyncSession = Depends(get_session)):
+@router.get(
+    path="/me",
+    responses={**deps.build_response(deps.UserSession.get_current_active_user)},
+)
+async def get_user(
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        default_session
+    ),
+    db_session: AsyncSession = Depends(get_session),
+):
     token_data, user_context = current_session
     user: User = await user_context.get_current_active_user(db_session, token_data)
     user_files = await user_attachment_manager.get_only_files(db_session, user.id)
@@ -89,28 +106,39 @@ async def get_user(current_session: tuple[schemas_t.JwtPayload, deps.UserSession
 
 @router.patch(path="/me/update/username")
 async def update_user_username(
-        data_form: UserUpdateUsername,
-        current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(default_session),
-        db_session: AsyncSession = Depends(get_session),
+    data_form: UserUpdateUsername,
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        default_session
+    ),
+    db_session: AsyncSession = Depends(get_session),
 ):
     token_data, user_context = current_session
     user: User = await user_context.get_current_active_user(db_session, token_data)
 
     if await UserService.get_by_username(db_session, username=data_form.username):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+        )
 
-    updated_user = await UserService.update_user(db_session, user, {"username": data_form.username})
+    updated_user = await UserService.update_user(
+        db_session, user, {"username": data_form.username}
+    )
     return updated_user
 
 
 @router.post(path="/me/update/password")
 async def update_user_password(
-        current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(default_session),
-        db_session: AsyncSession = Depends(get_session),
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        default_session
+    ),
+    db_session: AsyncSession = Depends(get_session),
 ):
     token_data, user_context = current_session
     user: User = await user_context.get_current_active_user(db_session, token_data)
-    code = await generate_and_add_code_to_redis(user_id=user.id, context="verify_password")
+
+    code = await generate_and_add_code_to_redis(
+        user_id=user.id, context="verify_password"
+    )
     try:
         await user_auth_sender.send_email(
             sender_name="Danone Market",
@@ -133,11 +161,22 @@ async def update_user_password(
 
 @router.post(path="/me/newmail")
 async def send_code_to_new_user_mail(
-        code_old: int,
-        new_mail: EmailField,
-        current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(default_session),
-        db_session: AsyncSession = Depends(get_session),
+    code_old: int,
+    new_mail: EmailField,
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        default_session
+    ),
+    db_session: AsyncSession = Depends(get_session),
 ):
+    """
+    Отправляет на новый емейл код подтверждения, сохраняя информацию о новой почте
+    :param code_old: код со старой почты
+    :param new_mail: новая почта
+    :param current_session:
+    :param db_session:
+    :return:
+    """
+
     token_data, user_context = current_session
     user: User = await user_context.get_current_active_user(db_session, token_data)
 
@@ -145,12 +184,9 @@ async def send_code_to_new_user_mail(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
-    print(code_old)
     valid = await verify_code(user_id=user.id, context="verify_email", code=code_old)
     if not valid:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Wrong code"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Wrong code")
 
     code = await generate_and_add_code_to_redis(user_id=user.id, context="verify_email")
     await add_mail_to_redis(user_id=user.id, mail=new_mail.email)
@@ -174,10 +210,14 @@ async def send_code_to_new_user_mail(
     return JSONResponse(content={"detail": "email_sended"})
 
 
-@router.post(path="/me/oldmail", )
+@router.post(
+    path="/me/oldmail",
+)
 async def send_code_to_old_user_email(
-        current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(default_session),
-        db_session: AsyncSession = Depends(get_session),
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        default_session
+    ),
+    db_session: AsyncSession = Depends(get_session),
 ):
     token_data, user_context = current_session
     user: User = await user_context.get_current_active_user(db_session, token_data)
@@ -187,7 +227,6 @@ async def send_code_to_old_user_email(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
     code = await generate_and_add_code_to_redis(user_id=user.id, context="verify_email")
-    print(code)
     try:
         await user_auth_sender.send_email(
             sender_name="Danone Market",
@@ -212,9 +251,11 @@ async def send_code_to_old_user_email(
     path="/me",
 )
 async def remove_user(
-        old_password: PasswordField,
-        current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(default_session),
-        db_session: AsyncSession = Depends(get_session),
+    old_password: PasswordField,
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        default_session
+    ),
+    db_session: AsyncSession = Depends(get_session),
 ):
     """
     Метод для дебага
@@ -223,7 +264,7 @@ async def remove_user(
     user: User = await user_context.get_current_active_user(db_session, token_data)
 
     if not await UserService.authenticate(
-            db_session, email=user.email, password=old_password.password
+        db_session, email=user.email, password=old_password.password
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -244,8 +285,8 @@ async def remove_user(
     },
 )
 async def reset_user_password(
-        email_f: EmailField,
-        db_session: AsyncSession = Depends(get_session),
+    email_f: EmailField,
+    db_session: AsyncSession = Depends(get_session),
 ):
     user = await UserService.get_by_email(db_session, email=email_f.email)
 
