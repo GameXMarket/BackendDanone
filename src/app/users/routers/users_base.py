@@ -11,7 +11,8 @@ from ..models import *
 from ..services import users_base as UserService
 from core import settings as conf
 from core.database import get_session
-from core.security.codes import generate_secret_number, add_code_to_redis, delete_code_from_redis
+from core.security.codes import (generate_secret_number,
+                                 generate_and_add_code_to_redis, delete_code_from_redis, verify_code, add_mail_to_redis)
 from core.security import verify_password
 from core.security import create_jwt_token
 from core.mail_sender import *
@@ -109,7 +110,7 @@ async def update_user_password(
 ):
     token_data, user_context = current_session
     user: User = await user_context.get_current_active_user(db_session, token_data)
-    code = await add_code_to_redis(user_id=user.id, context="verify_password")
+    code = await generate_and_add_code_to_redis(user_id=user.id, context="verify_password")
     try:
         await user_auth_sender.send_email(
             sender_name="Danone Market",
@@ -130,8 +131,10 @@ async def update_user_password(
     return JSONResponse(content={"detail": "email_sended"})
 
 
-@router.patch(path="/me/update/email", )
-async def update_user_email(
+@router.post(path="/me/newmail")
+async def send_code_to_new_user_mail(
+        code_old: int,
+        new_mail: EmailField,
         current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(default_session),
         db_session: AsyncSession = Depends(get_session),
 ):
@@ -142,7 +145,49 @@ async def update_user_email(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
-    code = await add_code_to_redis(user_id=user.id, context="verify_email")
+    print(code_old)
+    valid = await verify_code(user_id=user.id, context="verify_email", code=code_old)
+    if not valid:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Wrong code"
+        )
+
+    code = await generate_and_add_code_to_redis(user_id=user.id, context="verify_email")
+    await add_mail_to_redis(user_id=user.id, mail=new_mail.email)
+    try:
+        await user_auth_sender.send_email(
+            sender_name="Danone Market",
+            receiver_email=new_mail.email,
+            subject="Email change",
+            body=await render_auth_template(
+                template_file="code_send.html", data={"code": code}
+            ),
+        )
+    except BaseException as ex:
+        logger.error(type(ex))
+        logger.exception(ex)
+        await delete_code_from_redis(user_id=user.id, context="verify_email")
+        raise HTTPException(
+            detail="email not sended", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+    return JSONResponse(content={"detail": "email_sended"})
+
+
+@router.post(path="/me/oldmail", )
+async def send_code_to_old_user_email(
+        current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(default_session),
+        db_session: AsyncSession = Depends(get_session),
+):
+    token_data, user_context = current_session
+    user: User = await user_context.get_current_active_user(db_session, token_data)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+    code = await generate_and_add_code_to_redis(user_id=user.id, context="verify_email")
+    print(code)
     try:
         await user_auth_sender.send_email(
             sender_name="Danone Market",

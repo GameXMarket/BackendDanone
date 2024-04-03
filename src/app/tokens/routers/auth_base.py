@@ -5,8 +5,9 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from core.security import tokens as TokenSecurity
-from core.security.codes import (verify_code, add_code_to_redis,
-                           delete_code_from_redis, get_code_from_redis, generate_secret_number)
+from core.security.codes import (verify_code, generate_and_add_code_to_redis,
+                           delete_code_from_redis, get_code_from_redis, generate_secret_number,
+                                 delete_mail_from_redis, get_mail_from_redis)
 from core.database import get_session
 import core.depends as deps
 import core.settings as conf
@@ -241,7 +242,7 @@ async def verify_password_change(
     return status.HTTP_200_OK
 
 
-@router.post(
+@router.patch(
     path="/email-change",
     responses={
         404: {"model": schemas_u.UserError},
@@ -252,18 +253,11 @@ async def verify_password_change(
 async def verify_email_change(
         code: int,
         user_id: int,
-        form_data: schemas_u.EmailField,
         db_session: Session = Depends(get_session),
 ):
     """
     Метод используется для верификации пользователей, через почту
     """
-    valid = await verify_code(user_id=user_id, context="verify_email", code=code)
-
-    if not valid:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Wrong code"
-        )
 
     user = await UserService.get_by_id(db_session, id=user_id)
 
@@ -277,7 +271,15 @@ async def verify_email_change(
             status_code=status.HTTP_409_CONFLICT, detail="User not active"
         )
 
+    valid = await verify_code(user_id=user_id, context="verify_email", code=code)
+
+    if not valid:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Wrong code"
+        )
+    new_mail = await get_mail_from_redis(user_id)
     user = await UserService.update_user(
-        db_session, db_obj=user, obj_in={"email": form_data.email}
+        db_session, db_obj=user, obj_in={"email": new_mail}
     )
+    await delete_mail_from_redis(user_id)
     return schemas_u.UserPreDB(**user.to_dict())
