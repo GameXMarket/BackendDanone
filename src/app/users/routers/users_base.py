@@ -126,8 +126,8 @@ async def update_user_username(
     return updated_user
 
 
-@router.post(path="/me/update/password")
-async def update_user_password(
+@router.post(path="/me/password")
+async def send_code_for_change_password(
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
         default_session
     ),
