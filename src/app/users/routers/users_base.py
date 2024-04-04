@@ -170,7 +170,8 @@ async def send_code_to_old_user_email(
 ):
 
     """
-       Отправляет на почту пользователя код, необходимый для смены почты.\nКод в дальнейшем используйется в /me/newmail
+    Отправляет на почту пользователя код, необходимый для смены почты. <br>
+    Код в дальнейшем используйется в /me/newmail
     """
 
     token_data, user_context = current_session
@@ -213,8 +214,8 @@ async def send_code_to_new_user_mail(
 
     """
     Отправляет на новый емейл код подтверждения, сохраняя информацию о новой почте\n
-    :param code_old: код со старой почты\n
-    :param new_mail: новая почта
+     * code_old - код со старой почты\n
+     * email - новая почта
     """
 
     token_data, user_context = current_session
