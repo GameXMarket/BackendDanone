@@ -171,8 +171,7 @@ async def send_code_to_old_user_email(
 
     """
        Отправляет на почту пользователя код, необходимый для смены почты.\nКод в дальнейшем используйется в /me/newmail
-
-       """
+    """
 
     token_data, user_context = current_session
     user: User = await user_context.get_current_active_user(db_session, token_data)
