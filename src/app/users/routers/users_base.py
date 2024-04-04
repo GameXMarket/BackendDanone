@@ -159,6 +159,49 @@ async def update_user_password(
     return JSONResponse(content={"detail": "email_sended"})
 
 
+@router.post(
+    path="/me/oldmail",
+)
+async def send_code_to_old_user_email(
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        default_session
+    ),
+    db_session: AsyncSession = Depends(get_session),
+):
+
+    """
+       Отправляет на почту пользователя код, необходимый для смены почты.\nКод в дальнейшем используйется в /me/newmail
+
+       """
+
+    token_data, user_context = current_session
+    user: User = await user_context.get_current_active_user(db_session, token_data)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+    code = await generate_and_add_code_to_redis(user_id=user.id, context="verify_email")
+    try:
+        await user_auth_sender.send_email(
+            sender_name="Danone Market",
+            receiver_email=user.email,
+            subject="Email change",
+            body=await render_auth_template(
+                template_file="code_send.html", data={"code": code}
+            ),
+        )
+    except BaseException as ex:
+        logger.error(type(ex))
+        logger.exception(ex)
+        await delete_code_from_redis(user_id=user.id, context="verify_email")
+        raise HTTPException(
+            detail="email not sended", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+    return JSONResponse(content={"detail": "email_sended"})
+
+
 @router.post(path="/me/newmail")
 async def send_code_to_new_user_mail(
     code_old: int,
@@ -168,13 +211,11 @@ async def send_code_to_new_user_mail(
     ),
     db_session: AsyncSession = Depends(get_session),
 ):
+
     """
-    Отправляет на новый емейл код подтверждения, сохраняя информацию о новой почте
-    :param code_old: код со старой почты
+    Отправляет на новый емейл код подтверждения, сохраняя информацию о новой почте\n
+    :param code_old: код со старой почты\n
     :param new_mail: новая почта
-    :param current_session:
-    :param db_session:
-    :return:
     """
 
     token_data, user_context = current_session
@@ -194,43 +235,6 @@ async def send_code_to_new_user_mail(
         await user_auth_sender.send_email(
             sender_name="Danone Market",
             receiver_email=new_mail.email,
-            subject="Email change",
-            body=await render_auth_template(
-                template_file="code_send.html", data={"code": code}
-            ),
-        )
-    except BaseException as ex:
-        logger.error(type(ex))
-        logger.exception(ex)
-        await delete_code_from_redis(user_id=user.id, context="verify_email")
-        raise HTTPException(
-            detail="email not sended", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-    return JSONResponse(content={"detail": "email_sended"})
-
-
-@router.post(
-    path="/me/oldmail",
-)
-async def send_code_to_old_user_email(
-    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
-        default_session
-    ),
-    db_session: AsyncSession = Depends(get_session),
-):
-    token_data, user_context = current_session
-    user: User = await user_context.get_current_active_user(db_session, token_data)
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-        )
-    code = await generate_and_add_code_to_redis(user_id=user.id, context="verify_email")
-    try:
-        await user_auth_sender.send_email(
-            sender_name="Danone Market",
-            receiver_email=user.email,
             subject="Email change",
             body=await render_auth_template(
                 template_file="code_send.html", data={"code": code}
