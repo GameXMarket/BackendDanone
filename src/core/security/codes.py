@@ -53,10 +53,8 @@ async def get_code_from_redis(
     async with get_redis_client() as redis:
         code = await redis.get(f"{user_id}:{context}")
         if code:
-            code = int(code.decode())
-        else:
-            return None
-        return code
+            return int(code.decode())
+        return None
 
 
 async def generate_secret_number(length: int = 4) -> int:
