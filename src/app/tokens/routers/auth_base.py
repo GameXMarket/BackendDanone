@@ -253,7 +253,7 @@ async def verify_password_change(
     return status.HTTP_200_OK
 
 
-@router.patch(
+@router.post(
     path="/email-change",
     responses={
         404: {"model": schemas_u.UserError},
@@ -268,9 +268,6 @@ async def verify_email_change(
     ),
     db_session: Session = Depends(get_session),
 ):
-    """
-    Метод используется для верификации пользователей, через почту
-    """
     token_data, user_context = current_session
     user: models_u.User = await user_context.get_current_active_user(db_session, token_data)
 
