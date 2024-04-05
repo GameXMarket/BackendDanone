@@ -77,6 +77,9 @@ async def get_mini_with_offset_limit(
         user_id=user.id,
         offset=abs(offset),
         limit=abs(limit),
+        search_query=search_query,
+        is_descending=is_descending,
+        category_value_ids=category_value_ids,
     )
 
     return offers
@@ -182,8 +185,8 @@ async def update_offer(
     user: models_u.User = await user_context.get_current_active_user(
         db_session, token_data
     )
-    offer_db = await services_f.get_by_user_id_offer_id(
-        db_session, user_id=user.id, id=offer_id
+    offer_db = await services_f.get_raw_offer_by_user_id(
+        db_session, user_id=user.id, offer_id=offer_id
     )
 
     if not offer_db:

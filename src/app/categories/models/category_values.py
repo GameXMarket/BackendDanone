@@ -27,8 +27,6 @@ class CategoryValue(Base):
         Integer, ForeignKey("user.id", ondelete="SET NULL"), nullable=True
     )
     value = Column(VARCHAR(length=17), nullable=False)
-    created_at = Column(Integer, nullable=False)
-    updated_at = Column(Integer, nullable=False)
 
     carcass: Mapped["CategoryCarcass"] = relationship(
         lazy="noload", back_populates="values", foreign_keys=[carcass_id]
@@ -42,6 +40,9 @@ class CategoryValue(Base):
         base_dict = {}
         lazy_load_v = ["carcass", "next_carcass", "author"]
         for var_name in args:
+            if var_name is None:
+                continue
+
             var_value = getattr(self, var_name)
             base_dict[var_name] = (
                 var_value.to_dict() if var_name in lazy_load_v else var_value

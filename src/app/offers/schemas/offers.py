@@ -17,7 +17,6 @@ class CategoryValueIdsBase(BaseModel):
 
 
 class OfferMiniBase(BaseModel):
-    attachment_id: int | None = None
     name: str = Field(examples=["Offer name"])
     description: str = Field(examples=["Offer description"])
 

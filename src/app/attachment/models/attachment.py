@@ -50,6 +50,7 @@ class Attachment(Base):
             "message_attachment",
             "offer_attachment",
             "conflict_attachment",
+            "category_value_attachment",
             name="attachment_types",
         )
     )
@@ -100,6 +101,18 @@ class MessageAttachment(Attachment):
     }
 
 
+class CategoryValueAttachemnt(Attachment):
+    __tablename__ = "category_value_attachment"
+    id = Column(
+        Integer, ForeignKey("base_attachment.id", ondelete="CASCADE"), primary_key=True
+    )
+    category_value_id = Column(Integer, ForeignKey("category_value.id", ondelete="CASCADE"), unique=True, nullable=False)
+
+    __mapper_args__ = {
+        "polymorphic_identity": "category_value_attachment",
+    }
+
+
 class File(Base):
     """
     Путь файла находится через created_at параметр + hash
@@ -143,8 +156,8 @@ DECLARE
     payload TEXT;
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM file WHERE hash = OLD.hash) THEN
-        INSERT INTO deleted_file (id, hash, created_at)
-        VALUES (OLD.id, OLD.hash, OLD.created_at);
+        INSERT INTO deleted_file (id, hash, created_at, updated_at)
+        VALUES (OLD.id, OLD.hash, OLD.created_at, -1);
 		payload := json_build_object('unix', OLD.created_at, 'hash', OLD.hash, 'type', OLD.type);
         PERFORM pg_notify('new_deleted_file', payload);
     END IF;
@@ -204,6 +217,15 @@ def create_message_attachment_trigger(
     **kw,
 ):
     __create_trigger(connection, "message_attachment_after_delete", "message_attachment", "delete_from_base_attachment")
+
+
+@event.listens_for(CategoryValueAttachemnt.__table__, "after_create")
+def create_message_attachment_trigger(
+    target: CategoryValueAttachemnt.__table__,
+    connection: sqlalchemy.engine.base.Connection,
+    **kw,
+):
+    __create_trigger(connection, "category_value_attachment_after_delete", "category_value_attachment", "delete_from_base_attachment")
 
 
 @event.listens_for(File.__table__, "after_create")

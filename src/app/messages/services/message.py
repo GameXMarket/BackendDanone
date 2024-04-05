@@ -7,8 +7,9 @@ from dataclasses import dataclass
 from pydantic import ValidationError
 from fastapi import Depends, WebSocket, WebSocketException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, and_
+from sqlalchemy import select, union_all, or_, and_, text, func
 from sqlalchemy.orm import aliased
+import sqlalchemy
 
 from core import depends as deps
 from core.database import context_get_session
@@ -16,8 +17,9 @@ from core.redis import get_redis_client, get_redis_pipeline
 from app.messages import models as models_m
 from app.messages import schemas as schemas_m
 from app.messages import services as services_m
+from app.users import models as models_u
+from app.attachment.services import message_attachment_manager, user_attachment_manager
 from app.tokens import schemas as schemas_t
-from app.attachment.services import message_attachment_manager
 
 
 class BaseChatManager:
@@ -58,20 +60,54 @@ class BaseChatManager:
 
         return chat
 
-    async def get_all_user_chats_ids_by_user_id(
+    async def get_all_user_dialogs_ids_by_user_id(
         self, db_session: AsyncSession, user_id: int, offset: int, limit: int
     ) -> Sequence[int]:
         """
-        Непубличный метод для подгрузки чатов пользователя
+        Непубличный метод для подгрузки диалогов пользователя
         """
+        FirstChatMember = aliased(models_m.ChatMember)
+        SecondChatMember = aliased(models_m.ChatMember)
+        
         stmt = (
-            select(models_m.ChatMember.chat_id)
-            .where(models_m.ChatMember.user_id == user_id)
+            select(FirstChatMember.chat_id, models_u.User.username, models_u.User.id)
+            .join(SecondChatMember, SecondChatMember.chat_id == FirstChatMember.chat_id)
+            .join(models_u.User, models_u.User.id == SecondChatMember.user_id)
+            .join(models_m.Chat, models_m.Chat.id == FirstChatMember.chat_id)
+            .where(
+                and_(
+                    models_m.Chat.is_dialog == True,
+                    FirstChatMember.user_id == user_id,
+                    SecondChatMember.user_id != user_id,
+                )
+            )
             .offset(offset)
             .limit(limit)
         )
-        result = await db_session.execute(stmt)
-        return result.scalars().all()
+        rows = (await db_session.execute(stmt)).fetchall()
+        
+        dialogs_data = []
+        for row in rows:
+            count_msg_stmt = (
+                select(func.count(models_m.Message.id))
+                .join(models_m.ChatMember, models_m.ChatMember.id == models_m.Message.chat_member_id)
+                .where(models_m.ChatMember.chat_id == row[0])
+            )
+            
+            if (msg_count := (await db_session.execute(count_msg_stmt)).scalar()) == 0:
+                continue
+            
+            dialog_data = {
+                "chat_id": row[0],
+                "message_count": msg_count,
+                "interlocutor_username": row[1],
+                "interlocutor_files": await user_attachment_manager.get_only_files(
+                    db_session, row[2]
+                ),
+            }
+            dialogs_data.append(dialog_data)
+        
+        return dialogs_data
 
     async def get_dialog_id_by_user_id(
         self, db_session: AsyncSession, user_id: int, interlocutor_id: int
@@ -227,6 +263,13 @@ class BaseMessageManager(BaseChatMemberManager):
             await db_session.delete(message)
             await db_session.commit()
             return message
+    
+    async def create_system_message(self, db_session: AsyncSession, chat_id: int, content: str):
+        new_message = models_m.SystemMessage(chat_id=chat_id, content=content)
+        db_session.add(new_message)
+        await db_session.commit()
+        await db_session.refresh(new_message)
+        return new_message
 
     async def get_messages_by_chat_id_user_id(
         self,
@@ -247,33 +290,50 @@ class BaseMessageManager(BaseChatMemberManager):
             return None
 
         messages_stmt = (
-            select(models_m.Message, models_m.ChatMember.user_id)
+            select(models_m.Message.id, models_m.Message.content, models_m.Message.created_at, models_m.ChatMember.user_id)
             .join(
                 models_m.ChatMember,
                 models_m.Message.chat_member_id == models_m.ChatMember.id,
             )
             .where(models_m.ChatMember.chat_id == chat_id)
+        )
+        system_message_stmt = (
+            cast(sqlalchemy.Select, select(models_m.SystemMessage.id, models_m.SystemMessage.content, models_m.SystemMessage.created_at, -1))
+            .where(models_m.SystemMessage.chat_id == chat_id)
+        )
+        all_messages_stmt = (
+            union_all(messages_stmt, system_message_stmt)
+            .order_by(text("created_at"))
             .offset(offset)
             .limit(limit)
         )
-        messages = await db_session.execute(messages_stmt)
-        return [
-            {
-                **cast(models_m.Message, message).to_dict(),
-                "user_id": cast(int, user_id),
-                "files": await message_attachment_manager.get_only_files(
-                    db_session, cast(models_m.Message, message).id
+        
+        rows = await db_session.execute(all_messages_stmt)
+        
+        result = []
+        for id, content, created_at, user_id_ in rows:
+            data = {
+                "content": content,
+                "created_at": created_at,
+                "user_id": user_id_,
+                "files":  await message_attachment_manager.get_only_files(
+                    db_session, id
                 ),
             }
-            for message, user_id in messages
-        ]
-
+            result.append(data)
+        
+        return result
+    
     async def create_message_by_sender_id(
         self, db_session: AsyncSession, sender_id: int, message: schemas_m.MessageCreate
     ):
         chat_member_id = await self.get_chat_member_id_by_chat_user_ids(
             db_session, message.chat_id, sender_id
         )
+        
+        if not chat_member_id:
+            return None
+        
         return await self.create_message(
             db_session, chat_member_id, message.content, message.need_wait
         )
@@ -361,6 +421,10 @@ class ChatConnectionManager:
                 message = await message_manager.create_message_by_sender_id(
                     db_session, conn_context.user_id, new_message
                 )
+                
+                if not message:
+                    await self.__raise(conn_context, status.WS_1002_PROTOCOL_ERROR, "Not real chat_id")
+                
                 # todo сюда можно придумать решение получше, конечно
                 #  а-ля проверять появился ли файл или нет или
                 #  добавить pg listener на таблицу и уже там чекать
@@ -414,5 +478,5 @@ class ChatConnectionManager:
                     conn_context,
                     code=status.WS_1003_UNSUPPORTED_DATA,
                 )
-
-            await self.__send_message(conn_context, new_message)
+            else:
+                await self.__send_message(conn_context, new_message)

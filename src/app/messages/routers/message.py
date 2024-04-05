@@ -47,7 +47,7 @@ async def get_dialog_id_by_user_id(
 
 
 @router.get("/my/getall")
-async def get_all_chats_with_offset_limit(
+async def get_all_dialogs_with_offset_limit(
     offset: int = 0,
     limit: int = 10,
     db_session: AsyncSession = Depends(get_session),
@@ -61,14 +61,14 @@ async def get_all_chats_with_offset_limit(
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
 
-    chats_ids = await services.message_manager.get_all_user_chats_ids_by_user_id(
+    dialogs_data = await services.message_manager.get_all_user_dialogs_ids_by_user_id(
         db_session, user.id, offset, limit
     )
 
-    if not chats_ids:
+    if not dialogs_data:
         raise HTTPException(404)
 
-    return JSONResponse({"chats_ids": chats_ids})
+    return dialogs_data
 
 
 @router.get("/my/getmessages")

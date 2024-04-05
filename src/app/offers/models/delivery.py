@@ -2,7 +2,6 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import Column, Integer, String, Text, Enum, ForeignKey
 from sqlalchemy.orm import relationship, Mapped
-
 from core.database import Base
 
 if TYPE_CHECKING:
@@ -13,11 +12,8 @@ if TYPE_CHECKING:
 class Delivery(Base):
     __tablename__ = "delivery"
     id = Column(Integer, primary_key=True, index=True)
-    offer_id = Column(Integer)
-    value = Column(Integer)
+    offer_id = Column(Integer, ForeignKey('offer.id', ondelete="CASCADE"))
+    value = Column(String)
     created_at = Column(Integer)
-    
-    offer: Mapped["Offer"] = relationship(back_populates="deliveries", lazy="noload")
 
-
-
+    offer: Mapped["Offer"] = relationship(back_populates="delivery", lazy="noload")
