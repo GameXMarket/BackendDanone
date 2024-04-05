@@ -152,6 +152,7 @@ origins = [
     "http://localhost:8080",
     "http://localhost:3000",
     "https://fronted-danone-k7l2.vercel.app",
+    "http://31.129.111.90:8090",
     "https://test.yunikeil.ru",
     "https://fronted-danone-git-front-logic-dydecs-projects.vercel.app",
     "https://fronted-danone-git-development-dydecs-projects.vercel.app",
