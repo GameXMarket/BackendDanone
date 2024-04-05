@@ -262,6 +262,13 @@ class BaseMessageManager(BaseChatMemberManager):
             await db_session.delete(message)
             await db_session.commit()
             return message
+    
+    async def create_system_message(self, db_session: AsyncSession, chat_id: int, content: str):
+        new_message = models_m.SystemMessage(chat_id=chat_id, content=content)
+        db_session.add(new_message)
+        await db_session.commit()
+        await db_session.refresh(new_message)
+        return new_message
 
     async def get_messages_by_chat_id_user_id(
         self,
