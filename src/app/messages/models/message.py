@@ -28,7 +28,6 @@ class Message(Base):
     id = Column(Integer, primary_key=True)
     chat_member_id = Column(Integer, ForeignKey('chat_member.id', ondelete="CASCADE"), nullable=False)
     content = Column(String)
-    created_at = Column(Integer)
 
 
 class SystemMessage(Base):
