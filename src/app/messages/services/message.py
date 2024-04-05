@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pydantic import ValidationError
 from fastapi import Depends, WebSocket, WebSocketException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, union_all, or_, and_, text, func
+from sqlalchemy import select, union_all, desc, or_, and_, text, func
 from sqlalchemy.orm import aliased
 import sqlalchemy
 
@@ -303,7 +303,7 @@ class BaseMessageManager(BaseChatMemberManager):
         )
         all_messages_stmt = (
             union_all(messages_stmt, system_message_stmt)
-            .order_by(text("created_at"))
+            .order_by(desc(text("created_at")))
             .offset(offset)
             .limit(limit)
         )
@@ -322,7 +322,7 @@ class BaseMessageManager(BaseChatMemberManager):
             }
             result.append(data)
         
-        return result
+        return result[::-1]
     
     async def create_message_by_sender_id(
         self, db_session: AsyncSession, sender_id: int, message: schemas_m.MessageCreate
