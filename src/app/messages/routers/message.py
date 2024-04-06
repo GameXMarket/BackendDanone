@@ -38,10 +38,14 @@ async def get_dialog_id_by_user_id(
     chat_data = await services.message_manager.get_dialog_id_by_user_id(
         db_session, user.id, interlocutor_id
     )
+    
     if not chat_data:
         chat_data = await services.message_manager.create_dialog(
             db_session, user.id, interlocutor_id
         )
+    
+    elif not chat_data:
+        raise HTTPException(404)
     
     return chat_data
 
