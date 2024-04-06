@@ -143,21 +143,21 @@ async def __init_offers():
             "description": "Brawl..stars",
             "price": 100,
             "count": 5,
-            "category_value_ids": [1],
+            "category_value_ids": [13, 15, 17],
         },
         {
-            "name": "BrawStars...",
-            "description": "Brawl..stars",
+            "name": "Dota2 Boost",
+            "description": "Dota 2 boost mmr",
             "price": 50,
             "count": 50,
-            "category_value_ids": [2],
+            "category_value_ids": [7, 8, 9],
         },
         {
-            "name": "BrawStars...",
-            "description": "Brawl..stars",
+            "name": "Cs2",
+            "description": "CS2 Boost ELO",
             "price": 1000,
             "count": 20,
-            "category_value_ids": [3],
+            "category_value_ids": [1, 2, 3],
         },
     ]
 
@@ -192,17 +192,16 @@ async def __init_user():
                 additional_fields={"role_id": 3, "is_verified": True},
             )
 
-        if conf.DEBUG:
-            test_user: models_u.User = await services_u.get_by_email(
+        test_user: models_u.User = await services_u.get_by_email(
                 db_session, email=conf.BASE_DEBUG_USER_EMAIL
             )
-            if not test_user:
-                test_user: models_u.User = await services_u.create_user(
-                    db_session=db_session,
-                    obj_in=schemas_u.UserSignUp(
-                        password=conf.BASE_DEBUG_USER_PASS,
-                        email=conf.BASE_DEBUG_USER_EMAIL,
-                        username=conf.BASE_DEBUG_USER_LOGIN,
-                    ),
-                    additional_fields={"role_id": 0, "is_verified": True},
-                )
+        if not test_user:
+            test_user: models_u.User = await services_u.create_user(
+                db_session=db_session,
+                obj_in=schemas_u.UserSignUp(
+                    password=conf.BASE_DEBUG_USER_PASS,
+                    email=conf.BASE_DEBUG_USER_EMAIL,
+                    username=conf.BASE_DEBUG_USER_LOGIN,
+                ),
+                additional_fields={"role_id": 0, "is_verified": True},
+            )
