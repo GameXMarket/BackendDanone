@@ -100,6 +100,7 @@ class BaseChatManager:
             dialog_data = {
                 "chat_id": row[0],
                 "message_count": msg_count,
+                "interlocutor_id": row[2],
                 "interlocutor_username": row[1],
                 "interlocutor_files": await user_attachment_manager.get_only_files(
                     db_session, row[2]
