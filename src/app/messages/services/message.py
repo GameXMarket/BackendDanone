@@ -17,7 +17,7 @@ from core.redis import get_redis_client, get_redis_pipeline
 from app.messages import models as models_m
 from app.messages import schemas as schemas_m
 from app.messages import services as services_m
-from app.users import models as models_u
+from app.users import models as models_u, services as services_u
 from app.attachment.services import message_attachment_manager, user_attachment_manager
 from app.tokens import schemas as schemas_t
 
@@ -119,6 +119,10 @@ class BaseChatManager:
         FirstChatMember = aliased(models_m.ChatMember)
         SecondChatMember = aliased(models_m.ChatMember)
 
+        interlocutor = await services_u.get_by_id(db_session, id=interlocutor_id)
+        if not interlocutor: # Переделать когда будет более подробная обработка ошибок
+            return None
+        
         stmt = (
             select(models_m.Chat.id)
             .where(models_m.Chat.is_dialog == True)
@@ -131,9 +135,14 @@ class BaseChatManager:
                 )
             )
         )
-
-        result = await db_session.execute(stmt)
-        return result.scalar_one_or_none()
+        
+        chat_data = {
+            "chat_id": (await db_session.execute(stmt)).scalar_one_or_none(),
+            "interlocutor_username": interlocutor.username,
+            "interlocutor_files": await user_attachment_manager.get_only_files(db_session, interlocutor_id)
+        }
+        
+        return chat_data
 
 
 class BaseChatMemberManager(BaseChatManager):
@@ -197,6 +206,21 @@ class BaseChatMemberManager(BaseChatManager):
         await db_session.commit()
         return chat.id
 
+    async def create_dialog(
+        self, db_session: AsyncSession, user_id: int, interlocutor_id: int
+    ):
+        interlocutor = await services_u.get_by_id(db_session, id=interlocutor_id)
+        if not interlocutor:
+            return None
+
+        chat_data = {
+            "chat_id": await self.create_new_chat_with_members(db_session, user_id, interlocutor_id),
+            "interlocutor_username": interlocutor.username,
+            "interlocutor_files": await user_attachment_manager.get_only_files(db_session, interlocutor_id)
+        }
+        
+        return chat_data
+    
     async def get_chat_member_id_by_chat_user_ids(
         self, db_session: AsyncSession, chat_id: int, user_id: int
     ) -> int | None:
