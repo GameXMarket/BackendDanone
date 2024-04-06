@@ -136,8 +136,12 @@ class BaseChatManager:
             )
         )
         
+        chat_id = (await db_session.execute(stmt)).scalar_one_or_none()
+        if not chat_id:
+            return None
+        
         chat_data = {
-            "chat_id": (await db_session.execute(stmt)).scalar_one_or_none(),
+            "chat_id": chat_id,
             "interlocutor_id": interlocutor_id,
             "interlocutor_username": interlocutor.username,
             "interlocutor_files": await user_attachment_manager.get_only_files(db_session, interlocutor_id)
