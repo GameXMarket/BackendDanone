@@ -138,6 +138,7 @@ class BaseChatManager:
         
         chat_data = {
             "chat_id": (await db_session.execute(stmt)).scalar_one_or_none(),
+            "interlocutor_id": interlocutor_id,
             "interlocutor_username": interlocutor.username,
             "interlocutor_files": await user_attachment_manager.get_only_files(db_session, interlocutor_id)
         }
@@ -215,6 +216,7 @@ class BaseChatMemberManager(BaseChatManager):
 
         chat_data = {
             "chat_id": await self.create_new_chat_with_members(db_session, user_id, interlocutor_id),
+            "interlocutor_id": interlocutor_id,
             "interlocutor_username": interlocutor.username,
             "interlocutor_files": await user_attachment_manager.get_only_files(db_session, interlocutor_id)
         }
