@@ -104,9 +104,11 @@ async def create_upload_files_user(
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
 
-    return await services.user_attachment_manager.create_new_attachment(
+    attachment_json = await services.user_attachment_manager.create_new_attachment(
         db_session, file, user.id
     )
+    
+    return {"user_files": await services.user_attachment_manager.get_only_files(db_session, user.id)}
 
 
 @router.delete("/deletefiles/user/")
