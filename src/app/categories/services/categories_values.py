@@ -156,3 +156,10 @@ async def get_value_ids_by_carcass(db_session: AsyncSession, carcass_id: int):
     if value_ids:
         return value_ids
     return None
+
+
+async def get_all(db_session: AsyncSession):
+    stmt = select(
+        models.category_values.CategoryValue
+    )
+    return (await db_session.execute(stmt)).all()
