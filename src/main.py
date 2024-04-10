@@ -17,7 +17,7 @@ import core.settings as conf
 from core.database import event_listener, init_models
 
 from core.redis import redis_pool, get_redis_client
-from core.logging import InfoHandlerTG, ErrorHandlerTG
+from core.logging import InfoHandlerTG, WarningHandlerTG, ErrorHandlerTG
 from core.utils import check_dir_exists, setup_helper
 from app.users import users_routers
 from app.tokens import tokens_routers
@@ -42,13 +42,16 @@ class StartedFailed(Exception):
 async def lifespan(app: FastAPI):
     # ! Решение только на время разработки
     info_tg_handler = InfoHandlerTG()
+    warning_tg_handler = WarningHandlerTG()
     error_tg_handler = ErrorHandlerTG()
 
     uvi_access_logger = logging.getLogger("uvicorn.access")
     uvi_access_logger.addHandler(info_tg_handler)
+    uvi_access_logger.addHandler(warning_tg_handler)
 
     logger = logging.getLogger("uvicorn")
     logger.addHandler(info_tg_handler)
+    logger.addHandler(warning_tg_handler)
     logger.addHandler(error_tg_handler)
 
     await init_models(drop_all=conf.DROP_TABLES)

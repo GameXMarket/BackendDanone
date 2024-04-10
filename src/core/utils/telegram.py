@@ -31,7 +31,7 @@ async def send_telegram_message(
     chat_id: int,
     text: str,
     *,
-    parse_mode: Literal["MarkdownV2"] = "MarkdownV2",
+    parse_mode: Literal["Markdown", "MarkdownV2"] = "MarkdownV2",
     need_log: bool = False,
     need_keyboard: bool = True,
 ):
