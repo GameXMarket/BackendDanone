@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, cast
 import random
 
 from ..redis import get_redis_client
@@ -21,8 +21,8 @@ async def verify_code(
     right_code, data = await get_code_data_from_redis(user_id=user_id, context=context)
     if code == right_code:
         await delete_code_data_from_redis(user_id, context)
-        return True, data
-
+        return True, cast(bytes, data).decode() if data else None
+    
     return False, None
 
 
@@ -60,7 +60,7 @@ async def get_code_data_from_redis(
     async with get_redis_client() as redis:
         result: str = await redis.get(f"{user_id}:{context}")
         if result:
-            code, data = result.split(":")
-            return int(code), str(data) if str(data) != "NaN" else None
+            code, data = result.split(b":")
+            return int(code), data if data != b"NaN" else None
 
-        return None
+        return None, None

@@ -74,6 +74,7 @@ async def update_user(
 
     db_session.add(db_obj)
     await db_session.commit()
+    await db_session.refresh(db_obj)
 
     return db_obj
 
