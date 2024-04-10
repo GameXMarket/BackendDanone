@@ -1,5 +1,7 @@
 import logging
 
+import sqlalchemy
+
 from app.users import models as models_u, services as services_u, schemas as schemas_u
 from app.categories import (
     models as models_c,
@@ -20,9 +22,12 @@ async def preload_db_main():
 
 
 async def __init_base_db():
-    await __init_user()
-    await __init_categories()
-    await __init_offers()
+    try:
+        await __init_user()
+        await __init_categories()
+        await __init_offers()
+    except sqlalchemy.exc.IntegrityError:
+        logging.getLogger("uvicorn").warning("cant init dbase, IntegrityError!")
 
 
 async def __init_categories():

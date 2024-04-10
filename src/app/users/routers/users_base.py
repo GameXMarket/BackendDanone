@@ -18,13 +18,7 @@ from ..models import *
 from ..services import users_base as UserService
 from core import settings as conf
 from core.database import get_session
-from core.security.codes import (
-    generate_secret_number,
-    generate_and_add_code_to_redis,
-    delete_code_from_redis,
-    verify_code,
-    add_mail_to_redis,
-)
+from core.security import codes
 from core.security import verify_password
 from core.security import create_jwt_token
 from core.mail_sender import *
@@ -136,7 +130,7 @@ async def send_code_for_change_password(
     token_data, user_context = current_session
     user: User = await user_context.get_current_active_user(db_session, token_data)
 
-    code = await generate_and_add_code_to_redis(
+    code = await codes.generate_and_add_code_data_to_redis(
         user_id=user.id, context="verify_password"
     )
     try:
@@ -151,7 +145,7 @@ async def send_code_for_change_password(
     except BaseException as ex:
         logger.error(type(ex))
         logger.exception(ex)
-        await delete_code_from_redis(user_id=user.id, context="verify_password")
+        await codes.delete_code_data_from_redis(user_id=user.id, context="verify_password")
         raise HTTPException(
             detail="email not sended", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
@@ -177,11 +171,9 @@ async def send_code_to_old_user_email(
     token_data, user_context = current_session
     user: User = await user_context.get_current_active_user(db_session, token_data)
 
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-        )
-    code = await generate_and_add_code_to_redis(user_id=user.id, context="verify_email")
+    code = await codes.generate_and_add_code_data_to_redis(
+        user_id=user.id, context="verify_old_email"
+    )
     try:
         await user_auth_sender.send_email(
             sender_name="Danone Market",
@@ -194,7 +186,7 @@ async def send_code_to_old_user_email(
     except BaseException as ex:
         logger.error(type(ex))
         logger.exception(ex)
-        await delete_code_from_redis(user_id=user.id, context="verify_email")
+        await codes.delete_code_data_from_redis(user_id=user.id, context="verify_old_email")
         raise HTTPException(
             detail="email not sended", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
@@ -204,8 +196,7 @@ async def send_code_to_old_user_email(
 
 @router.post(path="/me/newmail")
 async def send_code_to_new_user_mail(
-    code_old: int,
-    new_mail: EmailField,
+    form_data: UserUpdateEmail,
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
         default_session
     ),
@@ -221,20 +212,15 @@ async def send_code_to_new_user_mail(
     token_data, user_context = current_session
     user: User = await user_context.get_current_active_user(db_session, token_data)
 
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-        )
-    valid = await verify_code(user_id=user.id, context="verify_email", code=code_old)
-    if not valid:
+    is_valid, _ = await codes.verify_code(user_id=user.id, context="verify_old_email", code=form_data.code_old)
+    if not is_valid:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Wrong code")
 
-    code = await generate_and_add_code_to_redis(user_id=user.id, context="verify_email")
-    await add_mail_to_redis(user_id=user.id, mail=new_mail.email)
+    code = await codes.generate_and_add_code_data_to_redis(user_id=user.id, context="verify_new_email", data=form_data.email)
     try:
         await user_auth_sender.send_email(
             sender_name="Danone Market",
-            receiver_email=new_mail.email,
+            receiver_email=form_data.email,
             subject="Email change",
             body=await render_auth_template(
                 template_file="code_send.html", data={"code": code}
@@ -243,7 +229,7 @@ async def send_code_to_new_user_mail(
     except BaseException as ex:
         logger.error(type(ex))
         logger.exception(ex)
-        await delete_code_from_redis(user_id=user.id, context="verify_email")
+        await codes.delete_code_data_from_redis(user_id=user.id, context="verify_new_email")
         raise HTTPException(
             detail="email not sended", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
