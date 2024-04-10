@@ -281,12 +281,16 @@ async def verify_email_change(
             status_code=status.HTTP_409_CONFLICT, detail="User not active"
         )
 
-    valid = await verify_code(user_id=user.id, context="verify_email", code=code)
+    valid = await verify_code(user_id=user.id, context="verify_email", code=code, need_delete=False)
 
     if not valid:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Wrong code")
 
     new_mail = await get_mail_from_redis(user.id)
+    
+    if not new_mail:
+        raise HTTPException(403)
+    
     user = await UserService.update_user(
         db_session, db_obj=user, obj_in={"email": new_mail}
     )

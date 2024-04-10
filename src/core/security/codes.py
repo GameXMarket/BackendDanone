@@ -4,11 +4,12 @@ import random
 
 
 async def verify_code(
-    user_id: int, context: Literal["verify_email", "verify_password"], code: int
+    user_id: int, context: Literal["verify_email", "verify_password"], code: int, need_delete: bool = True
 ) -> bool:
     right_code = await get_code_from_redis(user_id=user_id, context=context)
     if code == right_code:
-        await delete_code_from_redis(user_id, context)
+        if need_delete:
+            await delete_code_from_redis(user_id, context)
         return True
     return False
 
@@ -18,10 +19,16 @@ async def delete_mail_from_redis(user_id: int, context: str = "mail_update"):
         await redis.delete(f"{context}:{user_id}")
 
 
-async def get_mail_from_redis(user_id: int, context: str = "mail_update"):
+async def get_mail_from_redis(user_id: int, context: str = "mail_update", need_delete: bool = True):
     async with get_redis_client() as redis:
-        mail = await redis.get(f"{context}:{user_id}")
-        return str(mail.decode())
+        mail = await redis.get(f"{context}:{user_id}", None)
+        if mail:
+            if need_delete:
+                await delete_code_from_redis(user_id, context)
+            
+            return str(mail)
+        
+        return None
 
 
 async def add_mail_to_redis(
@@ -53,7 +60,8 @@ async def get_code_from_redis(
     async with get_redis_client() as redis:
         code = await redis.get(f"{user_id}:{context}")
         if code:
-            return int(code.decode())
+            return int(code)
+        
         return None
 
 
