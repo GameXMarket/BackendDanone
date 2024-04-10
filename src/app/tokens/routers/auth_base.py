@@ -5,15 +5,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from core.security import tokens as TokenSecurity
-from core.security.codes import (
-    verify_code,
-    generate_and_add_code_to_redis,
-    delete_code_from_redis,
-    get_code_from_redis,
-    generate_secret_number,
-    delete_mail_from_redis,
-    get_mail_from_redis,
-)
+from core.security import codes
 from core.database import get_session
 import core.depends as deps
 import core.settings as conf
@@ -23,6 +15,7 @@ import app.users.services as UserService
 import app.tokens.schemas as schemas_t
 import app.tokens.models as models_t
 import app.tokens.services as BannedTokensService
+
 
 logger = logging.getLogger("uvicorn")
 router = APIRouter(responses={200: {"model": schemas_t.TokenSet}})
@@ -222,8 +215,7 @@ async def verify_password_reset(
     },
 )
 async def verify_password_change(
-    code: int,
-    form_data: schemas_u.PasswordField,
+    form_data: schemas_u.UserUpdatePassword,
     db_session: Session = Depends(get_session),
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
             default_session
@@ -242,15 +234,14 @@ async def verify_password_change(
             status_code=status.HTTP_409_CONFLICT, detail="User not active"
         )
 
-    valid = await verify_code(user_id=user.id, context="verify_password", code=code)
-
-    if not valid:
+    is_valid, _ = await codes.verify_code(user_id=user.id, context="verify_password", code=form_data.code)
+    if not is_valid:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Wrong code")
 
     user = await UserService.update_user(
         db_session, db_obj=user, obj_in={"password": form_data.password}
     )
-    return status.HTTP_200_OK
+    return 
 
 
 @router.post(
