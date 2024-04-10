@@ -21,7 +21,7 @@ async def delete_mail_from_redis(user_id: int, context: str = "mail_update"):
 
 async def get_mail_from_redis(user_id: int, context: str = "mail_update", need_delete: bool = True):
     async with get_redis_client() as redis:
-        mail = await redis.get(f"{context}:{user_id}", None)
+        mail = await redis.get(f"{context}:{user_id}")
         if mail:
             if need_delete:
                 await delete_code_from_redis(user_id, context)
