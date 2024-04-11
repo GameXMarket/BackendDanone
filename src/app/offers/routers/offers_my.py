@@ -134,6 +134,31 @@ async def get_offers_by_category(
     return offers
 
 
+@router.get(path="/my/byvalueid")
+async def get_offers_by_category(
+    value_id: int,
+    offset: int = 0,
+    limit: int = 10,
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        base_session
+    ),
+    db_session: AsyncSession = Depends(get_session),
+):
+    """
+    Возвращает ваши категории + кол-во лотов
+    """
+    token_data, user_context = current_session
+    user = await user_context.get_current_active_user(db_session, token_data)
+
+    offers = await services_f.get_offers_by_value_id(
+        db_session, user.id, value_id, offset, limit
+    )
+    if not offers:
+        raise HTTPException(404)
+
+    return offers
+
+
 @router.get(
     path="/my/{offer_id}/",
     responses={
