@@ -41,7 +41,7 @@ DBASE_NAME_TEST: str = os.getenv("DBASE_NAME_TEST")
 DBASE_IP: str = os.getenv("DBASE_IP")
 DBASE_PORT: int = int(os.getenv("DBASE_PORT"))
 DATABASE_URL: str = os.getenv("DATABASE_URL")
-DATABASE_TEST_URL: str = os.getenv("DATABASE_URL")
+DATABASE_TEST_URL: str = os.getenv("DATABASE_URL_TEST")
 ASYNCPG_DB_URL: str = os.getenv("ASYNCPG_DB_URL")
 REDIS_URL: str = os.getenv("REDIS_URL")
 
