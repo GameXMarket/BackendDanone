@@ -6,18 +6,24 @@ from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import NullPool
 
 from core.database import Base, get_session
 from core.settings.config import DATABASE_TEST_URL
 from main import app
 
-
-engine = create_async_engine(DATABASE_TEST_URL, echo=True)
+pytest.mark.anyio
+engine = create_async_engine(DATABASE_TEST_URL, echo=True, poolclass=NullPool)
 async_session = sessionmaker(bind=engine, class_=AsyncSession)
 
 
+@pytest.fixture(scope="session")
+def anyio_backend():
+    return "asyncio"
+
+
 @pytest.fixture
-async def headers():
+def headers():
     headers = {"accept": "application/json", "Content-Type": "application/json"}
     return headers
 
@@ -31,21 +37,14 @@ async def test_db():
 
 
 @pytest.fixture(scope="session")
-async def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest.fixture(scope="session")
 async def session() -> AsyncGenerator[AsyncSession, None]:
+    async def override_get_session() -> AsyncGenerator[AsyncSession, None]:
+        async with async_session() as session:
+            yield session
+    app.dependency_overrides[get_session] = override_get_session
     async with async_session() as session:
         yield session
-
-
-async def override_get_session() -> AsyncGenerator[AsyncSession, None]:
-    async with async_session() as session:
-        yield session
+        del app.dependency_overrides[get_session]
 
 
 @pytest.fixture(scope="session")
@@ -56,4 +55,3 @@ async def async_client() -> AsyncGenerator[AsyncClient, None]:
         yield async_client
 
 
-app.dependency_overrides[get_session] = override_get_session
