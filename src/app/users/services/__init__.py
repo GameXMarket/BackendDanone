@@ -10,3 +10,4 @@ from .users_base import (
     get_role_id,
 )
 from .users_online import ConnectionContext, OnlineConnectionManager
+from .user_notifications import user_notification_manager

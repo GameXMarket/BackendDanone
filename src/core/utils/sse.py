@@ -1,6 +1,8 @@
 from typing import Optional
 import asyncio
 
+from core.utils import AppStatus
+
 
 class SseQueue:
     def __init__(self) -> None:
@@ -65,5 +67,24 @@ class SseQueue:
         return event
     
     async def get_events(self):
-        while True:
-            yield await self.get_event()
+        while AppStatus.should_exit is False:
+            try:
+                event = await asyncio.wait_for(self.get_event(), timeout=10)
+                yield event
+            # Вероятно не лучшее решение, но пока пусть будет так.
+            except asyncio.TimeoutError:
+                print("skip")
+                pass
+        
+        d = self.__get_event_text(
+            **{
+                "event": "system",
+                "data": "service restart",
+                "id": None,
+                "retry": None,
+                "comment": "service restarting at the moment",
+            }
+        )
+        yield d.replace("\n\n", "\r\n")
+
+
