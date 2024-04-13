@@ -36,20 +36,13 @@ async def test_function_for_tests(
     event: str = "test",
     data: str = "ping",
     comment: str = "comment",
-    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
-        default_session
-    ),
-    db_session: AsyncSession = Depends(get_session),
+    user_id: int = 1,
 ):
-    token_data, user_context = current_session
-    user = await user_context.get_current_active_user(db_session, token_data)
-
-    notify_listener: SseQueue = user_notification_manager.get_user_listener(user.id)
-    if not notify_listener:
+    context_manager = user_notification_manager.sse_managers.get(user_id)
+    if not context_manager:
         raise HTTPException(404)
 
-    await notify_listener.create_event(
-        
+    await context_manager.create_event(
         event=event,
         data="pong" if data == "ping" else data,
         comment=comment,
