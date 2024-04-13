@@ -20,7 +20,7 @@ class MessageInDB(BaseModel):
 
 class MessageCreate(BaseModel):
     chat_id: int
-    content: str = Field(min_length=1, max_length=4096)
+    content: str = Field(min_length=0, max_length=4096)
     need_wait: int = 0
 
     @field_validator("content", mode="before")
