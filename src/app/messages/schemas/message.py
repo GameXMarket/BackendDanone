@@ -25,6 +25,9 @@ class MessageCreate(BaseModel):
 
     @field_validator("content", mode="before")
     def process_text(cls, v: str) -> str:
+        if not isinstance(v, str):
+            raise ValueError
+        
         return v.strip().replace("  ", " ")
 
 
