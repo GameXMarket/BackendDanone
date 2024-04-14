@@ -1,8 +1,7 @@
-import random
 from typing import Any
 import logging
 import aiofiles.os
-from ..redis import get_redis_client
+from uvicorn.main import Server
 
 
 logger = logging.getLogger("uvicorn")
@@ -23,3 +22,16 @@ async def check_dir_exists(path: str | Any, auto_create: bool = True):
         return True
 
     return False
+
+
+original_handler = Server.handle_exit
+
+class AppStatus:
+    should_exit = False
+    
+    @staticmethod
+    def handle_exit(*args, **kwargs):
+        AppStatus.should_exit = True
+        original_handler(*args, **kwargs)
+
+Server.handle_exit = AppStatus.handle_exit
