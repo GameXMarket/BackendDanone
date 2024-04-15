@@ -1,10 +1,10 @@
 import time
-from typing import List
+from typing import List, cast
 
 from fastapi import Depends
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, aliased
 from sqlalchemy import select, update, exists, delete, and_, asc, func, desc
 
 from .. import models as models_f
@@ -214,6 +214,50 @@ async def get_offers_by_carcass_id(
             "carcass_select_name": carcass_names[0],
             "carcass_in_offer_name": carcass_names[1],
             "carcass_in_offer_value": row[4],
+        }
+        result.append(offer)
+
+    return result
+
+
+async def get_offers_by_value_id(
+    db_session: AsyncSession, user_id, value_id, offset, limit
+):
+    GameCategoryValue = aliased(CategoryValue)
+    CategoryValueNext = aliased(CategoryValue)
+    
+    GameOfferCategoryValue = aliased(models_f.OfferCategoryValue)
+    AllOfferCategoryValue = aliased(models_f.OfferCategoryValue)
+    
+    stmt = (
+        select(
+            models_f.Offer.id,
+            models_f.Offer.name,
+            models_f.Offer.price,
+            models_f.Offer.count,
+            CategoryValueNext.value,
+        )
+        .join(GameOfferCategoryValue, GameOfferCategoryValue.offer_id == models_f.Offer.id)
+        .join(GameCategoryValue, GameCategoryValue.id == GameOfferCategoryValue.category_value_id)
+        .join(CategoryCarcass, CategoryCarcass.id == GameCategoryValue.next_carcass_id)
+        .join(CategoryValueNext, CategoryValueNext.carcass_id == CategoryCarcass.id)
+        .join(AllOfferCategoryValue, AllOfferCategoryValue.offer_id == models_f.Offer.id)
+        .where(GameOfferCategoryValue.category_value_id == value_id)
+        .where(models_f.Offer.user_id == user_id)
+        .where(CategoryValueNext.id == AllOfferCategoryValue.category_value_id)
+        .offset(offset)
+        .limit(limit)
+    )
+    rows = await db_session.execute(stmt)
+
+    result = []
+    for row in rows:
+        offer = {
+            "id": row[0],
+            "name": row[1],
+            "price": row[2],
+            "count": row[3],
+            "category_value": row[4],
         }
         result.append(offer)
 

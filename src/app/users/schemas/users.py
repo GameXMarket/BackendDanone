@@ -77,11 +77,11 @@ class UserUpdateUsername(UsernameField):
 
 
 class UserUpdatePassword(PasswordField):
-    auth: PasswordField
+    code: int
 
 
-class UserUpdateEmail(BaseModel):
-    auth: PasswordField
+class UserUpdateEmail(EmailField):
+    code_old: int
 
 
 class UserPreDB(BaseUser):

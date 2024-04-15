@@ -35,15 +35,19 @@ async def get_dialog_id_by_user_id(
     if user.id == interlocutor_id:
         raise HTTPException(404)
 
-    chat_id = await services.message_manager.get_dialog_id_by_user_id(
+    chat_data = await services.message_manager.get_dialog_id_by_user_id(
         db_session, user.id, interlocutor_id
     )
-    if not chat_id:
-        chat_id = await services.message_manager.create_new_chat_with_members(
+    
+    if not chat_data:
+        chat_data = await services.message_manager.create_dialog(
             db_session, user.id, interlocutor_id
         )
-
-    return JSONResponse({"chat_id": chat_id})
+    
+    elif not chat_data:
+        raise HTTPException(404)
+    
+    return chat_data
 
 
 @router.get("/my/getall")

@@ -120,3 +120,10 @@ async def get_carcass_names(db_session: AsyncSession, carcass_id: int):
     if carcass_names:
         return carcass_names[0]
     return None
+
+
+async def get_all(db_seesion: AsyncSession):
+    stmt = select(
+        models.CategoryCarcass
+    )
+    return (await db_seesion.execute(stmt)).all()
