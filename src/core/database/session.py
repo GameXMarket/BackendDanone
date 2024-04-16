@@ -1,8 +1,6 @@
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, AsyncGenerator
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from core.database import engine
 
