@@ -41,16 +41,17 @@ class StartedFailed(Exception):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ! Решение только на время разработки
-    info_tg_handler = InfoHandlerTG()
+    # Info handlers ОЧЕНЬ сильно резали производительность
+    #info_tg_handler = InfoHandlerTG()
     warning_tg_handler = WarningHandlerTG()
     error_tg_handler = ErrorHandlerTG()
 
     uvi_access_logger = logging.getLogger("uvicorn.access")
-    uvi_access_logger.addHandler(info_tg_handler)
+    #uvi_access_logger.addHandler(info_tg_handler)
     uvi_access_logger.addHandler(warning_tg_handler)
 
     logger = logging.getLogger("uvicorn")
-    logger.addHandler(info_tg_handler)
+    #logger.addHandler(info_tg_handler)
     logger.addHandler(warning_tg_handler)
     logger.addHandler(error_tg_handler)
 
