@@ -5,8 +5,6 @@ import secrets
 from typing import Annotated
 from contextlib import asynccontextmanager
 
-import asyncpg
-import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.middleware.cors import CORSMiddleware
@@ -160,8 +158,10 @@ async def openapi(username: str = Depends(__temp_get_current_username)):
 
 
 if __name__ == "__main__":
+    import uvicorn
+
     uvicorn.run(
-        app="main:app" if conf.DEBUG else app,
+        app="main:app",
         host=conf.SERVER_IP,
         port=conf.SERVER_PORT,
         reload=conf.DEBUG,
