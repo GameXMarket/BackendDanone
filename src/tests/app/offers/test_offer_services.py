@@ -99,7 +99,6 @@ async def test_get_offer_by_value_id():
 async def test_update_offer():
     async with async_session() as session:
         offer_: Offer = await get_by_offer_id(db_session=session, id=test_offer_id)
-        print(offer_)
         offer: Offer = await update_offer(db_session=session, db_obj=offer_, obj_in=OfferBase(
             name=test_offer_name_second,
             description=test_offer_description,
@@ -107,7 +106,6 @@ async def test_update_offer():
             count=test_offer_count,
             category_value_ids=test_category_value_ids
         ))
-        print(offer)
         assert offer["name"] == test_offer_name_second
 
 
