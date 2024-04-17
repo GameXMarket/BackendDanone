@@ -95,10 +95,10 @@ async def test_get_offer_by_value_id():
         offers: list  = await get_offers_by_value_id(db_session=session, user_id=test_offer_user_id, value_id=1, offset=0, limit=10)
         assert test_offer_id in [offer["id"] for offer in offers]
 
-#НАДО ДУМАТЬ! 2 НИЖНИХ НЕ РАБОТАЮТ
+
 async def test_update_offer():
     async with async_session() as session:
-        offer_: Offer = await get_by_offer_id(db_session=session, id=test_offer_id)
+        offer_: Offer = await get_raw_offer_by_user_id(db_session=session, user_id=test_offer_user_id, offer_id=test_offer_id)
         offer: Offer = await update_offer(db_session=session, db_obj=offer_, obj_in=OfferBase(
             name=test_offer_name_second,
             description=test_offer_description,
@@ -106,7 +106,7 @@ async def test_update_offer():
             count=test_offer_count,
             category_value_ids=test_category_value_ids
         ))
-        assert offer["name"] == test_offer_name_second
+        assert offer.name == test_offer_name_second
 
 
 async def test_delete_offer():

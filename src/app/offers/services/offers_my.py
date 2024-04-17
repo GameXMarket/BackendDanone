@@ -299,7 +299,7 @@ async def update_offer(
         update_data = obj_in
     else:
         update_data = obj_in.model_dump(exclude_unset=True)
-    print(f"\n\n\n\n\n{db_obj}\n\n\n\n\n")
+    
     for field in obj_data:
         if field in update_data:
             setattr(db_obj, field, update_data[field])
