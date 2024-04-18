@@ -62,7 +62,7 @@ class BaseChatManager:
 
     async def get_all_user_dialogs_ids_by_user_id(
         self, db_session: AsyncSession, user_id: int, offset: int, limit: int
-    ) -> Sequence[int]:
+    ):
         """
         Непубличный метод для подгрузки диалогов пользователя
         """
@@ -96,7 +96,7 @@ class BaseChatManager:
             
             if (msg_count := (await db_session.execute(count_msg_stmt)).scalar()) == 0:
                 continue
-            
+                        
             dialog_data = {
                 "chat_id": row[0],
                 "message_count": msg_count,
@@ -368,6 +368,17 @@ class BaseMessageManager(BaseChatMemberManager):
         return await self.create_message(
             db_session, chat_member_id, message.content, message.need_wait
         )
+    
+    async def get_all_user_dialogs_ids_by_user_id_with_last_message(
+        self, db_session: AsyncSession, user_id: int, offset: int, limit: int
+    ):
+        dialogs = await super().get_all_user_dialogs_ids_by_user_id(db_session, user_id, offset, limit)
+        
+        for i, dialog in enumerate(dialogs):
+            last_message = await self.get_messages_by_chat_id_user_id(db_session, dialog["chat_id"], user_id, 0, 1)
+            dialogs[i]["last_message"] = last_message[0]
+        
+        return dialogs
 
 
 message_manager = BaseMessageManager()

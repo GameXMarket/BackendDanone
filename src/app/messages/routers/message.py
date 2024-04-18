@@ -65,7 +65,7 @@ async def get_all_dialogs_with_offset_limit(
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
 
-    dialogs_data = await services.message_manager.get_all_user_dialogs_ids_by_user_id(
+    dialogs_data = await services.message_manager.get_all_user_dialogs_ids_by_user_id_with_last_message(
         db_session, user.id, offset, limit
     )
 
