@@ -2,11 +2,15 @@ from typing import Tuple, Any
 import time
 
 from fastapi.encoders import jsonable_encoder
+from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, exists, delete, and_
 
+from app.tokens import schemas as schemas_t
 from .. import models, schemas
-from core.security import get_password_hash, verify_password
+from core import settings as conf
+from core.mail_sender import *
+from core.security import get_password_hash, verify_password, create_jwt_token
 
 
 async def get_by_id(db_session: AsyncSession, *, id: int):
@@ -113,6 +117,32 @@ async def authenticate(db_session: AsyncSession, *, email: str, password: str):
 
     return user
 
+
+async def send_verify_mail(receiver_mail: str, logger):
+    verify_token = create_jwt_token(
+        type_=schemas_t.TokenType.email_verify,
+        email=receiver_mail,
+        secret=conf.EMAIL_SECRET_KEY,
+        expires_delta=conf.EMAIL_ACCESS_TOKEN_EXPIRE_MINUTES,
+    )
+
+    try:
+        # need fix this
+        await user_auth_sender.send_email(
+            sender_name="Danone Market",
+            receiver_email=receiver_mail,
+            subject="User Verify",
+            body=await render_auth_template(
+                template_file="verify_user.html", data={"token": verify_token}
+            ),
+        )
+    except BaseException as ex:
+        logger.error(type(ex))
+        logger.exception(ex)
+        raise HTTPException(
+            detail="email not sended", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )  
+      
 
 def is_active(user: models.User):
     return user.is_verified
