@@ -6,16 +6,35 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, exists, delete, and_
 
 from .. import models, schemas
+from .categories_values import get_associated_by_id
 
 
+# потом нужно будет делать get_raw, это решение кажется очень костыльным
 async def get_by_id(
-    db_session: AsyncSession, *, id: int, options: List[Tuple[Any]] = None
-) -> models.CategoryCarcass | None:
+    db_session: AsyncSession, *, id: int, options: List[Tuple[Any]] = None, need_subvalues: bool = False
+) -> models.CategoryCarcass | dict | None:
     stmt = select(models.CategoryCarcass).where(models.CategoryCarcass.id == id)
+    
     if options:
         for option in options:
             stmt = stmt.options(option[0](option[1]))
+    
     category: models.CategoryCarcass | None = (await db_session.execute(stmt)).scalar()
+    
+    if need_subvalues:
+        category_dict = category.to_dict()
+        category_dict["values"] = []
+        
+        for category_value in category.values if category.values else []:
+            subvalues = await get_associated_by_id(db_session, [category_value.id])
+            
+            category_value_dict = category_value.to_dict()
+            category_value_dict["subvalues"] = subvalues
+            
+            category_dict["values"].append(category_value_dict)
+        
+        return category_dict
+    
     return category
 
 
@@ -101,3 +120,10 @@ async def get_carcass_names(db_session: AsyncSession, carcass_id: int):
     if carcass_names:
         return carcass_names[0]
     return None
+
+
+async def get_all(db_seesion: AsyncSession):
+    stmt = select(
+        models.CategoryCarcass
+    )
+    return (await db_seesion.execute(stmt)).all()
