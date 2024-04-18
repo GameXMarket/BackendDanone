@@ -21,6 +21,8 @@ base_connection_manager = services.ChatConnectionManager()
 @router.get("/my/getdialog/")
 async def get_dialog_id_by_user_id(
     interlocutor_id: int,
+    message_offset: int = 0,
+    message_limit: int = 10,
     db_session: AsyncSession = Depends(get_session),
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
         base_session
@@ -42,6 +44,10 @@ async def get_dialog_id_by_user_id(
     
     if not chat_data:
         raise HTTPException(404)
+    
+    chat_data["messages"] = await services.message_manager.get_messages_by_chat_id_user_id(
+        db_session, chat_data["chat_id"], user.id, message_offset, message_limit
+    )
     
     return chat_data
 

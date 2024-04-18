@@ -112,7 +112,7 @@ class BaseChatManager:
 
     async def get_dialog_id_by_user_id(
         self, db_session: AsyncSession, user_id: int, interlocutor_id: int
-    ) -> int | None:
+    ):
         """
         Публичный метод для получения чата с данным пользователем
         user_id - тот, кто запрашивает чат
