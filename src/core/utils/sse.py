@@ -8,7 +8,11 @@ from core.settings import config
 class SseQueue:
     def __init__(self) -> None:
         self._queue = asyncio.Queue()
-
+        self._ping_task = asyncio.create_task(self.ping())
+    
+    def __del__(self):
+        self._ping_task.cancel()
+    
     def __get_event_text(self, **sse_event) -> str:
         string_event = ""
         for key, value in sse_event.items():
@@ -66,6 +70,12 @@ class SseQueue:
     async def get_event(self) -> str:
         event = await self._queue.get()
         return event
+    
+    async def ping(self):
+        while True:
+            await self.create_event(comment="ping")
+            await asyncio.sleep(15)
+
 
     async def get_events(self):
         while AppStatus.should_exit is False:
