@@ -2,6 +2,7 @@ import logging
 
 from fastapi import Depends, APIRouter, HTTPException, WebSocketDisconnect
 from fastapi.responses import JSONResponse
+from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.depends import depends as deps
@@ -33,20 +34,51 @@ async def get_dialog_id_by_user_id(
     user = await user_context.get_current_active_user(db_session, token_data)
 
     if user.id == interlocutor_id:
-        raise HTTPException(404)
+        raise HTTPException(403)
 
     chat_data = await services.message_manager.get_dialog_id_by_user_id(
         db_session, user.id, interlocutor_id
     )
     
     if not chat_data:
-        chat_data = await services.message_manager.create_dialog(
-            db_session, user.id, interlocutor_id
-        )
-    
-    elif not chat_data:
         raise HTTPException(404)
     
+    return chat_data
+
+
+@router.post("/my/newdialog/")
+async def get_dialog_id_by_user_id(
+    interlocutor_id: int,
+    message: schemas.MessageCreateTemp,
+    db_session: AsyncSession = Depends(get_session),
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        base_session
+    ),
+) -> JSONResponse:
+    """
+    Если файлы не будут адекватно работать, то просто кидайте null
+    """
+    token_data, user_context = current_session
+    user = await user_context.get_current_active_user(db_session, token_data)
+
+    if user.id == interlocutor_id:
+        raise HTTPException(403)
+
+    chat_data = await services.message_manager.get_dialog_id_by_user_id(
+        db_session, user.id, interlocutor_id
+    )
+    
+    if chat_data:
+        raise HTTPException(409)
+
+    conn_context = services.ConnectionContext(None, user.id)
+    chat_data = await services.message_manager.create_dialog_with_message(
+        db_session, user.id, interlocutor_id, message, base_connection_manager, conn_context
+    )
+    
+    if not chat_data:
+        raise HTTPException(404)
+        
     return chat_data
 
 

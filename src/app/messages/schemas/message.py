@@ -1,4 +1,5 @@
 from pydantic import field_validator, Field, BaseModel
+from fastapi import UploadFile
 
 
 class ChatInDB(BaseModel):
@@ -18,10 +19,29 @@ class MessageInDB(BaseModel):
     created_at: int
 
 
+class MessageCreateTemp(BaseModel):
+    # Временная схема (вопрос насколько ахах)
+    message_image: UploadFile | None = None
+    content: str = Field(min_length=0, max_length=4096)
+
+    @field_validator("content", mode="before")
+    def process_text(cls, v: str) -> str:
+        if not isinstance(v, str):
+            raise ValueError
+        
+        return v.strip().replace("  ", " ")
+    
+    def get_message_create(self, chat_id: int):
+        return MessageCreate(
+            content=self.content,
+            chat_id=chat_id,
+        )
+
+
 class MessageCreate(BaseModel):
+    need_wait: int = 0
     chat_id: int
     content: str = Field(min_length=0, max_length=4096)
-    need_wait: int = 0
 
     @field_validator("content", mode="before")
     def process_text(cls, v: str) -> str:
