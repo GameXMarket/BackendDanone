@@ -82,7 +82,7 @@ async def send_verify_mail_again(
     db_session: AsyncSession = Depends(get_session),
 ):
     await UserService.send_verify_mail(receiver_mail=email.email, logger=logger)
-    return status.HTTP_200_OK
+    return {"status": "ok"}
 
     
 @router.patch(path="/me/update/username")
