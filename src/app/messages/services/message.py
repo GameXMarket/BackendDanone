@@ -15,16 +15,13 @@ import sqlalchemy
 from core import depends as deps
 from core.database import context_get_session
 from core.redis import get_redis_client, get_redis_pipeline
-from core.sse.manager import BaseNotificationManager
 from app.messages import models as models_m
 from app.messages import schemas as schemas_m
 from app.messages import services as services_m
+from app.users.routers.users_notifications import user_notification_manager
 from app.users import models as models_u, services as services_u
 from app.attachment.services import message_attachment_manager, user_attachment_manager
 from app.tokens import schemas as schemas_t
-
-
-message_notification_manager = BaseNotificationManager()
 
 
 class BaseChatManager:
@@ -398,7 +395,7 @@ class BaseMessageManager(BaseChatMemberManager):
         if not dialog_data:
             return None
         
-        context_manager = message_notification_manager.sse_managers.get(user_id)
+        context_manager = user_notification_manager.sse_managers.get(interlocutor_id)
         if context_manager:
             await context_manager.create_event(
                 event="new_chat",

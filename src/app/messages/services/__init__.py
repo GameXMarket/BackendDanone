@@ -1,1 +1,1 @@
-from .message import ConnectionContext, ChatConnectionManager, message_manager, message_notification_manager
+from .message import ConnectionContext, ChatConnectionManager, message_manager

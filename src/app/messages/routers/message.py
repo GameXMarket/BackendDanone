@@ -15,7 +15,6 @@ router = APIRouter()
 ws_router = APIRouter()
 base_session = deps.UserSession()
 base_connection_manager = services.ChatConnectionManager()
-message_notification_manager = services.message_notification_manager
 
 
 @router.get("/my/getdialog/")
@@ -136,13 +135,6 @@ async def get_all_messages_with_offset_limit(
     return messages
 
 
-@router.get("/my/listeners/newdialogdata")
-async def user_sse_notifications_listener(
-    sse_response=Depends(message_notification_manager),
-):
-    return sse_response
-
-
 # debug
 @router.delete("/my/dev/delete_dialog")
 async def delete_dialog_by_dialog_id(
@@ -154,26 +146,6 @@ async def delete_dialog_by_dialog_id(
         raise HTTPException(404)
     
     return chat
-
-
-@router.post("/my/dev/create_chat_notification")
-async def test_function_for_tests(
-    event: str = "test",
-    data: str = "ping",
-    comment: str = "comment",
-    user_id: int = 1,
-):
-    context_manager = message_notification_manager.sse_managers.get(user_id)
-    if not context_manager:
-        raise HTTPException(404)
-
-    await context_manager.create_event(
-        event=event,
-        data="pong" if data == "ping" else data,
-        comment=comment,
-    )
-
-    return {"status": "ok"}
 
 
 @ws_router.websocket("/my")
