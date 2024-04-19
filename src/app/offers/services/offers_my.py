@@ -4,7 +4,7 @@ from typing import List, cast
 from fastapi import Depends
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, aliased
+from sqlalchemy.orm import selectinload, aliased, make_transient
 from sqlalchemy import select, update, exists, delete, and_, asc, func, desc
 
 from .. import models as models_f
@@ -294,7 +294,9 @@ async def create_offer(
 async def update_offer(
     db_session: AsyncSession, db_obj: models_f.Offer, obj_in: schemas_f.OfferBase
 ):
+    
     obj_data = jsonable_encoder(db_obj)
+
     if isinstance(obj_in, dict):
         update_data = obj_in
     else:
@@ -304,28 +306,15 @@ async def update_offer(
         if field in update_data:
             setattr(db_obj, field, update_data[field])
 
-    category_ids_in: List[int] = obj_in.category_value_ids
-    current_category_ids = {
-        offer_category.category_value_id for offer_category in db_obj.category_values
-    }
-
-    # Create new associations
-    for category_id in category_ids_in:
-        if category_id not in current_category_ids:
-            await __ocv.create_offer_category_value(
-                db_session, category_value_id=category_id, offer_id=db_obj.id
+    db_obj.category_values.clear()
+    for value in update_data["category_value_ids"]:
+        await __ocv.create_offer_category_value(
+                db_session, category_value_id=value, offer_id=db_obj.id
             )
-            current_category_ids.add(category_id)
-
-    # Delete old associations
-    for category_id in current_category_ids - set(category_ids_in):
-        await __ocv.delete_offer_category_value(
-            db_session, category_value_id=category_id, offer_id=db_obj.id
-        )
-        current_category_ids.remove(category_id)
-
+        
     db_session.add(db_obj)
     await db_session.commit()
+    await db_session.refresh(db_obj)
 
     return db_obj
 

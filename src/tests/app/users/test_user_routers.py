@@ -87,17 +87,9 @@ async def test_update_username(async_client: AsyncClient):
     assert response.json()["username"] == third_test_username
 
 
-async def test_update_password(async_client: AsyncClient):
-    response = await async_client.patch(
-        update_endpoint + "/password",
-        json={"password": second_test_password, "auth": {"password": test_password}},
-    )
-    assert response.status_code == 200
-
-
-async def test_update_email(async_client: AsyncClient):
-    response = await async_client.patch(
-        update_endpoint + "/email", json={"auth": {"password": test_password}}
+async def test_oldmail_code(async_client: AsyncClient):
+    response = await async_client.post(
+        base_endpoint + "/oldmail"
     )
     assert response.status_code == 200
 

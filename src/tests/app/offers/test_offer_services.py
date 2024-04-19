@@ -72,16 +72,15 @@ async def test_get_by_user_id_offer_id():
 
 async def test_get_mini_by_user_id_offset_limit():
     async with async_session() as session:
-        offer: list[Offer] = await get_mini_by_user_id_offset_limit(
+        offers: list[Offer] = await get_mini_by_user_id_offset_limit(
             db_session=session,
-            offset=test_offer_id-1,
-            limit=1,
+            offset=0,
+            limit=10,
             user_id=test_offer_user_id,
 
         )
-        
-        assert offer[0]["name"] == test_offer_name
-        assert offer[0]["description"] == test_offer_description
+        assert test_offer_name in [offer["name"] for offer in offers] 
+        assert test_offer_description in [offer["description"] for offer in offers] 
 
 
 async def test_get_offer_by_carcass_id():

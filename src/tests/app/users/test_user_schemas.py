@@ -47,6 +47,7 @@ async def test_user_update_username_model():
 async def test_user_update_password_model():
     data = {
         "password": "new_password",
+        "code": 1234,
         "auth": {"password": "old_password"},
     }
     user = UserUpdatePassword(**data)
