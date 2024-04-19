@@ -32,6 +32,12 @@ async def test_db():
         await conn.run_sync(Base.metadata.create_all)
 
 
+async def clear_db():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+
+
 @pytest.fixture(scope="session")
 async def async_client() -> AsyncGenerator[AsyncClient, None]:
     async with AsyncClient(

@@ -6,7 +6,7 @@ from core.security import create_new_token_set
 from app.users.models import User
 from app.users.schemas import UserSignUp
 from app.users.services import create_user, update_user
-from tests.conftest import async_session
+from tests.conftest import async_session, clear_db
 
 
 test_password = "12341234"
@@ -22,6 +22,11 @@ third_test_username = "GAMEX"
 
 base_endpoint = "users/me"
 update_endpoint = base_endpoint + "/update"
+
+
+async def test_drop_current_db():
+    await clear_db()
+    assert 1 == 1
 
 
 async def insert_test_user(session: AsyncSession, cookies: bool = True):
