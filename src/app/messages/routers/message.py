@@ -144,6 +144,18 @@ async def user_sse_notifications_listener(
 
 
 # debug
+@router.delete("/my/dev/delete_dialog")
+async def delete_dialog_by_dialog_id(
+    dialog_id: int,
+    db_session: AsyncSession = Depends(get_session),
+):
+    chat = await services.message_manager.delete_chat(db_session, dialog_id)
+    if not chat:
+        raise HTTPException(404)
+    
+    return chat
+
+
 @router.post("/my/dev/create_chat_notification")
 async def test_function_for_tests(
     event: str = "test",
