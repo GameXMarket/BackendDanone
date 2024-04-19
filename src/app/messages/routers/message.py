@@ -15,11 +15,14 @@ router = APIRouter()
 ws_router = APIRouter()
 base_session = deps.UserSession()
 base_connection_manager = services.ChatConnectionManager()
+message_notification_manager = services.message_notification_manager
 
 
 @router.get("/my/getdialog/")
 async def get_dialog_id_by_user_id(
     interlocutor_id: int,
+    message_offset: int = 0,
+    message_limit: int = 10,
     db_session: AsyncSession = Depends(get_session),
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
         base_session
@@ -33,20 +36,55 @@ async def get_dialog_id_by_user_id(
     user = await user_context.get_current_active_user(db_session, token_data)
 
     if user.id == interlocutor_id:
-        raise HTTPException(404)
+        raise HTTPException(403)
 
     chat_data = await services.message_manager.get_dialog_id_by_user_id(
         db_session, user.id, interlocutor_id
     )
     
     if not chat_data:
-        chat_data = await services.message_manager.create_dialog(
-            db_session, user.id, interlocutor_id
-        )
-    
-    elif not chat_data:
         raise HTTPException(404)
     
+    chat_data["messages"] = await services.message_manager.get_messages_by_chat_id_user_id(
+        db_session, chat_data["chat_id"], user.id, message_offset, message_limit
+    )
+    
+    return chat_data
+
+
+@router.post("/my/newdialog/")
+async def create_dialog_by_user_id(
+    interlocutor_id: int,
+    message: schemas.MessageCreateTemp,
+    db_session: AsyncSession = Depends(get_session),
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        base_session
+    ),
+) -> JSONResponse:
+    """
+    Если файлы не будут адекватно работать, то просто кидайте null
+    """
+    token_data, user_context = current_session
+    user = await user_context.get_current_active_user(db_session, token_data)
+
+    if user.id == interlocutor_id:
+        raise HTTPException(403)
+
+    chat_data = await services.message_manager.get_dialog_id_by_user_id(
+        db_session, user.id, interlocutor_id
+    )
+    
+    if chat_data:
+        raise HTTPException(409)
+
+    conn_context = services.ConnectionContext(None, user.id)
+    chat_data = await services.message_manager.create_dialog_with_message(
+        db_session, user.id, interlocutor_id, message, base_connection_manager, conn_context
+    )
+    
+    if not chat_data:
+        raise HTTPException(404)
+        
     return chat_data
 
 
@@ -65,7 +103,7 @@ async def get_all_dialogs_with_offset_limit(
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
 
-    dialogs_data = await services.message_manager.get_all_user_dialogs_ids_by_user_id(
+    dialogs_data = await services.message_manager.get_all_user_dialogs_ids_by_user_id_with_last_message(
         db_session, user.id, offset, limit
     )
 
@@ -96,6 +134,34 @@ async def get_all_messages_with_offset_limit(
         raise HTTPException(404)
 
     return messages
+
+
+@router.get("/my/listeners/newdialogdata")
+async def user_sse_notifications_listener(
+    sse_response=Depends(message_notification_manager),
+):
+    return sse_response
+
+
+# debug
+@router.post("/my/dev/create_chat_notification")
+async def test_function_for_tests(
+    event: str = "test",
+    data: str = "ping",
+    comment: str = "comment",
+    user_id: int = 1,
+):
+    context_manager = message_notification_manager.sse_managers.get(user_id)
+    if not context_manager:
+        raise HTTPException(404)
+
+    await context_manager.create_event(
+        event=event,
+        data="pong" if data == "ping" else data,
+        comment=comment,
+    )
+
+    return {"status": "ok"}
 
 
 @ws_router.websocket("/my")

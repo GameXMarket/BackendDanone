@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 from fastapi import Depends, BackgroundTasks, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.utils.sse import SseQueue
+from core.sse.queue import SseQueue
 from core.database import get_session
 from core.settings import config
 from core import depends as deps
@@ -46,7 +46,7 @@ class SseManagerContext:
             await listener.create_event(**event_data)
 
 
-class __UserNotificationManager:
+class BaseNotificationManager:
     def __init__(self) -> None:
         self.sse_managers: dict[int, SseManagerContext] = {}
 
@@ -100,6 +100,3 @@ class __UserNotificationManager:
         response.headers["Connection"] = "keep-alive"
 
         return response
-
-
-user_notification_manager = __UserNotificationManager()
