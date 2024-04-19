@@ -53,7 +53,7 @@ async def get_dialog_id_by_user_id(
 
 
 @router.post("/my/newdialog/")
-async def get_dialog_id_by_user_id(
+async def create_dialog_by_user_id(
     interlocutor_id: int,
     message: schemas.MessageCreateTemp,
     db_session: AsyncSession = Depends(get_session),
