@@ -2,7 +2,6 @@ import logging
 
 from fastapi import Depends, APIRouter, HTTPException, WebSocketDisconnect
 from fastapi.responses import JSONResponse
-from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.depends import depends as deps
@@ -16,6 +15,7 @@ router = APIRouter()
 ws_router = APIRouter()
 base_session = deps.UserSession()
 base_connection_manager = services.ChatConnectionManager()
+message_notification_manager = services.message_notification_manager
 
 
 @router.get("/my/getdialog/")
@@ -134,6 +134,34 @@ async def get_all_messages_with_offset_limit(
         raise HTTPException(404)
 
     return messages
+
+
+@router.get("/my/listeners/newdialogdata")
+async def user_sse_notifications_listener(
+    sse_response=Depends(message_notification_manager),
+):
+    return sse_response
+
+
+# debug
+@router.post("/my/dev/create_chat_notification")
+async def test_function_for_tests(
+    event: str = "test",
+    data: str = "ping",
+    comment: str = "comment",
+    user_id: int = 1,
+):
+    context_manager = message_notification_manager.sse_managers.get(user_id)
+    if not context_manager:
+        raise HTTPException(404)
+
+    await context_manager.create_event(
+        event=event,
+        data="pong" if data == "ping" else data,
+        comment=comment,
+    )
+
+    return {"status": "ok"}
 
 
 @ws_router.websocket("/my")

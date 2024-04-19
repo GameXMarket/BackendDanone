@@ -21,7 +21,7 @@ class MessageInDB(BaseModel):
 
 class MessageCreateTemp(BaseModel):
     # Временная схема (вопрос насколько ахах)
-    message_image: UploadFile | None = None
+    message_image: UploadFile | None = Field(default=None, examples=[None])
     content: str = Field(min_length=0, max_length=4096)
 
     @field_validator("content", mode="before")
