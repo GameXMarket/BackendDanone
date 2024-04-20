@@ -22,10 +22,10 @@ class PurchaseManager:
         offer = await get_raw_offer_by_id(db_session, new_purchase_data.offer_id)
         
         if not offer:
-            return None
+            return 404
         
         if new_purchase_data.count > offer.count:
-            return None
+            return 403
         
         await update_offer(db_session, offer, {"count": offer.count - new_purchase_data.count}, need_commit=False)
 
