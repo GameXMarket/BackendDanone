@@ -9,7 +9,21 @@ import core.settings.config as conf
 
 
 logger = logging.getLogger("uvicorn")
-engine = create_async_engine(conf.DATABASE_URL, echo=conf.ECHO_SQL)
+engine = create_async_engine(
+    url=conf.DATABASE_URL,
+    pool_size=10,
+    max_overflow = 0,
+    pool_pre_ping = True,
+    connect_args = {
+        "timeout": 15,
+        "command_timeout": 5,
+        "server_settings": {
+            "jit": "off",
+            "application_name": "backend_danone",
+        },
+    },
+    echo=conf.ECHO_SQL
+)
 event_listener = PostgreListener()
 
 

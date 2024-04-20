@@ -1,13 +1,14 @@
 import time
+import json
 import asyncio
 from typing import cast, Any, NoReturn, Sequence
 from json.decoder import JSONDecodeError
 from dataclasses import dataclass
 
 from pydantic import ValidationError
-from fastapi import Depends, WebSocket, WebSocketException, status
+from fastapi import Depends, WebSocket, WebSocketException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, union_all, or_, and_, text, func
+from sqlalchemy import select, union_all, desc, or_, and_, text, func
 from sqlalchemy.orm import aliased
 import sqlalchemy
 
@@ -17,7 +18,8 @@ from core.redis import get_redis_client, get_redis_pipeline
 from app.messages import models as models_m
 from app.messages import schemas as schemas_m
 from app.messages import services as services_m
-from app.users import models as models_u
+from app.users.routers.users_notifications import user_notification_manager
+from app.users import models as models_u, services as services_u
 from app.attachment.services import message_attachment_manager, user_attachment_manager
 from app.tokens import schemas as schemas_t
 
@@ -62,7 +64,7 @@ class BaseChatManager:
 
     async def get_all_user_dialogs_ids_by_user_id(
         self, db_session: AsyncSession, user_id: int, offset: int, limit: int
-    ) -> Sequence[int]:
+    ):
         """
         Непубличный метод для подгрузки диалогов пользователя
         """
@@ -96,10 +98,11 @@ class BaseChatManager:
             
             if (msg_count := (await db_session.execute(count_msg_stmt)).scalar()) == 0:
                 continue
-            
+                        
             dialog_data = {
                 "chat_id": row[0],
                 "message_count": msg_count,
+                "interlocutor_id": row[2],
                 "interlocutor_username": row[1],
                 "interlocutor_files": await user_attachment_manager.get_only_files(
                     db_session, row[2]
@@ -111,7 +114,7 @@ class BaseChatManager:
 
     async def get_dialog_id_by_user_id(
         self, db_session: AsyncSession, user_id: int, interlocutor_id: int
-    ) -> int | None:
+    ):
         """
         Публичный метод для получения чата с данным пользователем
         user_id - тот, кто запрашивает чат
@@ -119,6 +122,10 @@ class BaseChatManager:
         FirstChatMember = aliased(models_m.ChatMember)
         SecondChatMember = aliased(models_m.ChatMember)
 
+        interlocutor = await services_u.get_by_id(db_session, id=interlocutor_id)
+        if not interlocutor: # Переделать когда будет более подробная обработка ошибок
+            return None
+        
         stmt = (
             select(models_m.Chat.id)
             .where(models_m.Chat.is_dialog == True)
@@ -131,9 +138,19 @@ class BaseChatManager:
                 )
             )
         )
-
-        result = await db_session.execute(stmt)
-        return result.scalar_one_or_none()
+        
+        chat_id = (await db_session.execute(stmt)).scalar_one_or_none()
+        if not chat_id:
+            return None
+        
+        chat_data = {
+            "chat_id": chat_id,
+            "interlocutor_id": interlocutor_id,
+            "interlocutor_username": interlocutor.username,
+            "interlocutor_files": await user_attachment_manager.get_only_files(db_session, interlocutor_id)
+        }
+        
+        return chat_data
 
 
 class BaseChatMemberManager(BaseChatManager):
@@ -197,6 +214,22 @@ class BaseChatMemberManager(BaseChatManager):
         await db_session.commit()
         return chat.id
 
+    async def create_dialog(
+        self, db_session: AsyncSession, user_id: int, interlocutor_id: int
+    ):
+        interlocutor = await services_u.get_by_id(db_session, id=interlocutor_id)
+        if not interlocutor:
+            return None
+
+        chat_data = {
+            "chat_id": await self.create_new_chat_with_members(db_session, user_id, interlocutor_id),
+            "interlocutor_id": interlocutor_id,
+            "interlocutor_username": interlocutor.username,
+            "interlocutor_files": await user_attachment_manager.get_only_files(db_session, interlocutor_id)
+        }
+        
+        return chat_data
+    
     async def get_chat_member_id_by_chat_user_ids(
         self, db_session: AsyncSession, chat_id: int, user_id: int
     ) -> int | None:
@@ -303,7 +336,7 @@ class BaseMessageManager(BaseChatMemberManager):
         )
         all_messages_stmt = (
             union_all(messages_stmt, system_message_stmt)
-            .order_by(text("created_at"))
+            .order_by(desc(text("created_at")))
             .offset(offset)
             .limit(limit)
         )
@@ -322,7 +355,7 @@ class BaseMessageManager(BaseChatMemberManager):
             }
             result.append(data)
         
-        return result
+        return result[::-1]
     
     async def create_message_by_sender_id(
         self, db_session: AsyncSession, sender_id: int, message: schemas_m.MessageCreate
@@ -337,7 +370,50 @@ class BaseMessageManager(BaseChatMemberManager):
         return await self.create_message(
             db_session, chat_member_id, message.content, message.need_wait
         )
-
+    
+    async def get_all_user_dialogs_ids_by_user_id_with_last_message(
+        self, db_session: AsyncSession, user_id: int, offset: int, limit: int
+    ):
+        dialogs = await self.get_all_user_dialogs_ids_by_user_id(db_session, user_id, offset, limit)
+        
+        for i, dialog in enumerate(dialogs):
+            last_message = await self.get_messages_by_chat_id_user_id(db_session, dialog["chat_id"], user_id, 0, 1)
+            dialogs[i]["last_message"] = last_message[0]
+        
+        return dialogs
+    
+    async def create_dialog_with_message(
+        self,
+        db_session: AsyncSession,
+        user_id: int,
+        interlocutor_id: int,
+        message: schemas_m.MessageCreateTemp,
+        chat_conn_manager: "ChatConnectionManager",
+        conn_context: "ConnectionContext",
+    ):
+        dialog_data = await self.create_dialog(db_session, user_id, interlocutor_id)
+        if not dialog_data:
+            return None
+        
+        context_manager = user_notification_manager.sse_managers.get(interlocutor_id)
+        if context_manager:
+            await context_manager.create_event(
+                event="new_chat",
+                data=json.dumps(dialog_data).replace("\n", " "),
+                comment="new chat with you created"
+            )
+        
+        message_create = message.get_message_create(dialog_data["chat_id"])
+        message_broadcast = await chat_conn_manager._ChatConnectionManager__send_message(conn_context, message_create)
+        if message.message_image:
+            await message_attachment_manager.create_new_attachment(db_session, [message.message_image], user_id)
+            message_broadcast["files"] = await message_attachment_manager.get_only_files(
+                db_session, message_broadcast["message_id"]
+            )
+        
+        dialog_data["last_message"] = message_broadcast
+        return dialog_data
+        
 
 message_manager = BaseMessageManager()
 
@@ -430,13 +506,16 @@ class ChatConnectionManager:
                 #  добавить pg listener на таблицу и уже там чекать
                 #  но в pg listener могут быть проблемы, а проверка создаст ненужные? запросы
                 if new_message.need_wait:
-                    await conn_context.websocket.send_json(
-                        {"message_id": message.id, "waiting": new_message.need_wait}
-                    )
-                    await asyncio.sleep(new_message.need_wait)
-                    files = await message_attachment_manager.get_only_files(
-                        db_session, message.id
-                    )
+                    # Временный костыль (if ws) (надеюсь) пока не перепишем файлы 
+                    # (убейте меня, ахах) :(
+                    if conn_context.websocket:
+                        await conn_context.websocket.send_json(
+                            {"message_id": message.id, "waiting": new_message.need_wait}
+                        )
+                        await asyncio.sleep(new_message.need_wait)
+                        files = await message_attachment_manager.get_only_files(
+                            db_session, message.id
+                        )
 
                 if not users_ids:
                     users_ids = await message_manager.get_users_ids_by_chat_id(
@@ -454,6 +533,11 @@ class ChatConnectionManager:
             }
         )
         await self.broadcast(message_broadcast, users_ids)
+        
+        # Ещё один костыль 😭
+        if not conn_context.websocket:
+            return message_broadcast
+            
 
     async def start_listening(self, conn_context: ConnectionContext) -> NoReturn:
         while True:
