@@ -91,7 +91,7 @@ class PurchaseManager:
         )
         
         result = await db_session.execute(stmt)
-        return result.scalars()
+        return result.scalars().all()
 
 
 purchase_manager = PurchaseManager()
