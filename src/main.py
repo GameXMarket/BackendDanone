@@ -23,6 +23,7 @@ from app.offers import offers_routers, delivery_routers
 from app.categories import category_routers
 from app.messages import message_routers
 from app.attachment import attachment_routers
+from app.purchase import purchase_routers
 #Не дай бог строчку ниже куда - либо перенести...
 from core.database.preload_data import preload_db_main
 
