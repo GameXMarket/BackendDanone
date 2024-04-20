@@ -11,7 +11,7 @@ router = APIRouter()
 base_manager = OnlineConnectionManager()
 
 
-@router.websocket("/online/")
+@router.websocket("/online")
 async def lazy_users_online(ws_context_data: tuple[ConnectionContext, OnlineConnectionManager] = Depends(base_manager)):
     conn_context, conn_manager = ws_context_data
     await conn_manager.connect(conn_context)

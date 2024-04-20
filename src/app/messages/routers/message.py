@@ -17,7 +17,7 @@ base_session = deps.UserSession()
 base_connection_manager = services.ChatConnectionManager()
 
 
-@router.get("/my/getdialog/")
+@router.get("/my/getdialog")
 async def get_dialog_id_by_user_id(
     interlocutor_id: int,
     message_offset: int = 0,
@@ -51,7 +51,7 @@ async def get_dialog_id_by_user_id(
     return chat_data
 
 
-@router.post("/my/newdialog/")
+@router.post("/my/newdialog")
 async def create_dialog_by_user_id(
     interlocutor_id: int,
     message: schemas.MessageCreateTemp,

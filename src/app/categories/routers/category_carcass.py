@@ -16,7 +16,7 @@ router = APIRouter()
 base_session = deps.UserSession()
 
 
-@router.get(path="/gettall/")
+@router.get(path="/gettall")
 async def get_root_with_offset_limit(
     offset: int = 0,
     limit: int = 1,

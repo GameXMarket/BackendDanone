@@ -60,7 +60,7 @@ async def get_files_by_attachment_id(
     return files
 
 
-@router.post("/uploadfiles/offer/")
+@router.post("/uploadfiles/offer")
 async def create_upload_files_offer(
     files: list[UploadFile],
     offer_id: int,
@@ -77,7 +77,7 @@ async def create_upload_files_offer(
     )
 
 
-@router.delete("/deletefiles/offer/")
+@router.delete("/deletefiles/offer")
 async def delete_offer_attachment(
     offer_id: int = Query(alias="id"),
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
@@ -93,7 +93,7 @@ async def delete_offer_attachment(
     )
 
 
-@router.post("/uploadfiles/user/")
+@router.post("/uploadfiles/user")
 async def create_upload_files_user(
     file: UploadFile,
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
@@ -111,7 +111,7 @@ async def create_upload_files_user(
     return {"user_files": await services.user_attachment_manager.get_only_files(db_session, user.id)}
 
 
-@router.delete("/deletefiles/user/")
+@router.delete("/deletefiles/user")
 async def delete_user_attachment(
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
         default_session
@@ -126,7 +126,7 @@ async def delete_user_attachment(
     )
 
 
-@router.post("/uploadfiles/message/")
+@router.post("/uploadfiles/message")
 async def create_upload_files_message(
     files: list[UploadFile],
     message_id: int,
@@ -143,7 +143,7 @@ async def create_upload_files_message(
     )
 
 
-@router.post("/uploadfiles/category_value/")
+@router.post("/uploadfiles/category_value")
 async def create_upload_files_category_value(
     file: UploadFile,
     category_value_id: int,
@@ -162,7 +162,7 @@ async def create_upload_files_category_value(
     )
 
 
-@router.delete("/deletefiles/category_value/")
+@router.delete("/deletefiles/category_value")
 async def delete_category_value_attachment(
     category_value_id: int,
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
