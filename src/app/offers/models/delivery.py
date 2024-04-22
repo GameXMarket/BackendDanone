@@ -16,4 +16,4 @@ class Delivery(Base):
     value = Column(String)
     created_at = Column(Integer)
 
-    offer: Mapped["Offer"] = relationship(back_populates="delivery", lazy="noload")
+    offer: Mapped["Offer"] = relationship(back_populates="deliveries", lazy="noload")
