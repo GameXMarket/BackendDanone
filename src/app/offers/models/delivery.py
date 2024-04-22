@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Column, Integer, String, Text, Enum, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, Enum, ForeignKey, VARCHAR
 from sqlalchemy.orm import relationship, Mapped
 from core.database import Base
 
@@ -13,7 +13,7 @@ class Delivery(Base):
     __tablename__ = "delivery"
     id = Column(Integer, primary_key=True, index=True)
     offer_id = Column(Integer, ForeignKey('offer.id', ondelete="CASCADE"))
-    value = Column(String)
+    value = Column(VARCHAR(500))
     created_at = Column(Integer)
 
     offer: Mapped["Offer"] = relationship(back_populates="delivery", lazy="noload")
