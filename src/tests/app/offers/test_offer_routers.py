@@ -81,7 +81,6 @@ async def test_get_my_offer_by_id(async_client: AsyncClient):
     response = await async_client.get(
         base_endpoint + "my/3/",
     )
-    print(f"\n\n\n\n\n\n{response.text}\n\n\n\n\n")
     assert response.status_code == 200
 
 
