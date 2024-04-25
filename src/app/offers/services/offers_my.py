@@ -38,7 +38,7 @@ async def get_raw_offer_by_user_id(
 
 async def get_by_user_id_offer_id(
     db_session: AsyncSession, user_id: int, id: int
-) -> models_f.Offer | None:
+) -> dict | None:
     stmt = select(models_f.Offer).where(
         models_f.Offer.user_id == user_id, models_f.Offer.id == id
     )
