@@ -12,7 +12,7 @@ from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 
 import core.settings as conf
-from core.database import event_listener, init_models
+from core.database import event_listener, init_models, context_get_session
 
 from core.redis import redis_pool, get_redis_client
 from core.logging import InfoHandlerTG, WarningHandlerTG, ErrorHandlerTG
@@ -55,7 +55,8 @@ async def lifespan(app: FastAPI):
     logger.addHandler(error_tg_handler)
 
     await init_models(drop_all=conf.DROP_TABLES)
-    await preload_db_main()
+    async with context_get_session() as session:
+        await preload_db_main(session)
 
     
     async with get_redis_client() as client:

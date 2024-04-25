@@ -85,9 +85,13 @@ async def create_delivery(
     
     created_deliveries = []
     for delivery in deliveries:
-        if not await services_f.get_by_user_id_offer_id(db_session, user.id, delivery.offer_id):
+        offer = await services_f.get_raw_offer_by_user_id(db_session, user.id, delivery.offer_id)
+        if not offer:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
+        elif offer.count != None:
+            raise HTTPException(403, detail="Offer does not support delivery")
+        
         created_delivery: models_f.Delivery = await services_f.create_delivery(
             db_session, obj_in=delivery
         )

@@ -12,8 +12,8 @@ if TYPE_CHECKING:
 class User(Base):
     __tablename__ = "user"
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, index=True, unique=True, nullable=False)
-    email = Column(String, index=True, unique=True, nullable=False)
+    username = Column(String(50), index=True, unique=True, nullable=False)
+    email = Column(String(75), index=True, unique=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
     role_id = Column(

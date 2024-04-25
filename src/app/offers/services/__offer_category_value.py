@@ -56,5 +56,5 @@ async def delete_offer_category_value(
         OfferCategoryValue.offer_id == offer_id
     )
     offer_category_value: OfferCategoryValue = (await db_session.execute(stmt)).scalar_one()
-    db_session.delete(offer_category_value)
+    await db_session.delete(offer_category_value)
     await db_session.commit()

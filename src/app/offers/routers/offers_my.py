@@ -159,6 +159,32 @@ async def get_offers_by_category(
     return offers
 
 
+@router.post(path="/my/delivery")
+async def change_offer_delivery_status(
+    enabled: bool,
+    offer_id: int,
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        base_session
+    ),
+    db_session: AsyncSession = Depends(get_session),
+
+):
+    """
+    Метод включает и отключает delivery для оффера, после отключения количество устанавливается на 0
+    """
+    token_data, user_context = current_session
+    user = await user_context.get_current_active_user(db_session, token_data)
+
+    offer = await services_f.offers_my.get_raw_offer_by_user_id(db_session, user.id, offer_id)
+    if not offer:
+        raise HTTPException(404)
+    
+    new_count = None if enabled else 0
+    new_offer = await services_f.offers_my.update_offer(db_session, db_obj=offer, obj_in={"count": new_count})
+    
+    return new_offer
+
+
 @router.get(
     path="/my/{offer_id}",
     responses={
