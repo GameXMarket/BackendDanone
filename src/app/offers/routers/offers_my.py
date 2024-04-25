@@ -8,11 +8,11 @@ from sqlalchemy.orm import selectinload
 from .. import models as models_f
 from .. import schemas as schemas_f
 from .. import services as services_f
-from core import settings as conf
 from core.database import get_session
 from core.depends import depends as deps
 from app.users import models as models_u
 from app.tokens import schemas as schemas_t
+
 
 logger = logging.getLogger("uvicorn")
 router = APIRouter()
@@ -160,7 +160,7 @@ async def get_offers_by_category(
 
 
 @router.get(
-    path="/my/{offer_id}/",
+    path="/my/{offer_id}",
     responses={
         **{200: {"model": schemas_f.OfferPreDB}, 404: {"model": schemas_f.OfferError}},
         **deps.build_response(deps.UserSession.get_current_active_user),
@@ -189,7 +189,7 @@ async def get_by_id(
 
 
 @router.put(
-    path="/my/{offer_id}/",
+    path="/my/{offer_id}",
     responses={
         **{404: {"model": schemas_f.OfferError}},
         **deps.build_response(deps.UserSession.get_current_active_user),
@@ -225,7 +225,7 @@ async def update_offer(
 
 
 @router.delete(
-    path="/my/{offer_id}/",
+    path="/my/{offer_id}",
     responses={
         **{404: {"model": schemas_f.OfferError}},
         **deps.build_response(deps.UserSession.get_current_active_user),

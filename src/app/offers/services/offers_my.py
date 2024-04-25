@@ -231,10 +231,7 @@ async def get_offers_by_value_id(
     
     stmt = (
         select(
-            models_f.Offer.id,
-            models_f.Offer.name,
-            models_f.Offer.price,
-            models_f.Offer.count,
+            models_f.Offer,
             CategoryValueNext.value,
         )
         .join(GameOfferCategoryValue, GameOfferCategoryValue.offer_id == models_f.Offer.id)
@@ -249,15 +246,18 @@ async def get_offers_by_value_id(
         .limit(limit)
     )
     rows = await db_session.execute(stmt)
-
+    
     result = []
     for row in rows:
+        offer: models_f.Offer = row[0]
+        real_offer_count = await offer.get_real_count(db_session)
+
         offer = {
-            "id": row[0],
-            "name": row[1],
-            "price": row[2],
-            "count": row[3],
-            "category_value": row[4],
+            "id": offer.id,
+            "name": offer.name,
+            "price": offer.price,
+            "count": real_offer_count,
+            "category_value": row[1],
         }
         result.append(offer)
 
