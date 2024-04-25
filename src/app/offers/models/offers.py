@@ -1,7 +1,7 @@
 import time
 from typing import List
 
-from sqlalchemy import func, select, Column, Integer, String, Text, Enum, ForeignKey
+from sqlalchemy import func, select, Column, Integer, String, Text, Enum, ForeignKey, CheckConstraint, VARCHAR
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import relationship, Mapped
 
@@ -21,13 +21,11 @@ class Offer(Base):
     id = Column(Integer, primary_key=True, index=True)
     # About ondelete arg:
     # https://docs.sqlalchemy.org/en/20/core/constraints.html#sqlalchemy.schema.ForeignKey.params.ondelete
-    user_id = Column(
-        Integer, ForeignKey("user.id", ondelete="CASCADE")
-    )  # ForeignKey to user_id
-    name = Column(String, nullable=False)
+    user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'))  # ForeignKey to user_id
+    name = Column(String(50), nullable=False)
     description = Column(Text, nullable=False)
-    price = Column(Integer, nullable=False)
-    count = Column(Integer, nullable=True, default=None)
+    price = Column(Integer, CheckConstraint('price >= 1 and price <=1000000', name='check_price'), nullable=False)
+    count = Column(Integer, CheckConstraint('(count IS NULL) OR (count >= 1 AND count <= 1000000)', name='check_count'), nullable=True, default=None)
     status = Column(
         Enum("active", "hidden", "deleted", name="offer_statuses"),
         nullable=False,

@@ -26,8 +26,8 @@ class OfferMini(OfferMiniBase):
 
 
 class OfferBase(OfferMiniBase):
-    price: int = Field(examples=[1000], gt=0, lt=100000)
-    count: int | None = Field(examples=[None], gt=-1, lt=100000)
+    price: int = Field(examples=[1000], gt=0, le=1000000)
+    count: int | None = Field(examples=[None], ge=0, le=1000000)
     category_value_ids: list[int] | None = None
 
 
