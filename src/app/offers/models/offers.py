@@ -1,3 +1,4 @@
+import time
 from typing import List
 
 from sqlalchemy import func, select, Column, Integer, String, Text, Enum, ForeignKey
@@ -26,13 +27,13 @@ class Offer(Base):
     name = Column(String, nullable=False)
     description = Column(Text, nullable=False)
     price = Column(Integer, nullable=False)
-    count = Column(Integer, nullable=False)
+    count = Column(Integer, nullable=True, default=None)
     status = Column(
         Enum("active", "hidden", "deleted", name="offer_statuses"),
         nullable=False,
         default="active",
     )
-    upped_at = Column(Integer, nullable=False)
+    upped_at = Column(Integer, nullable=False, default=int(time.time()))
 
     user: Mapped["User"] = relationship(back_populates="offers", lazy="noload")
     category_values: Mapped[list["OfferCategoryValue"]] = relationship(
