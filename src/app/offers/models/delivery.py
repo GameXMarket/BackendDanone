@@ -11,9 +11,9 @@ if TYPE_CHECKING:
 # TODO прокинуть связи, маппед и тд
 class Delivery(Base):
     __tablename__ = "delivery"
-    id = Column(Integer, primary_key=True, index=True)
+    
+    id = Column(Integer, primary_key=True)
     offer_id = Column(Integer, ForeignKey('offer.id', ondelete="CASCADE"))
     value = Column(VARCHAR(500))
-    created_at = Column(Integer)
 
     offer: Mapped["Offer"] = relationship(back_populates="deliveries", lazy="noload")
