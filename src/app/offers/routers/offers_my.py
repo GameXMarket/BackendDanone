@@ -175,14 +175,15 @@ async def change_offer_delivery_status(
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
 
-    offer = await services_f.offers_my.get_by_user_id_offer_id(db_session, user.id, offer_id)
+    offer = await services_f.offers_my.get_raw_offer_by_user_id(db_session, user.id, offer_id)
     if not offer:
         raise HTTPException(404)
     
     new_count = None if enabled else 0
-    new_offer = await services_f.offers_my.update_offer(db_session, offer, {"count": new_count})
+    new_offer = await services_f.offers_my.update_offer(db_session, db_obj=offer, obj_in={"count": new_count})
     
     return new_offer
+
 
 @router.get(
     path="/my/{offer_id}",

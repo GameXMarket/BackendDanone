@@ -299,14 +299,7 @@ async def update_offer(
 
     if isinstance(obj_in, dict):
         update_data = obj_in
-        category_ids_in = []
-        current_category_ids = set()
     else:
-        category_ids_in: List[int] = obj_in.category_value_ids
-        current_category_ids = {
-            offer_category.category_value_id for offer_category in db_obj.category_values
-        }
-
         update_data = obj_in.model_dump(exclude_unset=True)
     
     for field in obj_data:
@@ -314,7 +307,7 @@ async def update_offer(
             setattr(db_obj, field, update_data[field])
 
     db_obj.category_values.clear()
-    for value in update_data["category_value_ids"]:
+    for value in update_data.get("category_value_ids", []):
         await __ocv.create_offer_category_value(
                 db_session, category_value_id=value, offer_id=db_obj.id
             )
@@ -323,7 +316,6 @@ async def update_offer(
     await db_session.commit()
     await db_session.refresh(db_obj)
 
-    await db_session.refresh(db_obj)
     return db_obj
 
 
