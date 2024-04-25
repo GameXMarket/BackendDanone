@@ -4,7 +4,7 @@ import time
 from fastapi.encoders import jsonable_encoder
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, exists, delete, and_
+from sqlalchemy import insert, select, update, exists, delete, and_
 
 from app.tokens import schemas as schemas_t
 from .. import models, schemas
@@ -41,19 +41,22 @@ async def create_user(
     obj_in: schemas.UserSignUp,
     additional_fields: dict = {},
 ):
-    db_obj = models.User(
-        username=obj_in.username,
-        email=obj_in.email,
-        hashed_password=get_password_hash(obj_in.password),
-        created_at=int(time.time()),
-        updated_at=int(time.time()),
-        **additional_fields,
+    stmt = (
+        insert(models.User)
+        .values(
+            username=obj_in.username,
+            email=obj_in.email,
+            hashed_password=get_password_hash(obj_in.password),
+            **additional_fields,
+
+        )
+        .returning(
+            models.User
+        )
     )
-
-    db_session.add(db_obj)
+    q = await db_session.execute(stmt)
     await db_session.commit()
-
-    return db_obj
+    return q.scalar()
 
 
 async def update_user(
