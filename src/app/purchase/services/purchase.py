@@ -24,11 +24,17 @@ class PurchaseManager:
         if not offer:
             return 404
         
-        if new_purchase_data.count > offer.count:
+        offer_real_count = await offer.get_real_count(db_session)
+        offer_with_delivery = offer.count == None
+        
+        if new_purchase_data.count > offer_real_count:
             return 403
         
-        await update_offer(db_session, offer, {"count": offer.count - new_purchase_data.count}, need_commit=False)
-
+        
+        if not offer_with_delivery:
+            await update_offer(db_session, offer, {"count": offer.count - new_purchase_data.count}, need_commit=False)
+        
+        # todo добавить логику времени на сделку
         purchase = models.Purchase(
             buyer_id=user_id,
             offer_id=offer.id,
@@ -39,6 +45,13 @@ class PurchaseManager:
         )
         
         db_session.add(purchase)
+        await db_session.flush()
+        
+        if offer_with_delivery:
+            # todo тута перенос автовыдачи в покупку
+            
+            ...
+
         await db_session.commit()
         await db_session.refresh(purchase)
         

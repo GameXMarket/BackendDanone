@@ -1,6 +1,6 @@
 from time import time
 
-from sqlalchemy import Column, Integer, String, Text, Enum, ForeignKey
+from sqlalchemy import Column, Integer, String, VARCHAR, Enum, ForeignKey
 from sqlalchemy.orm import relationship, Mapped
 
 from core.database import Base
@@ -24,5 +24,16 @@ class Purchase(Base):
     created_at = Column(Integer, nullable=False, default=int(time()))
     updated_at = Column(Integer, nullable=False, default=int(time()), onupdate=int(time()))
 
+    parcels: Mapped[list["Parcel"]] =  relationship(back_populates="purchase", lazy="selectin")
     buyer: Mapped["User"] = relationship(lazy="noload")
     offer: Mapped["Offer"] = relationship(lazy="noload")
+
+
+class Parcel(Base):
+    __tablename__ = "parcel"
+    
+    id = Column(Integer, primary_key=True)
+    purchase_id = Column(Integer, ForeignKey('purchase.id', ondelete="CASCADE"))
+    value = Column(VARCHAR(500))
+
+    purchase: Mapped["Purchase"] = relationship(back_populates="parcels", lazy="noload")

@@ -8,7 +8,6 @@ if TYPE_CHECKING:
     from .offers import Offer
 
 
-# TODO прокинуть связи, маппед и тд
 class Delivery(Base):
     __tablename__ = "delivery"
     
