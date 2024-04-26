@@ -61,19 +61,24 @@ class BaseChatManager:
         return chat
 
     async def get_all_user_dialogs_ids_by_user_id(
-        self, db_session: AsyncSession, user_id: int, offset: int, limit: int
+        self, db_session: AsyncSession, user_id: int
     ) -> Sequence[int]:
         """
         Непубличный метод для подгрузки диалогов пользователя
         """
         FirstChatMember = aliased(models_m.ChatMember)
         SecondChatMember = aliased(models_m.ChatMember)
+        LastMessage = aliased(models_m.Message)
         
         stmt = (
-            select(FirstChatMember.chat_id, models_u.User.username, models_u.User.id)
+            select(FirstChatMember.chat_id, models_u.User.username, models_u.User.id, func.max(LastMessage.created_at).label("last_message_date"))
             .join(SecondChatMember, SecondChatMember.chat_id == FirstChatMember.chat_id)
             .join(models_u.User, models_u.User.id == SecondChatMember.user_id)
             .join(models_m.Chat, models_m.Chat.id == FirstChatMember.chat_id)
+            .outerjoin(
+                LastMessage,
+                LastMessage.chat_member_id 
+            )
             .where(
                 and_(
                     models_m.Chat.is_dialog == True,
@@ -81,8 +86,6 @@ class BaseChatManager:
                     SecondChatMember.user_id != user_id,
                 )
             )
-            .offset(offset)
-            .limit(limit)
         )
         rows = (await db_session.execute(stmt)).fetchall()
         
