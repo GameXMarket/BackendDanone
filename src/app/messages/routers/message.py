@@ -52,9 +52,8 @@ async def get_dialog_id_by_user_id(
 
 @router.get("/my/getall")
 async def get_all_dialogs_with_offset_limit(
-    offset: int = 0,
-    limit: int = 10,
     db_session: AsyncSession = Depends(get_session),
+    sort: bool = True,
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
         base_session
     ),
@@ -64,9 +63,14 @@ async def get_all_dialogs_with_offset_limit(
     """
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
-
-    dialogs_data = await services.message_manager.get_all_user_dialogs_ids_by_user_id(
-        db_session, user.id, offset, limit
+    if sort:
+        dialogs_data = await services.message_manager.get_all_user_dialogs_ids_by_user_id_with_sort(
+        db_session, user.id
+    )
+    else:
+        dialogs_data = await services.message_manager.get_all_user_dialogs_ids_by_user_id(
+        db_session,
+        user.id
     )
 
     if not dialogs_data:
