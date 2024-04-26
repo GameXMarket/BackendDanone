@@ -118,17 +118,17 @@ async def __init_categories_values(db_session: AsyncSession):
     values_to_create = [
         {"carcass_id": 1, "value": "Counter-Strike 2", "next_carcass_id": 3},
         {"carcass_id": 3, "value": "Буст ELO)", "next_carcass_id": 9},
-        {"carcass_id": 9, "value": "25 ELO", "next_carcass_id": None},
-        {"carcass_id": 9, "value": "50 ELO", "next_carcass_id": None},
-        {"carcass_id": 9, "value": "100 ELO", "next_carcass_id": None},
-        {"carcass_id": 9, "value": "200 ELO", "next_carcass_id": None},
+        {"carcass_id": 9, "value": "25 ELO", "next_carcass_id": None, "is_offer_with_delivery": False},
+        {"carcass_id": 9, "value": "50 ELO", "next_carcass_id": None, "is_offer_with_delivery": False},
+        {"carcass_id": 9, "value": "100 ELO", "next_carcass_id": None, "is_offer_with_delivery": True},
+        {"carcass_id": 9, "value": "200 ELO", "next_carcass_id": None, "is_offer_with_delivery": True},
 
         {"carcass_id": 1, "value": "Dota 2", "next_carcass_id": 4},
         {"carcass_id": 4, "value": "Буст эмэмэрау)", "next_carcass_id": 8},
-        {"carcass_id": 8, "value": "100 ММР", "next_carcass_id": None},
-        {"carcass_id": 8, "value": "1000 ММР", "next_carcass_id": None},
-        {"carcass_id": 8, "value": "2000 ММР", "next_carcass_id": None},
-        {"carcass_id": 8, "value": "3000 ММР", "next_carcass_id": None},
+        {"carcass_id": 8, "value": "100 ММР", "next_carcass_id": None, "is_offer_with_delivery": False},
+        {"carcass_id": 8, "value": "1000 ММР", "next_carcass_id": None, "is_offer_with_delivery": False},
+        {"carcass_id": 8, "value": "2000 ММР", "next_carcass_id": None, "is_offer_with_delivery": True},
+        {"carcass_id": 8, "value": "3000 ММР", "next_carcass_id": None, "is_offer_with_delivery": True},
 
 
         {"carcass_id": 1, "value": "Brawl Stars", "next_carcass_id": 2},
@@ -137,12 +137,12 @@ async def __init_categories_values(db_session: AsyncSession):
         {"carcass_id": 6, "value": "Supersell ID", "next_carcass_id": 7},
         {"carcass_id": 6, "value": "Встреча в жизни", "next_carcass_id": 7},
         {"carcass_id": 6, "value": "Через сторонние", "next_carcass_id": 7},
-        {"carcass_id": 7, "value": "30 Гемов", "next_carcass_id": None},
-        {"carcass_id": 7, "value": "170 Гемов", "next_carcass_id": None},
-        {"carcass_id": 7, "value": "2000 Гемов", "next_carcass_id": None},
-        {"carcass_id": 5, "value": "1 уровень БП", "next_carcass_id": None},
-        {"carcass_id": 5, "value": "5 уровней БП", "next_carcass_id": None},
-        {"carcass_id": 5, "value": "10 уровней БП", "next_carcass_id": None},
+        {"carcass_id": 7, "value": "30 Гемов", "next_carcass_id": None, "is_offer_with_delivery": False},
+        {"carcass_id": 7, "value": "170 Гемов", "next_carcass_id": None, "is_offer_with_delivery": False},
+        {"carcass_id": 7, "value": "2000 Гемов", "next_carcass_id": None, "is_offer_with_delivery": False},
+        {"carcass_id": 5, "value": "1 уровень БП", "next_carcass_id": None, "is_offer_with_delivery": True},
+        {"carcass_id": 5, "value": "5 уровней БП", "next_carcass_id": None, "is_offer_with_delivery": True},
+        {"carcass_id": 5, "value": "10 уровней БП", "next_carcass_id": None, "is_offer_with_delivery": True},
     ]
 
     values = await services_c.categories_values.get_all(db_session=db_session)
