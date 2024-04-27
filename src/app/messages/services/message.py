@@ -62,11 +62,11 @@ class BaseChatManager:
 
         return chat
 
-    async def get_all_user_dialogs_ids_by_user_id_with_sort(
+    async def get_all_user_dialogs_ids_by_user_id_with_last_message(
         self, db_session: AsyncSession, user_id: int
     ):
         """
-        Непубличный метод для подгрузки диалогов пользователя с сортировкой
+        Непубличный метод для подгрузки диалогов пользователя с информацией о последнем сообщении
         """
         FirstChatMember = aliased(models_m.ChatMember)
         SecondChatMember = aliased(models_m.ChatMember)
@@ -74,7 +74,7 @@ class BaseChatManager:
         LastMessageSubquery = (
             select(
                 models_m.Message.chat_member_id,
-                func.max(models_m.Message.created_at).label("last_msg_id"),
+                func.max(models_m.Message.id).label("last_msg_id"),
             )
             .join(models_m.ChatMember, models_m.ChatMember.id == models_m.Message.chat_member_id)
             .group_by(models_m.Message.chat_member_id)
@@ -92,25 +92,18 @@ class BaseChatManager:
             .join(SecondChatMember, SecondChatMember.chat_id == FirstChatMember.chat_id)
             .join(models_u.User, models_u.User.id == SecondChatMember.user_id)
             .join(models_m.Chat, models_m.Chat.id == FirstChatMember.chat_id)
-            .join(
+            .outerjoin(
                 LastMessageSubquery,
                 LastMessageSubquery.c.chat_member_id == FirstChatMember.id,
-                isouter=True,
             )
-            .join(
+            .outerjoin(
                 models_m.Message,
-                and_(
-                    models_m.Message.id == LastMessageSubquery.c.last_msg_id,
-                    models_m.Message.chat_member_id == FirstChatMember.id,
-                ),
-                isouter=True,
+                models_m.Message.id == LastMessageSubquery.c.last_msg_id,
             )
-            .where(
-                and_(
-                    models_m.Chat.is_dialog == True,
-                    FirstChatMember.user_id == user_id,
-                    SecondChatMember.user_id != user_id,
-                )
+            .filter(
+                models_m.Chat.is_dialog == True,
+                FirstChatMember.user_id == user_id,
+                SecondChatMember.user_id != user_id,
             )
             .group_by(
                 FirstChatMember.chat_id,
@@ -118,12 +111,13 @@ class BaseChatManager:
                 models_u.User.id,
                 LastMessageSubquery.c.last_msg_id,
             )
-            .order_by(desc(LastMessageSubquery.c.last_msg_id))
         )
 
         rows = (await db_session.execute(stmt)).fetchall()
         dialogs_data = []
         for row in rows:
+            print(f"\n\n\n\n\n\n{row}\n\n\n\n\n\n\n")
+            last_message_id = row[4] if row[4] is not None else None
             dialog_data = {
                 "chat_id": row[0],
                 "message_count": row[3],
@@ -132,6 +126,7 @@ class BaseChatManager:
                 "interlocutor_files": await user_attachment_manager.get_only_files(
                     db_session, row[2]
                 ),
+                "last_message_id": last_message_id
             }
             dialogs_data.append(dialog_data)
 
@@ -397,14 +392,17 @@ class BaseMessageManager(BaseChatMemberManager):
         )
     
     async def get_all_user_dialogs_ids_by_user_id_with_last_message_with_sort(
-        self, db_session: AsyncSession, user_id: int, offset: int, limit: int
+        self, db_session: AsyncSession, user_id: int
     ):
-        dialogs = await self.get_all_user_dialogs_ids_by_user_id_with_sort(db_session, user_id, offset, limit)
-        
-        for i, dialog in enumerate(dialogs):
-            last_message = await self.get_messages_by_chat_id_user_id(db_session, dialog["chat_id"], user_id, 0, 1)
-            dialogs[i]["last_message"] = last_message[0]
-        
+        dialogs = await self.get_all_user_dialogs_ids_by_user_id_with_last_message(db_session, user_id)
+
+        for dialog in dialogs:
+            last_message = await self.get_message(db_session, dialog["last_message_id"])
+            dialog["last_message"] = last_message.content
+            dialog["last_message_created_at"] = last_message.created_at
+
+        dialogs.sort(key=lambda x: x["last_message_created_at"], reverse=True)
+
         return dialogs
     
     async def create_dialog_with_message(
