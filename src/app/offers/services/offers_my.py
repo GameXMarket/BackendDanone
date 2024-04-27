@@ -233,6 +233,7 @@ async def get_offers_by_value_id(
         select(
             models_f.Offer,
             CategoryValueNext.value,
+            CategoryCarcass,
         )
         .join(GameOfferCategoryValue, GameOfferCategoryValue.offer_id == models_f.Offer.id)
         .join(GameCategoryValue, GameCategoryValue.id == GameOfferCategoryValue.category_value_id)
@@ -250,16 +251,19 @@ async def get_offers_by_value_id(
     result = []
     for row in rows:
         offer: models_f.Offer = row[0]
+        carcass: CategoryCarcass = row[2]
         real_offer_count = await offer.get_real_count(db_session)
 
-        offer = {
+        offer_ = {
             "id": offer.id,
             "name": offer.name,
             "price": offer.price,
             "count": real_offer_count,
-            "category_value": row[1],
+            "carcass_select_name": carcass.select_name,
+            "carcass_in_offer_name": carcass.in_offer_name,
+            "carcass_in_offer_value": row[1],
         }
-        result.append(offer)
+        result.append(offer_)
 
     return result
 
