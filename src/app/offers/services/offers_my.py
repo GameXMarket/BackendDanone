@@ -310,11 +310,13 @@ async def update_offer(
         if field in update_data:
             setattr(db_obj, field, update_data[field])
 
-    db_obj.category_values.clear()
-    for value in update_data.get("category_value_ids", []):
-        await __ocv.create_offer_category_value(
-                db_session, category_value_id=value, offer_id=db_obj.id
-            )
+    category_value_ids = update_data.get("category_value_ids")
+    if category_value_ids:
+        db_obj.category_values.clear()
+        for value in category_value_ids:
+            await __ocv.create_offer_category_value(
+                    db_session, category_value_id=value, offer_id=db_obj.id
+                )
         
     db_session.add(db_obj)
     await db_session.commit()
