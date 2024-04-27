@@ -62,20 +62,32 @@ class BaseChatManager:
 
         return chat
 
-    async def get_all_user_dialogs_ids_by_user_id(
-        self, db_session: AsyncSession, user_id: int, offset: int, limit: int
+    async def get_all_user_dialogs_ids_by_user_id_with_sort(
+        self, db_session: AsyncSession, user_id: int
     ):
         """
-        Непубличный метод для подгрузки диалогов пользователя
+        Непубличный метод для подгрузки диалогов пользователя с сортировкой
         """
         FirstChatMember = aliased(models_m.ChatMember)
         SecondChatMember = aliased(models_m.ChatMember)
-        
+
         stmt = (
-            select(FirstChatMember.chat_id, models_u.User.username, models_u.User.id)
+            select(
+                FirstChatMember.chat_id,
+                models_u.User.username,
+                models_u.User.id,
+                func.count(models_m.Message.id).label("message_count"),
+            )
             .join(SecondChatMember, SecondChatMember.chat_id == FirstChatMember.chat_id)
             .join(models_u.User, models_u.User.id == SecondChatMember.user_id)
             .join(models_m.Chat, models_m.Chat.id == FirstChatMember.chat_id)
+            .join(
+                models_m.Message,
+                and_(
+                    models_m.Message.chat_member_id == FirstChatMember.id,
+                ),
+                isouter=True,
+            )
             .where(
                 and_(
                     models_m.Chat.is_dialog == True,
@@ -83,25 +95,19 @@ class BaseChatManager:
                     SecondChatMember.user_id != user_id,
                 )
             )
-            .offset(offset)
-            .limit(limit)
+            .group_by(
+                FirstChatMember.chat_id,
+                models_u.User.username,
+                models_u.User.id,
+            )
         )
+
         rows = (await db_session.execute(stmt)).fetchall()
-        
         dialogs_data = []
         for row in rows:
-            count_msg_stmt = (
-                select(func.count(models_m.Message.id))
-                .join(models_m.ChatMember, models_m.ChatMember.id == models_m.Message.chat_member_id)
-                .where(models_m.ChatMember.chat_id == row[0])
-            )
-            
-            if (msg_count := (await db_session.execute(count_msg_stmt)).scalar()) == 0:
-                continue
-                        
             dialog_data = {
                 "chat_id": row[0],
-                "message_count": msg_count,
+                "message_count": row[3],
                 "interlocutor_id": row[2],
                 "interlocutor_username": row[1],
                 "interlocutor_files": await user_attachment_manager.get_only_files(
@@ -109,7 +115,7 @@ class BaseChatManager:
                 ),
             }
             dialogs_data.append(dialog_data)
-        
+
         return dialogs_data
 
     async def get_dialog_id_by_user_id(
@@ -371,15 +377,17 @@ class BaseMessageManager(BaseChatMemberManager):
             db_session, chat_member_id, message.content, message.need_wait
         )
     
-    async def get_all_user_dialogs_ids_by_user_id_with_last_message(
-        self, db_session: AsyncSession, user_id: int, offset: int, limit: int
+    async def get_all_user_dialogs_ids_by_user_id_with_last_message_with_sort(
+        self, db_session: AsyncSession, user_id: int
     ):
-        dialogs = await self.get_all_user_dialogs_ids_by_user_id(db_session, user_id, offset, limit)
+        dialogs = await self.get_all_user_dialogs_ids_by_user_id_with_sort(db_session, user_id)
         
         for i, dialog in enumerate(dialogs):
             last_message = await self.get_messages_by_chat_id_user_id(db_session, dialog["chat_id"], user_id, 0, 1)
             dialogs[i]["last_message"] = last_message[0]
-        
+
+        dialogs.sort(key=lambda x: x["last_message"]["created_at"], reverse=True)
+
         return dialogs
     
     async def create_dialog_with_message(
