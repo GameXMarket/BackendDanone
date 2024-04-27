@@ -72,7 +72,7 @@ class BaseChatManager:
         LastMessageSubquery = (
             select(
                 models_m.Message.chat_member_id,
-                func.max(models_m.Message.id).label("last_msg_id"),
+                func.max(models_m.Message.created_at).label("last_msg_id"),
             )
             .join(models_m.ChatMember, models_m.ChatMember.id == models_m.Message.chat_member_id)
             .group_by(models_m.Message.chat_member_id)
