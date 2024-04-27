@@ -66,7 +66,7 @@ class BaseChatManager:
         self, db_session: AsyncSession, user_id: int
     ):
         """
-        Непубличный метод для подгрузки диалогов пользователя с последним сообщением
+        Непубличный метод для подгрузки диалогов пользователя с информацией о последнем сообщении
         """
         FirstChatMember = aliased(models_m.ChatMember)
         SecondChatMember = aliased(models_m.ChatMember)
@@ -74,8 +74,7 @@ class BaseChatManager:
         LastMessageSubquery = (
             select(
                 models_m.Message.chat_member_id,
-                func.max(models_m.Message.created_at).label("last_msg_id"),
-                func.count(models_m.Message.id).label("message_count")
+                func.max(models_m.Message.id).label("last_msg_id"),
             )
             .join(models_m.ChatMember, models_m.ChatMember.id == models_m.Message.chat_member_id)
             .group_by(models_m.Message.chat_member_id)
@@ -110,12 +109,7 @@ class BaseChatManager:
                 LastMessageSubquery.c.chat_member_id == FirstChatMember.id,
                 isouter=True,
             )
-            .join(
-                LastMessageContentSubquery,
-                LastMessageContentSubquery.c.chat_member_id == FirstChatMember.id,
-                isouter=True,
-            )
-            .join(
+            .outerjoin(
                 models_m.Message,
                 and_(
                     models_m.Message.id == LastMessageSubquery.c.last_msg_id,
@@ -152,7 +146,7 @@ class BaseChatManager:
                 "interlocutor_files": await user_attachment_manager.get_only_files(
                     db_session, row[2]
                 ),
-                "last_message": row[5]
+                "last_message_id": last_message_id
             }
             dialogs_data.append(dialog_data)
 
@@ -416,6 +410,20 @@ class BaseMessageManager(BaseChatMemberManager):
         return await self.create_message(
             db_session, chat_member_id, message.content, message.need_wait
         )
+    
+    async def get_all_user_dialogs_ids_by_user_id_with_last_message_with_sort(
+        self, db_session: AsyncSession, user_id: int
+    ):
+        dialogs = await self.get_all_user_dialogs_ids_by_user_id_with_last_message(db_session, user_id)
+
+        for dialog in dialogs:
+            last_message = await self.get_message(db_session, dialog["last_message_id"])
+            dialog["last_message"] = last_message.content
+            dialog["last_message_created_at"] = last_message.created_at
+
+        dialogs.sort(key=lambda x: x["last_message_created_at"], reverse=True)
+
+        return dialogs
     
     async def create_dialog_with_message(
         self,
