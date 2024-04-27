@@ -5,6 +5,7 @@ from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, exists, delete, and_
 
+from app.attachment.services import category_value_attachment_manager
 from .. import models, schemas
 from .categories_values import get_associated_by_id
 
@@ -29,6 +30,7 @@ async def get_by_id(
             subvalues = await get_associated_by_id(db_session, [category_value.id])
             
             category_value_dict = category_value.to_dict()
+            category_value_dict["files"] = await category_value_attachment_manager.get_only_files(db_session=db_session, category_value_id=category_value.id)
             category_value_dict["subvalues"] = subvalues
             
             category_dict["values"].append(category_value_dict)

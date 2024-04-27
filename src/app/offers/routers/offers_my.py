@@ -13,6 +13,7 @@ from core.database import get_session
 from core.depends import depends as deps
 from app.users import models as models_u
 from app.tokens import schemas as schemas_t
+from app.attachment.services import category_value_attachment_manager
 
 logger = logging.getLogger("uvicorn")
 router = APIRouter()
@@ -156,7 +157,9 @@ async def get_offers_by_category(
     if not offers:
         raise HTTPException(404)
 
-    return offers
+    value_file = await category_value_attachment_manager.get_only_files(db_session=db_session, category_value_id=value_id)
+
+    return {"offers": offers, "files": value_file}
 
 
 @router.get(

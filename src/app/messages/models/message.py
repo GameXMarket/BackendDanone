@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Boolean, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, String, Integer, Boolean, ForeignKey, UniqueConstraint, VARCHAR
 from sqlalchemy.orm import relationship, Mapped
 
 from core.database import Base
@@ -27,7 +27,7 @@ class Message(Base):
 
     id = Column(Integer, primary_key=True)
     chat_member_id = Column(Integer, ForeignKey('chat_member.id', ondelete="CASCADE"), nullable=False)
-    content = Column(String)
+    content = Column(VARCHAR(4096))
 
 
 class SystemMessage(Base):
@@ -35,5 +35,5 @@ class SystemMessage(Base):
     
     id = Column(Integer, primary_key=True)
     chat_id = Column(Integer, ForeignKey("chat.id", ondelete="CASCADE"), nullable=False)
-    content = Column(String, nullable=False)
+    content = Column(VARCHAR(1000), nullable=False)
     

@@ -20,6 +20,8 @@ base_connection_manager = services.ChatConnectionManager()
 @router.get("/my/getdialog/")
 async def get_dialog_id_by_user_id(
     interlocutor_id: int,
+    message_offset: int = 0,
+    message_limit: int = 10,
     db_session: AsyncSession = Depends(get_session),
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
         base_session
@@ -33,20 +35,55 @@ async def get_dialog_id_by_user_id(
     user = await user_context.get_current_active_user(db_session, token_data)
 
     if user.id == interlocutor_id:
-        raise HTTPException(404)
+        raise HTTPException(403)
 
     chat_data = await services.message_manager.get_dialog_id_by_user_id(
         db_session, user.id, interlocutor_id
     )
     
     if not chat_data:
-        chat_data = await services.message_manager.create_dialog(
-            db_session, user.id, interlocutor_id
-        )
-    
-    elif not chat_data:
         raise HTTPException(404)
     
+    chat_data["messages"] = await services.message_manager.get_messages_by_chat_id_user_id(
+        db_session, chat_data["chat_id"], user.id, message_offset, message_limit
+    )
+    
+    return chat_data
+
+
+@router.post("/my/newdialog/")
+async def create_dialog_by_user_id(
+    interlocutor_id: int,
+    message: schemas.MessageCreateTemp,
+    db_session: AsyncSession = Depends(get_session),
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        base_session
+    ),
+) -> JSONResponse:
+    """
+    Если файлы не будут адекватно работать, то просто кидайте null
+    """
+    token_data, user_context = current_session
+    user = await user_context.get_current_active_user(db_session, token_data)
+
+    if user.id == interlocutor_id:
+        raise HTTPException(403)
+
+    chat_data = await services.message_manager.get_dialog_id_by_user_id(
+        db_session, user.id, interlocutor_id
+    )
+    
+    if chat_data:
+        raise HTTPException(409)
+
+    conn_context = services.ConnectionContext(None, user.id)
+    chat_data = await services.message_manager.create_dialog_with_message(
+        db_session, user.id, interlocutor_id, message, base_connection_manager, conn_context
+    )
+    
+    if not chat_data:
+        raise HTTPException(404)
+        
     return chat_data
 
 
@@ -63,7 +100,8 @@ async def get_all_dialogs_with_offset_limit(
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
 
-    dialogs_data = await services.message_manager.get_all_user_dialogs_ids_by_user_id_with_sort(
+
+    dialogs_data = await services.message_manager.get_all_user_dialogs_ids_by_user_id_with_last_message_with_sort(
         db_session, user.id
     )
 
@@ -94,6 +132,19 @@ async def get_all_messages_with_offset_limit(
         raise HTTPException(404)
 
     return messages
+
+
+# debug
+@router.delete("/my/dev/delete_dialog")
+async def delete_dialog_by_dialog_id(
+    dialog_id: int,
+    db_session: AsyncSession = Depends(get_session),
+):
+    chat = await services.message_manager.delete_chat(db_session, dialog_id)
+    if not chat:
+        raise HTTPException(404)
+    
+    return chat
 
 
 @ws_router.websocket("/my")

@@ -5,8 +5,6 @@ import secrets
 from typing import Annotated
 from contextlib import asynccontextmanager
 
-import asyncpg
-import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,7 +12,7 @@ from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 
 import core.settings as conf
-from core.database import event_listener, init_models
+from core.database import event_listener, init_models, context_get_session
 
 from core.redis import redis_pool, get_redis_client
 from core.logging import InfoHandlerTG, WarningHandlerTG, ErrorHandlerTG
@@ -41,21 +39,23 @@ class StartedFailed(Exception):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ! Решение только на время разработки
-    info_tg_handler = InfoHandlerTG()
+    # Info handlers ОЧЕНЬ сильно резали производительность
+    #info_tg_handler = InfoHandlerTG()
     warning_tg_handler = WarningHandlerTG()
     error_tg_handler = ErrorHandlerTG()
 
     uvi_access_logger = logging.getLogger("uvicorn.access")
-    uvi_access_logger.addHandler(info_tg_handler)
+    #uvi_access_logger.addHandler(info_tg_handler)
     uvi_access_logger.addHandler(warning_tg_handler)
 
     logger = logging.getLogger("uvicorn")
-    logger.addHandler(info_tg_handler)
+    #logger.addHandler(info_tg_handler)
     logger.addHandler(warning_tg_handler)
     logger.addHandler(error_tg_handler)
 
     await init_models(drop_all=conf.DROP_TABLES)
-    await preload_db_main()
+    async with context_get_session() as session:
+        await preload_db_main(session)
 
     
     async with get_redis_client() as client:
@@ -159,8 +159,10 @@ async def openapi(username: str = Depends(__temp_get_current_username)):
 
 
 if __name__ == "__main__":
+    import uvicorn
+
     uvicorn.run(
-        app="main:app" if conf.DEBUG else app,
+        app="main:app",
         host=conf.SERVER_IP,
         port=conf.SERVER_PORT,
         reload=conf.DEBUG,

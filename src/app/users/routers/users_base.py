@@ -49,31 +49,7 @@ async def sign_up(data: UserSignUp, db_session: AsyncSession = Depends(get_sessi
             status_code=status.HTTP_409_CONFLICT,
             detail="The user with this username already exists in the system.",
         )
-
-    verify_token = create_jwt_token(
-        type_=schemas_t.TokenType.email_verify,
-        email=data.email,
-        secret=conf.EMAIL_SECRET_KEY,
-        expires_delta=conf.EMAIL_ACCESS_TOKEN_EXPIRE_MINUTES,
-    )
-
-    try:
-        # need fix this
-        await user_auth_sender.send_email(
-            sender_name="Danone Market",
-            receiver_email=data.email,
-            subject="User Verify",
-            body=await render_auth_template(
-                template_file="verify_user.html", data={"token": verify_token}
-            ),
-        )
-    except BaseException as ex:
-        logger.error(type(ex))
-        logger.exception(ex)
-        raise HTTPException(
-            detail="email not sended", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
+    await UserService.send_verify_mail(receiver_mail=data.email, logger=logger)
     user = await UserService.create_user(db_session, obj_in=data)
 
     return UserPreDB(**user.to_dict())
@@ -98,6 +74,17 @@ async def get_user(
     return user_dict
 
 
+@router.post(
+    path="/send-verify-mail",
+)
+async def send_verify_mail_again(
+    email: EmailField,
+    db_session: AsyncSession = Depends(get_session),
+):
+    await UserService.send_verify_mail(receiver_mail=email.email, logger=logger)
+    return {"status": "ok"}
+
+    
 @router.patch(path="/me/update/username")
 async def update_user_username(
     data_form: UserUpdateUsername,

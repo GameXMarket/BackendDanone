@@ -13,7 +13,8 @@ from app.tokens.schemas.tokens import JwtPayload
 from app.users import models as models_u, schemas as schemas_u
 from app.users import services as UserService
 from core.security import tokens as TokenSecurity
-from core.database import get_session
+from core.database import get_session, context_get_session
+
 
 from core import settings as conf
 
@@ -97,13 +98,14 @@ async def get_access(
     return token_data
 
 
-async def ws_get_access(token: str = Query(None), db_session: AsyncSession = Depends(get_session)):  
+async def ws_get_access(token: str = Query(None)):  
     if not token:
         return None
     
-    token_data = await TokenSecurity.verify_jwt_token(
-        token=token, secret=conf.ACCESS_SECRET_KEY, db_session=db_session
-    )
+    async with context_get_session() as db_session:
+        token_data = await TokenSecurity.verify_jwt_token(
+            token=token, secret=conf.ACCESS_SECRET_KEY, db_session=db_session
+        )
     
     if not token_data:
         return None
