@@ -59,91 +59,16 @@ class BaseChatManager:
             await db_session.commit()
 
         return chat
-    
-    async def get_all_user_dialogs_ids_by_user_id_with_sort(
-        self, db_session: AsyncSession, user_id: int
-    ) -> Sequence[int]:
-        """
-        Непубличный метод для подгрузки диалогов пользователя с сортировкой
-        """
-        FirstChatMember = aliased(models_m.ChatMember)
-        SecondChatMember = aliased(models_m.ChatMember)
-
-        LastMessageSubquery = (
-            select(
-                models_m.Message.chat_member_id,
-                func.max(models_m.Message.id).label("last_msg_id"),
-            )
-            .join(models_m.ChatMember, models_m.ChatMember.id == models_m.Message.chat_member_id)
-            .group_by(models_m.Message.chat_member_id)
-            .subquery()
-        )
-
-        stmt = (
-            select(
-                FirstChatMember.chat_id,
-                models_u.User.username,
-                models_u.User.id,
-                func.count(models_m.Message.id).label("message_count"),
-                LastMessageSubquery.c.last_msg_id,
-            )
-            .join(SecondChatMember, SecondChatMember.chat_id == FirstChatMember.chat_id)
-            .join(models_u.User, models_u.User.id == SecondChatMember.user_id)
-            .join(models_m.Chat, models_m.Chat.id == FirstChatMember.chat_id)
-            .join(
-                LastMessageSubquery,
-                LastMessageSubquery.c.chat_member_id == FirstChatMember.id,
-                isouter=True,
-            )
-            .join(
-                models_m.Message,
-                and_(
-                    models_m.Message.id == LastMessageSubquery.c.last_msg_id,
-                    models_m.Message.chat_member_id == FirstChatMember.id,
-                ),
-                isouter=True,
-            )
-            .where(
-                and_(
-                    models_m.Chat.is_dialog == True,
-                    FirstChatMember.user_id == user_id,
-                    SecondChatMember.user_id != user_id,
-                )
-            )
-            .group_by(
-                FirstChatMember.chat_id,
-                models_u.User.username,
-                models_u.User.id,
-                LastMessageSubquery.c.last_msg_id,
-            )
-            .order_by(desc(LastMessageSubquery.c.last_msg_id))
-        )
-
-        rows = (await db_session.execute(stmt)).fetchall()
-        dialogs_data = []
-        for row in rows:
-            dialog_data = {
-                "chat_id": row[0],
-                "message_count": row[3],
-                "interlocutor_id": row[2],
-                "interlocutor_username": row[1],
-                "interlocutor_files": await user_attachment_manager.get_only_files(
-                    db_session, row[2]
-                ),
-            }
-            dialogs_data.append(dialog_data)
-
-        return dialogs_data
 
     async def get_all_user_dialogs_ids_by_user_id(
-        self, db_session: AsyncSession, user_id: int
+        self, db_session: AsyncSession, user_id: int, offset: int, limit: int
     ) -> Sequence[int]:
         """
         Непубличный метод для подгрузки диалогов пользователя
         """
         FirstChatMember = aliased(models_m.ChatMember)
         SecondChatMember = aliased(models_m.ChatMember)
-
+        
         stmt = (
             select(FirstChatMember.chat_id, models_u.User.username, models_u.User.id)
             .join(SecondChatMember, SecondChatMember.chat_id == FirstChatMember.chat_id)
@@ -156,10 +81,11 @@ class BaseChatManager:
                     SecondChatMember.user_id != user_id,
                 )
             )
-
+            .offset(offset)
+            .limit(limit)
         )
         rows = (await db_session.execute(stmt)).fetchall()
-
+        
         dialogs_data = []
         for row in rows:
             count_msg_stmt = (
@@ -167,7 +93,7 @@ class BaseChatManager:
                 .join(models_m.ChatMember, models_m.ChatMember.id == models_m.Message.chat_member_id)
                 .where(models_m.ChatMember.chat_id == row[0])
             )
-
+            
             if (msg_count := (await db_session.execute(count_msg_stmt)).scalar()) == 0:
                 continue
             
