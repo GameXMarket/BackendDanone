@@ -1,7 +1,7 @@
 import time
 from typing import List
 
-from sqlalchemy import func, select, Column, Integer, String, Text, Enum, ForeignKey, CheckConstraint, VARCHAR
+from sqlalchemy import func, select, Column, Integer, String, Text, Enum, ForeignKey, CheckConstraint, Boolean
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import relationship, Mapped
 
@@ -25,12 +25,13 @@ class Offer(Base):
     name = Column(String(50), nullable=False)
     description = Column(Text, nullable=False)
     price = Column(Integer, CheckConstraint('price >= 1 and price <=1000000', name='check_price'), nullable=False)
-    count = Column(Integer, CheckConstraint('(count IS NULL) OR (count >= 0 AND count <= 1000000)', name='check_count'), nullable=True, default=None)
+    count = Column(Integer, CheckConstraint('count >= 0 AND count <= 1000000', name='check_count'), nullable=False)
     status = Column(
         Enum("active", "hidden", "deleted", name="offer_statuses"),
         nullable=False,
         default="active",
     )
+    is_autogive_enabled = Column(Boolean, nullable=True)
     upped_at = Column(Integer, nullable=False, default=int(time.time()))
 
     user: Mapped["User"] = relationship(back_populates="offers", lazy="noload")
@@ -42,7 +43,10 @@ class Offer(Base):
     )
 
     async def get_real_count(self, db_session: AsyncSession):
-        if self.count != None:
+        if self.is_autogive_enabled == None:
+            return self.count
+        
+        elif self.is_autogive_enabled == False:
             return self.count
 
         value_count_stmt = select(func.count(Delivery.id)).where(

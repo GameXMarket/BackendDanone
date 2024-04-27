@@ -179,8 +179,7 @@ async def change_offer_delivery_status(
     if not offer:
         raise HTTPException(404)
     
-    new_count = None if enabled else 0
-    new_offer = await services_f.offers_my.update_offer(db_session, db_obj=offer, obj_in={"count": new_count})
+    new_offer = await services_f.offers_my.update_offer(db_session, db_obj=offer, obj_in={"is_autogive_enabled": enabled})
     
     return new_offer
 

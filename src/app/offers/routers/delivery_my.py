@@ -89,7 +89,7 @@ async def create_delivery(
         if not offer:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-        elif offer.count != None:
+        elif not offer.is_autogive_enabled:
             raise HTTPException(403, detail="Offer does not support delivery")
         
         created_delivery: models_f.Delivery = await services_f.create_delivery(
