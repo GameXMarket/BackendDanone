@@ -25,7 +25,7 @@ class PurchaseManager:
             return 404
         
         offer_real_count = await offer.get_real_count(db_session)
-        offer_with_delivery = offer.count == None
+        offer_with_delivery = offer.count is None
         
         if new_purchase_data.count > offer_real_count:
             return 403

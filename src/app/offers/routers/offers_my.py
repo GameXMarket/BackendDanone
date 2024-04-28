@@ -185,7 +185,7 @@ async def change_offer_delivery_status(
     if not offer:
         raise HTTPException(404)
     
-    elif offer.is_autogive_enabled == None:
+    elif offer.is_autogive_enabled is None:
         raise HTTPException(403, "Offer does not support delivery")
     
     new_offer = await services_f.offers_my.update_offer(db_session, db_obj=offer, obj_in={"is_autogive_enabled": enabled})
