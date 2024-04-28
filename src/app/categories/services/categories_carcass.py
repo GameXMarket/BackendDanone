@@ -45,6 +45,7 @@ async def get_all_with_offset_limit(
 ) -> List[models.CategoryCarcass]:
     stmt = (
         select(models.CategoryCarcass)
+        .where(models.CategoryCarcass.is_root == True)
         .order_by(models.CategoryCarcass.created_at)
         .offset(offset)
         .limit(limit)
