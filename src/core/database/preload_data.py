@@ -116,33 +116,44 @@ async def __init_categories_carcass(db_session: AsyncSession):
 
 async def __init_categories_values(db_session: AsyncSession):
     values_to_create = [
-        {"carcass_id": 1, "value": "Counter-Strike 2", "next_carcass_id": 3},
-        {"carcass_id": 3, "value": "Буст ELO)", "next_carcass_id": 9},
-        {"carcass_id": 9, "value": "25 ELO", "next_carcass_id": None, "is_offer_with_delivery": False},
-        {"carcass_id": 9, "value": "50 ELO", "next_carcass_id": None, "is_offer_with_delivery": False},
-        {"carcass_id": 9, "value": "100 ELO", "next_carcass_id": None, "is_offer_with_delivery": True},
-        {"carcass_id": 9, "value": "200 ELO", "next_carcass_id": None, "is_offer_with_delivery": True},
+        # New category CS2
+        {"carcass_id": 1, "value": "Counter-Strike 2", "next_carcass_id": 3}, # 1
+        # Subcategory
+        {"carcass_id": 3, "value": "Буст ELO)", "next_carcass_id": 9}, # 2
 
-        {"carcass_id": 1, "value": "Dota 2", "next_carcass_id": 4},
-        {"carcass_id": 4, "value": "Буст эмэмэрау)", "next_carcass_id": 8},
-        {"carcass_id": 8, "value": "100 ММР", "next_carcass_id": None, "is_offer_with_delivery": False},
-        {"carcass_id": 8, "value": "1000 ММР", "next_carcass_id": None, "is_offer_with_delivery": False},
-        {"carcass_id": 8, "value": "2000 ММР", "next_carcass_id": None, "is_offer_with_delivery": True},
-        {"carcass_id": 8, "value": "3000 ММР", "next_carcass_id": None, "is_offer_with_delivery": True},
+        {"carcass_id": 9, "value": "25 ELO", "next_carcass_id": None, "is_offer_with_delivery": False}, # 3
+        {"carcass_id": 9, "value": "50 ELO", "next_carcass_id": None, "is_offer_with_delivery": False}, # 4
+        {"carcass_id": 9, "value": "100 ELO", "next_carcass_id": None, "is_offer_with_delivery": True}, # 5
+        {"carcass_id": 9, "value": "200 ELO", "next_carcass_id": None, "is_offer_with_delivery": True}, # 6
 
+        # New category Dota2
+        {"carcass_id": 1, "value": "Dota 2", "next_carcass_id": 4}, # 7
+        # Subcategory
+        {"carcass_id": 4, "value": "Буст эмэмэрау)", "next_carcass_id": 8}, # 8
 
-        {"carcass_id": 1, "value": "Brawl Stars", "next_carcass_id": 2},
-        {"carcass_id": 2, "value": "Покупка гемов", "next_carcass_id": 6},
-        {"carcass_id": 2, "value": "Боевой пропуск", "next_carcass_id": 5},
-        {"carcass_id": 6, "value": "Supersell ID", "next_carcass_id": 7},
-        {"carcass_id": 6, "value": "Встреча в жизни", "next_carcass_id": 7},
-        {"carcass_id": 6, "value": "Через сторонние", "next_carcass_id": 7},
-        {"carcass_id": 7, "value": "30 Гемов", "next_carcass_id": None, "is_offer_with_delivery": False},
-        {"carcass_id": 7, "value": "170 Гемов", "next_carcass_id": None, "is_offer_with_delivery": False},
-        {"carcass_id": 7, "value": "2000 Гемов", "next_carcass_id": None, "is_offer_with_delivery": False},
-        {"carcass_id": 5, "value": "1 уровень БП", "next_carcass_id": None, "is_offer_with_delivery": True},
-        {"carcass_id": 5, "value": "5 уровней БП", "next_carcass_id": None, "is_offer_with_delivery": True},
-        {"carcass_id": 5, "value": "10 уровней БП", "next_carcass_id": None, "is_offer_with_delivery": True},
+        {"carcass_id": 8, "value": "100 ММР", "next_carcass_id": None, "is_offer_with_delivery": False}, # 9 
+        {"carcass_id": 8, "value": "1000 ММР", "next_carcass_id": None, "is_offer_with_delivery": False}, # 10
+        {"carcass_id": 8, "value": "2000 ММР", "next_carcass_id": None, "is_offer_with_delivery": True}, # 11
+        {"carcass_id": 8, "value": "3000 ММР", "next_carcass_id": None, "is_offer_with_delivery": True}, # 12
+
+        # New category BrawlStars
+        {"carcass_id": 1, "value": "Brawl Stars", "next_carcass_id": 2}, # 13
+        # Subcategory
+        {"carcass_id": 2, "value": "Покупка гемов", "next_carcass_id": 6}, # 14
+        # Subcategory
+        {"carcass_id": 2, "value": "Боевой пропуск", "next_carcass_id": 5}, # 15
+
+        {"carcass_id": 6, "value": "Supersell ID", "next_carcass_id": 7}, # 16
+        {"carcass_id": 6, "value": "Встреча в жизни", "next_carcass_id": 7}, # 17
+        {"carcass_id": 6, "value": "Через сторонние", "next_carcass_id": 7}, # 18
+
+        {"carcass_id": 7, "value": "30 Гемов", "next_carcass_id": None, "is_offer_with_delivery": False}, # 19
+        {"carcass_id": 7, "value": "170 Гемов", "next_carcass_id": None, "is_offer_with_delivery": False}, # 20
+        {"carcass_id": 7, "value": "2000 Гемов", "next_carcass_id": None, "is_offer_with_delivery": False}, # 21
+        
+        {"carcass_id": 5, "value": "1 уровень БП", "next_carcass_id": None, "is_offer_with_delivery": True}, # 22
+        {"carcass_id": 5, "value": "5 уровней БП", "next_carcass_id": None, "is_offer_with_delivery": True}, # 23
+        {"carcass_id": 5, "value": "10 уровней БП", "next_carcass_id": None, "is_offer_with_delivery": True}, # 24
     ]
 
     values = await services_c.categories_values.get_all(db_session=db_session)
@@ -159,33 +170,54 @@ async def __init_categories_values(db_session: AsyncSession):
 async def __init_offers(db_session: AsyncSession):
     offers_to_create = [
         {
-            "name": "BrawStars...",
-            "description": "Brawl..stars",
-            "price": 100,
-            "count": 5,
-            "category_value_ids": [13, 15, 17],
-        },
-        {
-            "name": "Dota2 Boost",
-            "description": "Dota 2 boost mmr",
-            "price": 50,
-            "count": 50,
-            "category_value_ids": [7, 8, 9],
-        },
-        {
-            "name": "Cs2",
-            "description": "CS2 Boost ELO",
+            "name": "CS2 50 elo without delivery 😦",
+            "description": "Просто описание для 50 elo без автовыдачи",
             "price": 1000,
             "count": 20,
-            "category_value_ids": [1, 2, 3],
+            "category_value_ids": [1, 2, 4],
+        },
+        {
+            "name": "CS2 100 elo with delivery 🎉",
+            "description": "Просто описание для 100 elo с автовыдачей",
+            "price": 1000,
+            "count": 20,
+            "category_value_ids": [1, 2, 5],
+        },
+        {
+            "name": "Dota2 буст 1000ммр без автовыдачи ✨",
+            "description": "Просто описание для буста 1000ммр без автовыдачи",
+            "price": 50,
+            "count": 50,
+            "category_value_ids": [7, 8, 10],
+        },
+        {
+            "name": "Dota2 буст 2000ммр с автовыдачей ❤️",
+            "description": "Просто описание для буста 2000ммр автовыдачей",
+            "price": 50,
+            "count": 50,
+            "category_value_ids": [7, 8, 11],
+        },
+        {
+            "name": "BrawStars gems without delivery 🤍",
+            "description": "Просто описание для гемов без автовыдачи",
+            "price": 100,
+            "count": 5,
+            "category_value_ids": [13, 14, 16, 19],
+        },
+        {
+            "name": "BrawStars battle pass with delivery 😭",
+            "description": "Просто описания для бп с автовыдачей",
+            "price": 100,
+            "count": 5,
+            "category_value_ids": [13, 15, 23],
         },
     ]
 
-    offer = await sevices_f.get_mini_by_offset_limit(
+    offers = await sevices_f.get_mini_by_offset_limit(
         db_session=db_session, offset=0, limit=10
     )
 
-    if not offer or conf.DROP_TABLES:
+    if not offers or conf.DROP_TABLES:
         for offer_data in offers_to_create:
             await sevices_f.create_offer(
                 db_session=db_session,

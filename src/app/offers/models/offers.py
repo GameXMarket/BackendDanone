@@ -31,7 +31,7 @@ class Offer(Base):
         nullable=False,
         default="active",
     )
-    is_autogive_enabled = Column(Boolean, nullable=True)
+    is_autogive_enabled = Column(Boolean, nullable=True, default=None)
     upped_at = Column(Integer, nullable=False, default=int(time.time()))
 
     user: Mapped["User"] = relationship(back_populates="offers", lazy="noload")
@@ -43,12 +43,9 @@ class Offer(Base):
     )
 
     async def get_real_count(self, db_session: AsyncSession):
-        if self.is_autogive_enabled == None:
+        if not self.is_autogive_enabled:
             return self.count
         
-        elif self.is_autogive_enabled == False:
-            return self.count
-
         value_count_stmt = select(func.count(Delivery.id)).where(
             Delivery.offer_id == self.id
         )

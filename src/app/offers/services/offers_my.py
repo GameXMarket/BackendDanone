@@ -273,13 +273,22 @@ async def create_offer(
 ) -> models_f.Offer:
     js_obj = obj_in.model_dump(exclude_unset=True)
     category_ids = js_obj.pop("category_value_ids")
+    # todo Сюда проверку на то все ли категории по дереву идут
+    
+    is_offer_with_delivery_stmt = select(
+        exists(CategoryValue.is_offer_with_delivery)
+        .where(CategoryValue.id.in_(category_ids))
+        .where(CategoryValue.is_offer_with_delivery == True)
+    )
+    is_offer_with_delivery = (await db_session.execute(is_offer_with_delivery_stmt)).scalar_one_or_none()
+    is_autogive_enabled = False if is_offer_with_delivery else None
+    
     db_obj = models_f.Offer(
         user_id=user_id,
         status="active",  # ! Temp testing
-        **js_obj,
-        created_at=int(time.time()),
-        updated_at=int(time.time()),
+        is_autogive_enabled=is_autogive_enabled,
         upped_at=int(time.time()),
+        **js_obj,
     )
 
     db_session.add(db_obj)
