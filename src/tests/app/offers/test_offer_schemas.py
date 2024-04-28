@@ -43,7 +43,7 @@ async def test_offer_pre_db():
     assert obj.price == 1000
     assert obj.count == 1
     assert obj.user_id == 1
-    assert obj.status == "active"
+    assert obj.status == "hidden"
     assert obj.created_at == 123456789
     assert obj.updated_at == 123456789
     assert obj.upped_at == 123456789
