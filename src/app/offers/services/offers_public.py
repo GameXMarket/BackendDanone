@@ -86,7 +86,7 @@ async def get_mini_by_offset_limit(
         )
         .where(models_f.Offer.status == "active")
         .order_by(
-            desc(models_f.Offer.created_at)
+            desc(models_f.Offer.upped_at)
             if is_descending is None
             else desc(models_f.Offer.price)
             if is_descending

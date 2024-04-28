@@ -30,7 +30,6 @@ class PurchaseManager:
         if new_purchase_data.count > offer_real_count:
             return 403
         
-        
         if not offer_with_delivery:
             await update_offer(db_session, offer, {"count": offer.count - new_purchase_data.count}, need_commit=False)
         
