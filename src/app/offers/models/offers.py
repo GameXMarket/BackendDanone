@@ -29,7 +29,7 @@ class Offer(Base):
     status = Column(
         Enum("active", "hidden", "deleted", name="offer_statuses"),
         nullable=False,
-        default="active",
+        default="hidden",
     )
     is_autogive_enabled = Column(Boolean, nullable=True, default=None)
     upped_at = Column(Integer, nullable=False, default=int(time.time()))

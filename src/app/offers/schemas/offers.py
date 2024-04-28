@@ -34,7 +34,7 @@ class OfferBase(OfferMiniBase):
 class OfferPreDB(OfferBase):
     id: int
     user_id: int
-    status: OfferStatusEnum = OfferStatusEnum.active.value
+    status: OfferStatusEnum = OfferStatusEnum.hidden.value
     created_at: int
     updated_at: int
     upped_at: int

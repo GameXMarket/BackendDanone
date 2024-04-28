@@ -216,13 +216,14 @@ async def __init_offers(db_session: AsyncSession):
     offers = await sevices_f.get_mini_by_offset_limit(
         db_session=db_session, offset=0, limit=10
     )
-
+    
     if not offers or conf.DROP_TABLES:
         for offer_data in offers_to_create:
             await sevices_f.create_offer(
                 db_session=db_session,
                 user_id=1,
                 obj_in=schemas_f.CreateOffer(**offer_data),
+                status="active",
             )
 
 

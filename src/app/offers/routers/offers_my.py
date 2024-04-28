@@ -1,7 +1,8 @@
 import logging
+from typing import Literal
 
 import fastapi
-from fastapi import Depends, APIRouter, HTTPException, status
+from fastapi import Depends, APIRouter, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -56,6 +57,7 @@ async def get_mini_with_offset_limit(
     limit: int = 10,
     search_query: str = None,
     is_descending: bool = None,
+    statuses: list[Literal["active", "hidden", "deleted"]] = fastapi.Query(default=["active", "hidden", "deleted"], alias="status"),
     category_value_ids: list[int] = fastapi.Query(default=None, examples=["[1, 2]"]),
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
         base_session
@@ -81,6 +83,7 @@ async def get_mini_with_offset_limit(
         search_query=search_query,
         is_descending=is_descending,
         category_value_ids=category_value_ids,
+        statuses=statuses
     )
 
     return offers
@@ -162,7 +165,7 @@ async def get_offers_by_category(
     return {"offers": offers, "files": value_file}
 
 
-@router.post(path="/my/delivery")
+@router.patch(path="/my/delivery")
 async def change_offer_delivery_status(
     enabled: bool,
     offer_id: int,
@@ -190,12 +193,30 @@ async def change_offer_delivery_status(
     return new_offer
 
 
+@router.patch(path="/my/status_change")
+async def change_offer_status(
+    status: Literal["active", "hidden"],
+    offer_id: int,
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        base_session
+    ),
+    db_session: AsyncSession = Depends(get_session),
+):
+    "Метод меняет видимоть оффера для отсальных людей"
+    token_data, user_context = current_session
+    user = await user_context.get_current_active_user(db_session, token_data)
+
+    offer = await services_f.offers_my.get_raw_offer_by_user_id(db_session, user.id, offer_id)
+    if not offer:
+        raise HTTPException(404)
+
+    new_offer = await services_f.offers_my.update_offer(db_session, db_obj=offer, obj_in={"status": status})
+    
+    return new_offer
+
+
 @router.get(
     path="/my/{offer_id}",
-    responses={
-        **{200: {"model": schemas_f.OfferPreDB}, 404: {"model": schemas_f.OfferError}},
-        **deps.build_response(deps.UserSession.get_current_active_user),
-    },
 )
 async def get_by_id(
     offer_id: int,
@@ -214,7 +235,7 @@ async def get_by_id(
     )
 
     if not offer:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        raise HTTPException(404)
 
     return offer
 
@@ -246,7 +267,7 @@ async def update_offer(
     )
 
     if not offer_db:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        raise HTTPException(404)
 
     new_offer = await services_f.update_offer(
         db_session, db_obj=offer_db, obj_in=offer_in
@@ -281,6 +302,6 @@ async def delete_offer(
     )
 
     if not deleted_offer:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        raise HTTPException(404)
 
     return deleted_offer

@@ -1,5 +1,5 @@
 import time
-from typing import List, cast
+from typing import List, Literal, cast
 
 from fastapi import Depends
 from fastapi.encoders import jsonable_encoder
@@ -76,7 +76,7 @@ async def get_mini_by_user_id_offset_limit(
     user_id: int,
     is_descending: bool = None,
     search_query: str = None,
-    status: models_f.Offer.status = "active",
+    statuses: list[Literal["active", "hidden", "deleted"]] = ["active", "hidden", "deleted"],
 ) -> list[models_f.Offer]:
     stmt = (
         select(
@@ -85,7 +85,8 @@ async def get_mini_by_user_id_offset_limit(
             models_f.Offer.description,
             models_f.Offer.price,
         )
-        .where(and_(models_f.Offer.user_id == user_id, models_f.Offer.status == status))
+        .where(models_f.Offer.user_id == user_id)
+        .where(models_f.Offer.status.in_(statuses))
         .order_by(
             desc(models_f.Offer.created_at)
             if is_descending is None
@@ -109,8 +110,6 @@ async def get_mini_by_user_id_offset_limit(
 
     if search_query:
         stmt = stmt.where(models_f.Offer.name.ilike(f"%{search_query}%"))
-
-    stmt = stmt.where(models_f.Offer.status == status)
 
     rows = await db_session.execute(stmt)
 
@@ -269,7 +268,7 @@ async def get_offers_by_value_id(
 
 
 async def create_offer(
-    db_session: AsyncSession, user_id: int, obj_in: schemas_f.CreateOffer
+    db_session: AsyncSession, user_id: int, obj_in: schemas_f.CreateOffer, status: str = None
 ) -> models_f.Offer:
     js_obj = obj_in.model_dump(exclude_unset=True)
     category_ids = js_obj.pop("category_value_ids")
@@ -285,11 +284,13 @@ async def create_offer(
     
     db_obj = models_f.Offer(
         user_id=user_id,
-        status="active",  # ! Temp testing
         is_autogive_enabled=is_autogive_enabled,
         upped_at=int(time.time()),
         **js_obj,
     )
+    
+    if status:
+        db_obj.status = status
 
     db_session.add(db_obj)
     await db_session.flush()
