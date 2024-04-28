@@ -76,7 +76,7 @@ async def get_mini_by_user_id_offset_limit(
     user_id: int,
     is_descending: bool = None,
     search_query: str = None,
-    statuses: list[Literal["active", "hidden", "deleted"]] = ["active", "hidden", "deleted"],
+    statuses: list[Literal["active", "hidden"]] = ["active", "hidden"],
 ) -> list[models_f.Offer]:
     stmt = (
         select(

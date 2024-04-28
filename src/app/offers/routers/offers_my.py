@@ -57,7 +57,7 @@ async def get_mini_with_offset_limit(
     limit: int = 10,
     search_query: str = None,
     is_descending: bool = None,
-    statuses: list[Literal["active", "hidden", "deleted"]] = fastapi.Query(default=["active", "hidden", "deleted"], alias="status"),
+    statuses: list[Literal["active", "hidden"]] = fastapi.Query(default=["active", "hidden"], alias="status"),
     category_value_ids: list[int] = fastapi.Query(default=None, examples=["[1, 2]"]),
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
         base_session
