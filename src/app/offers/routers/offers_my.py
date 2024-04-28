@@ -1,4 +1,5 @@
 import logging
+from typing import Literal
 
 import fastapi
 from fastapi import Depends, APIRouter, HTTPException, status
@@ -56,6 +57,7 @@ async def get_mini_with_offset_limit(
     limit: int = 10,
     search_query: str = None,
     is_descending: bool = None,
+    statuses: list[Literal["active", "hidden", "deleted"]] = fastapi.Query(default=["active", "hidden", "deleted"], alias="status"),
     category_value_ids: list[int] = fastapi.Query(default=None, examples=["[1, 2]"]),
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
         base_session
@@ -81,6 +83,7 @@ async def get_mini_with_offset_limit(
         search_query=search_query,
         is_descending=is_descending,
         category_value_ids=category_value_ids,
+        statuses=statuses
     )
 
     return offers
@@ -192,10 +195,6 @@ async def change_offer_delivery_status(
 
 @router.get(
     path="/my/{offer_id}",
-    responses={
-        **{200: {"model": schemas_f.OfferPreDB}, 404: {"model": schemas_f.OfferError}},
-        **deps.build_response(deps.UserSession.get_current_active_user),
-    },
 )
 async def get_by_id(
     offer_id: int,
