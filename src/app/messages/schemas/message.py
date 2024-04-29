@@ -51,9 +51,19 @@ class MessageCreate(BaseModel):
         return v.strip().replace("  ", " ")
 
 
-class SystemMessageBroadcast(BaseModel):
-    user_id: int = -1
+class SystemMessageCreate(BaseModel):
+    chat_id: int
     content: str
+    
+    def get_message_broadcast(self):
+        return SystemMessageBroadcast(
+            chat_id=self.chat_id,
+            content=self.content
+        )
+
+
+class SystemMessageBroadcast(SystemMessageCreate):
+    user_id: int = -1
 
 
 class MessageBroadcast(BaseModel):

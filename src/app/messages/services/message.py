@@ -303,8 +303,8 @@ class BaseMessageManager(BaseChatMemberManager):
             await db_session.commit()
             return message
     
-    async def create_system_message(self, db_session: AsyncSession, chat_id: int, content: str):
-        new_message = models_m.SystemMessage(chat_id=chat_id, content=content)
+    async def create_system_message(self, db_session: AsyncSession, message: schemas_m.SystemMessageCreate):
+        new_message = models_m.SystemMessage(chat_id=message.chat_id, content=message.content)
         db_session.add(new_message)
         await db_session.commit()
         await db_session.refresh(new_message)
@@ -546,11 +546,15 @@ class ChatConnectionManager:
         if not conn_context.websocket:
             return message_broadcast
     
-    async def send_system_message(
-        self, message: schemas_m.SystemMessageBroadcast,
-        users_ids_broadcast: list[int | bytes]
+    async def send_and_create_system_message(
+        self,
+        db_session: AsyncSession,
+        message: schemas_m.SystemMessageCreate,
+        users_ids_broadcast: list[int | bytes],
     ):
-        await self.broadcast(message, users_ids_broadcast)
+        broadcast_message = message.get_message_broadcast()
+        await message_manager.create_system_message(db_session, message)
+        await self.broadcast(broadcast_message, users_ids_broadcast)
 
     async def start_listening(self, conn_context: ConnectionContext) -> NoReturn:
         while True:
