@@ -173,42 +173,42 @@ async def __init_offers(db_session: AsyncSession):
             "name": "CS2 50 elo without delivery 😦",
             "description": "Просто описание для 50 elo без автовыдачи",
             "price": 1000,
-            "count": 20,
+            "count": 100,
             "category_value_ids": [1, 2, 4],
         },
         {
             "name": "CS2 100 elo with delivery 🎉",
             "description": "Просто описание для 100 elo с автовыдачей",
             "price": 1000,
-            "count": 20,
+            "count": 100,
             "category_value_ids": [1, 2, 5],
         },
         {
             "name": "Dota2 буст 1000ммр без автовыдачи ✨",
             "description": "Просто описание для буста 1000ммр без автовыдачи",
-            "price": 50,
-            "count": 50,
+            "price": 2000,
+            "count": 200,
             "category_value_ids": [7, 8, 10],
         },
         {
             "name": "Dota2 буст 2000ммр с автовыдачей ❤️",
             "description": "Просто описание для буста 2000ммр автовыдачей",
-            "price": 50,
-            "count": 50,
+            "price": 2000,
+            "count": 200,
             "category_value_ids": [7, 8, 11],
         },
         {
             "name": "BrawStars gems without delivery 🤍",
             "description": "Просто описание для гемов без автовыдачи",
-            "price": 100,
-            "count": 5,
+            "price": 3000,
+            "count": 300,
             "category_value_ids": [13, 14, 16, 19],
         },
         {
             "name": "BrawStars battle pass with delivery 😭",
             "description": "Просто описания для бп с автовыдачей",
-            "price": 100,
-            "count": 5,
+            "price": 3000,
+            "count": 300,
             "category_value_ids": [13, 15, 23],
         },
     ]
@@ -219,12 +219,16 @@ async def __init_offers(db_session: AsyncSession):
     
     if not offers or conf.DROP_TABLES:
         for offer_data in offers_to_create:
-            await sevices_f.create_offer(
-                db_session=db_session,
-                user_id=1,
-                obj_in=schemas_f.CreateOffer(**offer_data),
-                status="active",
-            )
+            for user_id in (1, 2):
+                offer = schemas_f.CreateOffer(**offer_data)
+                offer.name = offer.name + f" {user_id}"
+                offer.description = offer.description + f"from user with id: {user_id}"
+                await sevices_f.create_offer(
+                    db_session=db_session,
+                    user_id=user_id,
+                    obj_in=offer,
+                    status="active",
+                )
 
 
 async def __init_user(db_session: AsyncSession):

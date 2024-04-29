@@ -79,14 +79,14 @@ async def test_get_my_offers_byvalueid(async_client: AsyncClient):
 
 async def test_get_my_offer_by_id(async_client: AsyncClient):
     response = await async_client.get(
-        base_endpoint + "my/3/",
+        base_endpoint + "my/3",
     )
     assert response.status_code == 200
 
 
 async def test_update_my_offer_by_id(async_client: AsyncClient):
     response = await async_client.put(
-        base_endpoint + "my/3/",
+        base_endpoint + "my/3",
         json={
             "name": "Offer name",
             "description": "Offer description",
@@ -100,6 +100,6 @@ async def test_update_my_offer_by_id(async_client: AsyncClient):
 
 async def test_delete_my_offer_by_id(async_client: AsyncClient):
     response = await async_client.delete(
-        base_endpoint + "my/1/",
+        base_endpoint + "my/1",
     )
     assert response.status_code == 200
