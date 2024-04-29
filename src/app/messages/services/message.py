@@ -482,7 +482,7 @@ class ChatConnectionManager:
             del self.ws_connections[conn_context.user_id]
 
     async def broadcast(
-        self, message: schemas_m.MessageBroadcast, target_users_ids: list[int | bytes]
+        self, message: schemas_m.MessageBroadcast | Any, target_users_ids: list[int | bytes]
     ):
         for user_id in target_users_ids:
             if not (user_websockets := self.ws_connections.get(int(user_id))):
@@ -545,7 +545,12 @@ class ChatConnectionManager:
         # Ещё один костыль 😭
         if not conn_context.websocket:
             return message_broadcast
-            
+    
+    async def send_system_message(
+        self, message: schemas_m.SystemMessageBroadcast,
+        users_ids_broadcast: list[int | bytes]
+    ):
+        await self.broadcast(message, users_ids_broadcast)
 
     async def start_listening(self, conn_context: ConnectionContext) -> NoReturn:
         while True:
