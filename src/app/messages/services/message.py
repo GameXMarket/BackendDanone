@@ -404,7 +404,7 @@ class BaseMessageManager(BaseChatMemberManager):
             return None
         
         interlocutor_notification = user_notification_manager.sse_managers.get(interlocutor_id)
-        user_notification = user_notification_manager.sse_managers.get(user_notification)
+        user_notification = user_notification_manager.sse_managers.get(user_id)
         event_data = json.dumps(dialog_data).replace("\n", " ")
         
         if interlocutor_notification:
