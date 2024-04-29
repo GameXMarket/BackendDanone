@@ -104,10 +104,18 @@ class PurchaseManager:
             if not dialog_data:
                 raise HTTPException(404, "User not found, How did you get here?")
 
+            event_data = json.dumps(dialog_data).replace("\n", " ")
+            if buyer_notifications:
+                await buyer_notifications.create_event(
+                    event="new_chat",
+                    data=event_data,
+                    comment="new chat with you created",
+                )
+            
             if seller_notifications:
                 await seller_notifications.create_event(
                     event="new_chat",
-                    data=json.dumps(dialog_data).replace("\n", " "),
+                    data=event_data,
                     comment="new chat with you created",
                 )
 

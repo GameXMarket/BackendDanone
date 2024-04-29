@@ -403,11 +403,21 @@ class BaseMessageManager(BaseChatMemberManager):
         if not dialog_data:
             return None
         
-        context_manager = user_notification_manager.sse_managers.get(interlocutor_id)
-        if context_manager:
-            await context_manager.create_event(
+        interlocutor_notification = user_notification_manager.sse_managers.get(interlocutor_id)
+        user_notification = user_notification_manager.sse_managers.get(user_notification)
+        event_data = json.dumps(dialog_data).replace("\n", " ")
+        
+        if interlocutor_notification:
+            await interlocutor_notification.create_event(
                 event="new_chat",
-                data=json.dumps(dialog_data).replace("\n", " "),
+                data=event_data,
+                comment="new chat with you created"
+            )
+        
+        if user_notification:
+            await user_notification.create_event(
+                event="new_chat",
+                data=event_data,
                 comment="new chat with you created"
             )
         
