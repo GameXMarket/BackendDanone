@@ -38,7 +38,6 @@ class PurchaseManager:
         if not offer:
             raise HTTPException(404, "Offer doesn't exist")
 
-        # ! temp comment for debug
         if offer.user_id == user_id:
             raise HTTPException(403, "BuyerID cannot be equal to the SellerID")
 
