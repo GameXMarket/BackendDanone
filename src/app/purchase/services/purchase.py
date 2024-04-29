@@ -29,6 +29,7 @@ class PurchaseManager:
         if not offer:
             raise HTTPException(404, "Offer doesn't exist")
         
+        # ! temp comment for debug
         #if offer.user_id == user_id:
         #    raise HTTPException(403, "BuyerID cannot be equal to the SellerID")
         
@@ -75,6 +76,8 @@ class PurchaseManager:
                 await db_session.execute(create_parcel_stmt)
                 await self.__update_purchase(db_session, purchase, {"status": "completed"})
 
+        # todo добавить уведомления в систем месседж
+        
         await db_session.commit()
         await db_session.refresh(purchase)
                 
