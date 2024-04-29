@@ -192,7 +192,7 @@ async def __init_offers(db_session: AsyncSession):
         },
         {
             "name": "Dota2 буст 2000ммр с автовыдачей ❤️",
-            "description": "Просто описание для буста 2000ммр автовыдачей",
+            "description": "Просто описание для буста 2000ммр с автовыдачей",
             "price": 2000,
             "count": 200,
             "category_value_ids": [7, 8, 11],
@@ -218,17 +218,34 @@ async def __init_offers(db_session: AsyncSession):
     )
     
     if not offers or conf.DROP_TABLES:
-        for offer_data in offers_to_create:
-            for user_id in (1, 2):
+        for user_id in (1, 2):
+            for offer_data in offers_to_create:
                 offer = schemas_f.CreateOffer(**offer_data)
-                offer.name = offer.name + f" {user_id}"
-                offer.description = offer.description + f"from user with id: {user_id}"
-                await sevices_f.create_offer(
+                offer.name = offer.name + f" us_id: {user_id}"
+                offer.description = offer.description + f" from user with id: {user_id}"
+                db_offer = await sevices_f.create_offer(
                     db_session=db_session,
                     user_id=user_id,
                     obj_in=offer,
                     status="active",
                 )
+                
+                is_autogive_enabled = True if db_offer.is_autogive_enabled == False else None
+                await sevices_f.update_offer(db_session, db_offer, {"is_autogive_enabled": is_autogive_enabled})        
+                await __init_delivery(db_session, db_offer)
+
+
+async def __init_delivery(db_session: AsyncSession, offer: models_f.Offer):
+    if offer.is_autogive_enabled != True:
+        return
+    
+    for i in range(1, 10+1):
+        delivery_value = f"delivery || offer_name: {offer.name} || offer_id: {offer.id} || delivery_count: {i} ||"
+        delivery = schemas_f.Delivery(
+            offer_id=offer.id,
+            value=delivery_value
+        )
+        await sevices_f.create_delivery(db_session, delivery)
 
 
 async def __init_user(db_session: AsyncSession):

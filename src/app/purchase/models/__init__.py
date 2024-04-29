@@ -1,1 +1,1 @@
-from .purchase import Purchase
+from .purchase import Purchase, Parcel
