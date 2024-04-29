@@ -5,11 +5,14 @@ from inspect import cleandoc
 from fastapi.encoders import jsonable_encoder
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from sqlalchemy import insert, select, delete
 
 from app.offers.services import get_raw_offer_by_id, update_offer
 from .. import schemas as schemas_p, models as models_p
 from app.offers import models as models_f
+from app.users import models as models_u
+from app.attachment.services import offer_attachment_manager, user_attachment_manager
 
 
 #  мб нужно начать писать более сложные обработчики ошибок, 
@@ -135,15 +138,45 @@ class PurchaseManager:
         limit: int
 
     ):
+        _result = []
+        
         stmt = (
-            select(models_p.Purchase)
+            select(
+                models_p.Purchase.name,
+                models_p.Purchase.count,
+                models_p.Purchase.created_at,
+                models_p.Purchase.price,
+                models_p.Purchase.status,
+                models_p.Purchase.offer_id,
+                models_u.User.id, # Seller user_id
+                models_u.User.username,
+            )
+            .join(models_f.Offer, models_f.Offer.id == models_p.Purchase.offer_id)
+            .join(models_u.User, models_u.User.id == models_f.Offer.user_id)
             .where(models_p.Purchase.buyer_id == buyer_id)
             .offset(offset)
             .limit(limit)
         )
+        rows = await db_session.execute(stmt)
         
-        result = await db_session.execute(stmt)
-        return result.scalars().all()
+        for row in rows:
+            seller_files = await user_attachment_manager.get_only_files(db_session, row[6])
+            offer_files = await offer_attachment_manager.get_only_files(db_session, row[5])
+            purchase_dict = {
+                "name": row[0],
+                "count": row[1],
+                "created_at": row[2],
+                "price": row[3],
+                "status": row[4],
+                "seller_username": row[7],
+                "seller_files": seller_files,
+                "purchase_files": offer_files,
+            }
+            
+            _result.append(purchase_dict)
+        
+        return _result
+        
 
 
 purchase_manager = PurchaseManager()
