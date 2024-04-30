@@ -23,7 +23,7 @@ from app.offers import offers_routers, delivery_routers
 from app.categories import category_routers
 from app.messages import message_routers
 from app.attachment import attachment_routers
-from app.purchase import purchase_routers
+from app.purchase import purchase_routers, sales_routers
 #Не дай бог строчку ниже куда - либо перенести...
 from core.database.preload_data import preload_db_main
 
@@ -123,6 +123,7 @@ app.include_router(message_routers)
 app.include_router(attachment_routers)
 app.include_router(delivery_routers)
 app.include_router(purchase_routers)
+app.include_router(sales_routers)
 
 
 def __temp_get_current_username(

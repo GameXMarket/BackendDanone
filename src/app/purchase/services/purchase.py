@@ -270,6 +270,45 @@ class PurchaseManager:
             _result.append(purchase_dict)
 
         return _result
+        
+    async def get_all_sells(
+        self,
+        offset: int,
+        limit: int,
+        seller_id: int,
+        db_session: AsyncSession,
+    ):
+        stmt = (
+            select(models_p.Purchase)
+            .join(models_f.Offer, models_f.Offer.id == models_p.Purchase.offer_id)
+            .join(models_u.User, models_u.User.id == models_f.Offer.user_id)
+            .where(models_u.User.id == seller_id)
+            .offset(offset)
+            .limit(limit)
+        )
+        query = await db_session.execute(stmt)
+        return query.scalars().all()
+
+    async def get_all_sells_by_offer(
+        self,
+        offset: int,
+        limit: int,
+        offer_id: int,
+        seller_id: int,
+        db_session: AsyncSession,
+    ):
+        stmt = (
+            select(models_p.Purchase)
+            .join(models_f.Offer, models_f.Offer.id == models_p.Purchase.offer_id)
+            .join(models_u.User, models_u.User.id == models_f.Offer.user_id)
+            .where(models_f.Offer.id == offer_id)
+            .where(models_u.User.id == seller_id)
+            .offset(offset)
+            .limit(limit)
+        )
+        query = await db_session.execute(stmt)
+        return query.scalars().all()
+
 
 
 purchase_manager = PurchaseManager()
