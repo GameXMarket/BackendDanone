@@ -155,7 +155,7 @@ async def get_swagger_documentation(
 
 @app.get("/openapi.json", include_in_schema=False)
 async def openapi(username: str = Depends(__temp_get_current_username)):
-    return get_openapi(title=conf.TITLE, version=conf.VERSION, routes=app.routes)
+    return get_openapi(title=conf.TITLE, version=conf.VERSION, routes=app.routes, tags=openapi_tags)
 
 
 if __name__ == "__main__":
