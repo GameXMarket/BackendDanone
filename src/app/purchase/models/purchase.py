@@ -20,7 +20,13 @@ class Purchase(Base):
     description = Column(String)
     price = Column(Integer)
     count = Column(Integer)
-    status = Column(Enum("completed", "process", "refund", name="purchase_status"), default="process")
+    # Предварительные статусы, жду момента, когда распишут всё
+    # process - Покупка только создалась, деньги зарезервировались, ждём подтверждения продавцом о выполнении
+    # review - Продавец подтвердил выполнение, ждём подтверждения пользователя
+    # completed - Покупатель подтвердил выполнение (или заказ был с автовыдачей или поддержка решила, что заказ готов)
+    # dispute - Покупатель открыл спор по заказу, ждём решение администрации
+    # refund - Деньги возвращаются покупателю (по желанию продавца или поддержки)
+    status = Column(Enum("process", "review", "completed", "dispute", "refund", name="purchase_status"), default="process")
     created_at = Column(Integer, nullable=False, default=int(time()))
     updated_at = Column(Integer, nullable=False, default=int(time()), onupdate=int(time()))
 

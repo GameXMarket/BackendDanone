@@ -58,7 +58,6 @@ async def lifespan(app: FastAPI):
     async with context_get_session() as session:
         await preload_db_main(session)
 
-    
     async with get_redis_client() as client:
         logger.info(f"Redis ping returned with: {await client.ping()}.")
 

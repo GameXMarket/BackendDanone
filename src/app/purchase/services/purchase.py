@@ -1,4 +1,5 @@
 import json
+from typing import Literal
 from inspect import cleandoc
 
 
@@ -150,6 +151,35 @@ class PurchaseManager:
         await db_session.refresh(purchase)
 
         return purchase
+    
+    async def create_confirmation_request(
+        self,
+        db_session: AsyncSession,
+        purchase_id: int,
+        seller_id: int,
+    ):
+        """
+        Продавец после выполнения заказа меняет статус на проверку,
+         после этого пользователь должен подтвердить выполнение
+        Метод для пользователя
+        """
+        
+        ...
+    
+    async def change_confirmation_request_status(
+        self,
+        db_session: AsyncSession,
+        purchase_id: int,
+        buyer_id: int,
+        purchase_completed: bool,
+    ):
+        """
+        Меняется статус после подтверждения покупателем,
+         можно как одобрить так и запретить
+        Метод для пользователя
+        """
+        
+        ...
 
     async def get_purchase(
         self,
