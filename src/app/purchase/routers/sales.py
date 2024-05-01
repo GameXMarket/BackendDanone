@@ -62,7 +62,7 @@ async def get_sales_by_offer(
 
 
 @router.post("/my/confirmation")
-async def confirm_my_sale(
+async def create_confirmation_request(
     purchase_id: int,
     db_session: AsyncSession = Depends(get_session),
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
@@ -70,11 +70,12 @@ async def confirm_my_sale(
     ),
 ):
     """
-    Подтверждение выполнения продажи
+    Подтверждение выполнения продажи (продавец)
     """
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
 
-    ...
+    purchase = await purchase_manager.create_confirmation_request(db_session, purchase_id, user.id)
+    return purchase
 
 

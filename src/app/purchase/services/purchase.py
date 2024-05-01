@@ -163,8 +163,15 @@ class PurchaseManager:
          после этого пользователь должен подтвердить выполнение
         Метод для пользователя
         """
+        purchase = await self.get_sale(db_session, purchase_id, seller_id)
+        if not purchase:
+            raise HTTPException(404, "Sale not found")
         
-        ...
+        if purchase.status != "process":
+            raise HTTPException(403, "Sale status not in process")
+
+        purchase = await self.__update_purchase(db_session, purchase, {"status": "review"})
+        return purchase
     
     async def change_confirmation_request_status(
         self,
@@ -192,8 +199,25 @@ class PurchaseManager:
             .where(models_p.Purchase.id == purchase_id)
             .where(models_p.Purchase.buyer_id == buyer_id)
         )
+        
         result = await db_session.execute(stmt)
-        return result.scalars()
+        return result.scalar_one_or_none()
+    
+    async def get_sale(
+        self,
+        db_session: AsyncSession,
+        purchase_id: int,
+        seller_id: int,
+    ):
+        stmt = (
+            select(models_p.Purchase)
+            .join(models_f.Offer, models_f.Offer.id == models_p.Purchase.offer_id)
+            .where(models_p.Purchase.id == purchase_id)
+            .where(models_f.Offer.user_id == seller_id)
+        )
+
+        result = await db_session.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def __update_purchase(
         self,
