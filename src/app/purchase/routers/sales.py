@@ -26,7 +26,7 @@ async def get_all_my_sales(
     ),
 ):
     """
-    Получение всех продаж по пользователю
+    Получение всех продаж (продавец)
     """
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
@@ -49,7 +49,7 @@ async def get_sales_by_offer(
     ),
 ):
     """
-    Получение всех продаж по офферу
+    Получение всех продаж по офферу  (продавец)
     """
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
