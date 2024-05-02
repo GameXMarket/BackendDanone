@@ -135,15 +135,15 @@ class PurchaseManager:
         if buyer_notifications:
             await buyer_notifications.create_event(
                 event="new_purchase",
-                data=purchase_event,
-                comment="New purchase created..."
+                data=purchase.to_dict(),
+                comment=purchase_event
             )
         
         if seller_notifications:
             await seller_notifications.create_event(
                 event="new_purchase",
-                data=purchase_event,
-                comment="New purchase created..."
+                data=purchase.to_dict(),
+                comment=purchase_event
             )
 
 
@@ -171,6 +171,38 @@ class PurchaseManager:
             raise HTTPException(403, "Sale status not in process")
 
         purchase = await self.__update_purchase(db_session, purchase, {"status": "review"})
+        
+        buyer_notifications = user_notification_manager.sse_managers.get(purchase.buyer_id)
+        seller_notifications = user_notification_manager.sse_managers.get(seller_id)
+        
+        # Предполагается, что уже есть чатик (создаётся при создании покупки)
+        dialog_data = await message_manager.get_dialog_id_by_user_id(
+            db_session, seller_id, purchase.buyer_id
+        )
+        status_change_event = f"Продавец ({seller_id}) выполнил заказ ({purchase.id}) пользователя ({purchase.buyer_id}) и просит подтверждения.."
+        
+        system_message = SystemMessageCreate(
+            chat_id=dialog_data["chat_id"],
+            content=status_change_event,
+        )
+        await message_connection_manager.send_and_create_system_message(
+            db_session, system_message, [seller_id, purchase.buyer_id]
+        )
+        
+        if buyer_notifications:
+            await buyer_notifications.create_event(
+                event="new_purchase_status",
+                data=purchase.to_dict(),
+                comment=status_change_event
+            )
+        
+        if seller_notifications:
+            await seller_notifications.create_event(
+                event="new_purchase_status",
+                data=purchase.to_dict(),
+                comment=status_change_event
+            )  
+
         return purchase
     
     async def change_confirmation_request_status(
