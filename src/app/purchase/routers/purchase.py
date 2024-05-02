@@ -64,7 +64,6 @@ async def create_purchase(
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
 
-    # TODO доделать логику того, что один оффер нельзя купить дважды (пока не будет выполнен предыдущий)
     purchase = await purchase_manager.create_purchase(db_session, user.id, new_purchase_data)    
     if not purchase:
         raise HTTPException(404)

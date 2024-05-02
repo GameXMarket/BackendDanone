@@ -7,7 +7,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from sqlalchemy import insert, select, delete
+from sqlalchemy import insert, select, delete, exists
 
 from app.offers.services import get_raw_offer_by_id, update_offer
 from .. import schemas as schemas_p, models as models_p
@@ -31,7 +31,7 @@ class PurchaseManager:
     async def create_purchase(
         self,
         db_session: AsyncSession,
-        user_id: int,
+        buyer_id: int,
         new_purchase_data: schemas_p.PurchaseCreate,
     ):
         offer = await get_raw_offer_by_id(db_session, new_purchase_data.offer_id)
@@ -39,9 +39,19 @@ class PurchaseManager:
         if not offer:
             raise HTTPException(404, "Offer doesn't exist")
 
-        if offer.user_id == user_id:
+        if offer.user_id == buyer_id:
             raise HTTPException(403, "BuyerID cannot be equal to the SellerID")
 
+        check_other_purchases_stmt = select(
+            exists(models_p.Purchase)
+            .where(models_p.Purchase.offer_id == new_purchase_data.offer_id)
+            .where(models_p.Purchase.buyer_id == buyer_id)
+            .where(models_p.Purchase.status.in_(("process", "review", "dispute")))
+        )
+        active_purchase_exists = (await db_session.execute(check_other_purchases_stmt)).scalar()
+        if active_purchase_exists:
+            raise HTTPException(403, "Only one purchase can be created at the same time")
+        
         offer_real_count = await offer.get_real_count(db_session)
 
         if new_purchase_data.count > offer_real_count:
@@ -57,7 +67,7 @@ class PurchaseManager:
 
         # todo добавить логику времени на сделку
         purchase = models_p.Purchase(
-            buyer_id=user_id,
+            buyer_id=buyer_id,
             offer_id=offer.id,
             name=offer.name,
             description=offer.description,
@@ -96,11 +106,11 @@ class PurchaseManager:
         )
         seller_notifications = user_notification_manager.sse_managers.get(offer.user_id)
         dialog_data = await message_manager.get_dialog_id_by_user_id(
-            db_session, user_id, offer.user_id
+            db_session, buyer_id, offer.user_id
         )
         if not dialog_data:
             dialog_data = await message_manager.create_dialog(
-                db_session, user_id, offer.user_id
+                db_session, buyer_id, offer.user_id
             )
             if not dialog_data:
                 raise HTTPException(404, "User not found, How did you get here?")
@@ -145,7 +155,6 @@ class PurchaseManager:
                 data=purchase.to_dict(),
                 comment=purchase_event
             )
-
 
         await db_session.commit()
         await db_session.refresh(purchase)
