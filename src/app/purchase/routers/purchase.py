@@ -70,3 +70,30 @@ async def create_purchase(
         raise HTTPException(404)
     
     return purchase
+
+
+@router.post("/my/complete/")
+async def confirm_purchase(
+    state: bool,
+    purchase_id: int,
+    db_session: AsyncSession = Depends(get_session),
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        base_session
+    ),
+):
+    """
+    Создаёт спор при state = False, при state = True подтверждает выполнение
+    """
+    token_data, user_context = current_session
+    user = await user_context.get_current_active_user(db_session, token_data)
+
+    purchase = await purchase_manager.change_confirmation_request_status(
+        db_session=db_session,
+        purchase_id=purchase_id,
+        buyer_id=user.id,
+        purchase_completed=state,
+    )
+    if not purchase:
+        raise HTTPException(404)
+    
+    return purchase

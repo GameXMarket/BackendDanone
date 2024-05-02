@@ -1,5 +1,5 @@
 import json
-from typing import Literal
+from typing import Any, Literal
 from inspect import cleandoc
 
 
@@ -218,19 +218,87 @@ class PurchaseManager:
         Метод для пользователя
         """
         
-        ...
+        purchase = await self.get_purchase(db_session, purchase_id, buyer_id, (selectinload, models_p.Purchase.offer))
+        seller_id = purchase.offer.user_id
+        
+        if not purchase:
+            raise HTTPException(404, "Purchase not found")
+        
+        if purchase.status != "review":
+            raise HTTPException(403, "Purchase status not in review")
 
+        status = "completed" if purchase_completed else "dispute"
+        purchase = await self.__update_purchase(
+            db_session, purchase, {"status": status}
+        )
+
+        buyer_notifications = user_notification_manager.sse_managers.get(purchase.buyer_id)
+        seller_notifications = user_notification_manager.sse_managers.get(seller_id)
+        
+        # Предполагается, что уже есть чатик (создаётся при создании покупки)
+        dialog_data = await message_manager.get_dialog_id_by_user_id(
+            db_session, seller_id, purchase.buyer_id
+        )
+        status_change_event = f"Покупатель ({purchase.buyer_id}) подтвердил выполнение заказа ({purchase.id}) продавца ({seller_id}) ..."
+        
+        system_message = SystemMessageCreate(
+            chat_id=dialog_data["chat_id"],
+            content=status_change_event,
+        )
+        await message_connection_manager.send_and_create_system_message(
+            db_session, system_message, [seller_id, purchase.buyer_id]
+        )
+        
+        if buyer_notifications:
+            await buyer_notifications.create_event(
+                event="new_purchase_status",
+                data=purchase.to_dict(),
+                comment=status_change_event
+            )
+        
+        if seller_notifications:
+            await seller_notifications.create_event(
+                event="new_purchase_status",
+                data=purchase.to_dict(),
+                comment=status_change_event
+            )  
+
+        return purchase
+    
+    async def change_purchase_status(
+        self,
+        db_session: AsyncSession,
+        purchase: models_p.Purchase,
+        status: Literal[
+            "process",
+            "review",
+            "completed",
+            "dispute",
+            "refund",
+        ]
+    ):
+        str_ = cleandoc("""
+        Метод для смены статусов, много накладных расходов на упрощение 
+        Легче дублировать часть кода (мне просто лень прописывать доп условия)
+        """)
+
+        raise NotImplementedError(str_)
+        
     async def get_purchase(
         self,
         db_session: AsyncSession,
         purchase_id: int,
         buyer_id: int,
+        options: Any = None,
     ):
         stmt = (
             select(models_p.Purchase)
             .where(models_p.Purchase.id == purchase_id)
             .where(models_p.Purchase.buyer_id == buyer_id)
         )
+        
+        if options:
+            stmt = stmt.options(options[0](options[1]))
         
         result = await db_session.execute(stmt)
         return result.scalar_one_or_none()
@@ -279,7 +347,8 @@ class PurchaseManager:
         db_session: AsyncSession,
         user_id: int,
     ):
-        pass
+        
+        raise NotImplementedError("Просто не юзается (заглушка)")
 
     async def get_all_purchases(
         self, db_session: AsyncSession, buyer_id: int, offset: int, limit: int
