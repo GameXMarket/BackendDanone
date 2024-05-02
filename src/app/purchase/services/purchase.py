@@ -122,7 +122,7 @@ class PurchaseManager:
 
         # Todo content fix
         purchase_event = f"{purchase.buyer_id} купил у {offer.user_id} " + \
-            f"оффер '{offer.name}' в количестве {offer.count} на сумму {offer.price * offer.count}"
+            f"оффер '{offer.name}' в количестве {purchase.count} на сумму {purchase.price * purchase.count}"
         system_message = SystemMessageCreate(
             chat_id=dialog_data["chat_id"],
             content=purchase_event,
