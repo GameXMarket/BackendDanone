@@ -23,6 +23,7 @@ from app.offers import offers_routers, delivery_routers
 from app.categories import category_routers
 from app.messages import message_routers
 from app.attachment import attachment_routers
+from app.purchase import purchase_routers, sales_routers
 #Не дай бог строчку ниже куда - либо перенести...
 from core.database.preload_data import preload_db_main
 
@@ -57,7 +58,6 @@ async def lifespan(app: FastAPI):
     async with context_get_session() as session:
         await preload_db_main(session)
 
-    
     async with get_redis_client() as client:
         logger.info(f"Redis ping returned with: {await client.ping()}.")
 
@@ -122,6 +122,8 @@ app.include_router(category_routers)
 app.include_router(message_routers)
 app.include_router(attachment_routers)
 app.include_router(delivery_routers)
+app.include_router(purchase_routers)
+app.include_router(sales_routers)
 
 
 def __temp_get_current_username(

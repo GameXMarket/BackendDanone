@@ -1,6 +1,6 @@
 from typing import List, TYPE_CHECKING
 
-from sqlalchemy import Column, Integer, String, VARCHAR, ForeignKey
+from sqlalchemy import Column, Integer, Boolean, VARCHAR, ForeignKey
 from sqlalchemy.orm import validates, relationship, Mapped
 
 from core.database import Base
@@ -27,6 +27,7 @@ class CategoryValue(Base):
         Integer, ForeignKey("user.id", ondelete="SET NULL"), nullable=True
     )
     value = Column(VARCHAR(length=17), nullable=False)
+    is_offer_with_delivery = Column(Boolean, nullable=False, default=False)
 
     carcass: Mapped["CategoryCarcass"] = relationship(
         lazy="noload", back_populates="values", foreign_keys=[carcass_id]

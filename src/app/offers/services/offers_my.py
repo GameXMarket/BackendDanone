@@ -1,5 +1,5 @@
 import time
-from typing import List, cast
+from typing import List, Literal, cast
 
 from fastapi import Depends
 from fastapi.encoders import jsonable_encoder
@@ -38,7 +38,7 @@ async def get_raw_offer_by_user_id(
 
 async def get_by_user_id_offer_id(
     db_session: AsyncSession, user_id: int, id: int
-) -> models_f.Offer | None:
+) -> dict | None:
     stmt = select(models_f.Offer).where(
         models_f.Offer.user_id == user_id, models_f.Offer.id == id
     )
@@ -76,7 +76,7 @@ async def get_mini_by_user_id_offset_limit(
     user_id: int,
     is_descending: bool = None,
     search_query: str = None,
-    status: models_f.Offer.status = "active",
+    statuses: list[Literal["active", "hidden", "deleted"]] = ["active", "hidden", "deleted"],
 ) -> list[models_f.Offer]:
     stmt = (
         select(
@@ -85,9 +85,10 @@ async def get_mini_by_user_id_offset_limit(
             models_f.Offer.description,
             models_f.Offer.price,
         )
-        .where(and_(models_f.Offer.user_id == user_id, models_f.Offer.status == status))
+        .where(models_f.Offer.user_id == user_id)
+        .where(models_f.Offer.status.in_(statuses))
         .order_by(
-            desc(models_f.Offer.created_at)
+            desc(models_f.Offer.updated_at)
             if is_descending is None
             else desc(models_f.Offer.price)
             if is_descending
@@ -109,8 +110,6 @@ async def get_mini_by_user_id_offset_limit(
 
     if search_query:
         stmt = stmt.where(models_f.Offer.name.ilike(f"%{search_query}%"))
-
-    stmt = stmt.where(models_f.Offer.status == status)
 
     rows = await db_session.execute(stmt)
 
@@ -231,11 +230,9 @@ async def get_offers_by_value_id(
     
     stmt = (
         select(
-            models_f.Offer.id,
-            models_f.Offer.name,
-            models_f.Offer.price,
-            models_f.Offer.count,
+            models_f.Offer,
             CategoryValueNext.value,
+            CategoryCarcass,
         )
         .join(GameOfferCategoryValue, GameOfferCategoryValue.offer_id == models_f.Offer.id)
         .join(GameCategoryValue, GameCategoryValue.id == GameOfferCategoryValue.category_value_id)
@@ -249,34 +246,51 @@ async def get_offers_by_value_id(
         .limit(limit)
     )
     rows = await db_session.execute(stmt)
-
+    
     result = []
     for row in rows:
-        offer = {
-            "id": row[0],
-            "name": row[1],
-            "price": row[2],
-            "count": row[3],
-            "category_value": row[4],
+        offer: models_f.Offer = row[0]
+        carcass: CategoryCarcass = row[2]
+        real_offer_count = await offer.get_real_count(db_session)
+
+        offer_ = {
+            "id": offer.id,
+            "name": offer.name,
+            "price": offer.price,
+            "count": real_offer_count,
+            "carcass_select_name": carcass.select_name,
+            "carcass_in_offer_name": carcass.in_offer_name,
+            "carcass_in_offer_value": row[1],
         }
-        result.append(offer)
+        result.append(offer_)
 
     return result
 
 
 async def create_offer(
-    db_session: AsyncSession, user_id: int, obj_in: schemas_f.CreateOffer
+    db_session: AsyncSession, user_id: int, obj_in: schemas_f.CreateOffer, status: str = None
 ) -> models_f.Offer:
     js_obj = obj_in.model_dump(exclude_unset=True)
     category_ids = js_obj.pop("category_value_ids")
+    # todo Сюда проверку на то все ли категории по дереву идут
+    
+    is_offer_with_delivery_stmt = select(
+        exists(CategoryValue.is_offer_with_delivery)
+        .where(CategoryValue.id.in_(category_ids))
+        .where(CategoryValue.is_offer_with_delivery == True)
+    )
+    is_offer_with_delivery = (await db_session.execute(is_offer_with_delivery_stmt)).scalar_one_or_none()
+    is_autogive_enabled = False if is_offer_with_delivery else None
+    
     db_obj = models_f.Offer(
         user_id=user_id,
-        status="active",  # ! Temp testing
-        **js_obj,
-        created_at=int(time.time()),
-        updated_at=int(time.time()),
+        is_autogive_enabled=is_autogive_enabled,
         upped_at=int(time.time()),
+        **js_obj,
     )
+    
+    if status:
+        db_obj.status = status
 
     db_session.add(db_obj)
     await db_session.flush()
@@ -287,12 +301,14 @@ async def create_offer(
         )
 
     await db_session.commit()
+    await db_session.refresh(db_obj)
+    
     return db_obj
 
 
 # ! need refactor...
 async def update_offer(
-    db_session: AsyncSession, db_obj: models_f.Offer, obj_in: schemas_f.OfferBase
+    db_session: AsyncSession, db_obj: models_f.Offer, obj_in: schemas_f.OfferBase, need_commit: bool = True
 ):
     
     obj_data = jsonable_encoder(db_obj)
@@ -306,11 +322,13 @@ async def update_offer(
         if field in update_data:
             setattr(db_obj, field, update_data[field])
 
-    db_obj.category_values.clear()
-    for value in update_data["category_value_ids"]:
-        await __ocv.create_offer_category_value(
-                db_session, category_value_id=value, offer_id=db_obj.id
-            )
+    category_value_ids = update_data.get("category_value_ids")
+    if category_value_ids:
+        db_obj.category_values.clear()
+        for value in category_value_ids:
+            await __ocv.create_offer_category_value(
+                    db_session, category_value_id=value, offer_id=db_obj.id
+                )
         
     db_session.add(db_obj)
     await db_session.commit()

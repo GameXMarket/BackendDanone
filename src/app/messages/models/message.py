@@ -35,5 +35,5 @@ class SystemMessage(Base):
     
     id = Column(Integer, primary_key=True)
     chat_id = Column(Integer, ForeignKey("chat.id", ondelete="CASCADE"), nullable=False)
-    content = Column(VARCHAR(1000), nullable=False)
+    content = Column(VARCHAR(4096), nullable=False)
     

@@ -21,10 +21,22 @@ from app.users.services import get_by_id
 # Дублирование кода, можно переписать по нормальному старые методы,
 #  однако пока не понятно как именно всё будет использоваться, потому
 #  сейчас данный код будет дублироваться, до момента рефакторинга
-async def get_by_offer_id(
-    db_session: AsyncSession, *, id: int
-) -> models_f.Offer | None:
-    stmt = select(models_f.Offer).where(models_f.Offer.id == id)
+async def get_raw_offer_by_id(
+    db_session: AsyncSession, id: int,
+):
+    stmt = select(models_f.Offer).where(models_f.Offer.id == id).where(models_f.Offer.status == "active")
+    offer: models_f.Offer | None = (await db_session.execute(stmt)).scalar()
+
+    if not offer:
+        return None
+
+    return offer
+
+
+async def get_offer_by_id(
+    db_session: AsyncSession, id: int,
+) -> None | dict:
+    stmt = select(models_f.Offer).where(models_f.Offer.id == id).where(models_f.Offer.status == "active")
     offer: models_f.Offer | None = (await db_session.execute(stmt)).scalar()
 
     if not offer:
@@ -63,7 +75,6 @@ async def get_mini_by_offset_limit(
     category_value_ids: list[int] = None,
     is_descending: bool = None,
     search_query: str = None,
-    status: models_f.Offer.status = "active",
 ) -> list[models_f.Offer]:
     stmt = (
         select(
@@ -73,9 +84,9 @@ async def get_mini_by_offset_limit(
             models_f.Offer.price,
             models_f.Offer.user_id,
         )
-        .where(models_f.Offer.status == status)
+        .where(models_f.Offer.status == "active")
         .order_by(
-            desc(models_f.Offer.created_at)
+            desc(models_f.Offer.upped_at)
             if is_descending is None
             else desc(models_f.Offer.price)
             if is_descending
