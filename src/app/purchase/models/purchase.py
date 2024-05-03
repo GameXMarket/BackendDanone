@@ -1,6 +1,6 @@
 from time import time
 
-from sqlalchemy import Column, Integer, String, VARCHAR, Enum, ForeignKey
+from sqlalchemy import Column, Integer, SmallInteger, String, VARCHAR, Boolean, Enum, ForeignKey, CheckConstraint
 from sqlalchemy.orm import relationship, Mapped
 
 from core.database import Base
@@ -27,10 +27,11 @@ class Purchase(Base):
     # dispute - Покупатель открыл спор по заказу, ждём решение администрации
     # refund - Деньги возвращаются покупателю (по желанию продавца или поддержки)
     status = Column(Enum("process", "review", "completed", "dispute", "refund", name="purchase_status"), default="process")
-    created_at = Column(Integer, nullable=False, default=int(time()))
-    updated_at = Column(Integer, nullable=False, default=int(time()), onupdate=int(time()))
+    # Указывает есть ли отзыв, не путать review в статусе и review - отзыв
+    is_reviewed = Column(Boolean, nullable=False, default=False)
 
-    parcels: Mapped[list["Parcel"]] =  relationship(back_populates="purchase", lazy="selectin")
+    parcels: Mapped[list["Parcel"]] = relationship(back_populates="purchase", lazy="selectin")
+    review: Mapped["Review"] = relationship(back_populates="purchase", lazy="noload")
     buyer: Mapped["User"] = relationship(lazy="noload")
     offer: Mapped["Offer"] = relationship(lazy="noload")
 
@@ -43,3 +44,14 @@ class Parcel(Base):
     value = Column(VARCHAR(500))
 
     purchase: Mapped["Purchase"] = relationship(back_populates="parcels", lazy="noload")
+
+
+class Review(Base):
+    __tablename__ = "review"
+    
+    purchase_id = Column(Integer, ForeignKey('purchase.id', ondelete="CASCADE"), primary_key=True)
+    offer_id = Column(Integer, ForeignKey('offer.id', ondelete="SET NULL"))
+    rating = Column(SmallInteger, CheckConstraint('rating >= 1 AND rating <= 5', name='check_rating_range'), nullable=False)
+    value = Column(VARCHAR(4096), nullable=True)
+
+    purchase: Mapped["Purchase"] = relationship(back_populates="review", lazy="noload")
