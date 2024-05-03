@@ -1,6 +1,6 @@
 from time import time
 
-from sqlalchemy import Column, Integer, String, VARCHAR, Enum, ForeignKey
+from sqlalchemy import Column, Integer, String, VARCHAR, Boolean, Enum, ForeignKey
 from sqlalchemy.orm import relationship, Mapped
 
 from core.database import Base
@@ -27,10 +27,10 @@ class Purchase(Base):
     # dispute - Покупатель открыл спор по заказу, ждём решение администрации
     # refund - Деньги возвращаются покупателю (по желанию продавца или поддержки)
     status = Column(Enum("process", "review", "completed", "dispute", "refund", name="purchase_status"), default="process")
-    created_at = Column(Integer, nullable=False, default=int(time()))
-    updated_at = Column(Integer, nullable=False, default=int(time()), onupdate=int(time()))
+    # Указывает есть ли отзыв, не путать review в статусе и review - отзыв
+    is_reviewed = Column(Boolean, nullable=False, default=False)
 
-    parcels: Mapped[list["Parcel"]] =  relationship(back_populates="purchase", lazy="selectin")
+    parcels: Mapped[list["Parcel"]] = relationship(back_populates="purchase", lazy="selectin")
     buyer: Mapped["User"] = relationship(lazy="noload")
     offer: Mapped["Offer"] = relationship(lazy="noload")
 

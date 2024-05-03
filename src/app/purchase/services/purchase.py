@@ -7,8 +7,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from sqlalchemy import insert, select, delete, exists
-
+from sqlalchemy import insert, select, delete, exists, desc, asc
 from app.offers.services import get_raw_offer_by_id, update_offer
 from .. import schemas as schemas_p, models as models_p
 from app.offers import models as models_f
@@ -48,10 +47,14 @@ class PurchaseManager:
             .where(models_p.Purchase.buyer_id == buyer_id)
             .where(models_p.Purchase.status.in_(("process", "review", "dispute")))
         )
-        active_purchase_exists = (await db_session.execute(check_other_purchases_stmt)).scalar()
+        active_purchase_exists = (
+            await db_session.execute(check_other_purchases_stmt)
+        ).scalar()
         if active_purchase_exists:
-            raise HTTPException(403, "Only one purchase can be created at the same time")
-        
+            raise HTTPException(
+                403, "Only one purchase can be created at the same time"
+            )
+
         offer_real_count = await offer.get_real_count(db_session)
 
         if new_purchase_data.count > offer_real_count:
@@ -122,7 +125,7 @@ class PurchaseManager:
                     data=event_data,
                     comment="new chat with you created",
                 )
-            
+
             if seller_notifications:
                 await seller_notifications.create_event(
                     event="new_chat",
@@ -131,8 +134,10 @@ class PurchaseManager:
                 )
 
         # Todo content fix
-        purchase_event = f"{purchase.buyer_id} купил у {offer.user_id} " + \
-            f"оффер '{offer.name}' в количестве {purchase.count} на сумму {purchase.price * purchase.count}"
+        purchase_event = (
+            f"{purchase.buyer_id} купил у {offer.user_id} "
+            + f"оффер '{offer.name}' в количестве {purchase.count} на сумму {purchase.price * purchase.count}"
+        )
         system_message = SystemMessageCreate(
             chat_id=dialog_data["chat_id"],
             content=purchase_event,
@@ -140,27 +145,23 @@ class PurchaseManager:
         await message_connection_manager.send_and_create_system_message(
             db_session, system_message, [purchase.buyer_id, offer.user_id]
         )
-        
+
         # Не уверен нужны ли тут такие уведомления
         if buyer_notifications:
             await buyer_notifications.create_event(
-                event="new_purchase",
-                data=purchase.to_dict(),
-                comment=purchase_event
+                event="new_purchase", data=purchase.to_dict(), comment=purchase_event
             )
-        
+
         if seller_notifications:
             await seller_notifications.create_event(
-                event="new_purchase",
-                data=purchase.to_dict(),
-                comment=purchase_event
+                event="new_purchase", data=purchase.to_dict(), comment=purchase_event
             )
 
         await db_session.commit()
         await db_session.refresh(purchase)
 
         return purchase
-    
+
     async def create_confirmation_request(
         self,
         db_session: AsyncSession,
@@ -175,21 +176,25 @@ class PurchaseManager:
         purchase = await self.get_sale(db_session, purchase_id, seller_id)
         if not purchase:
             raise HTTPException(404, "Sale not found")
-        
+
         if purchase.status != "process":
             raise HTTPException(403, "Sale status not in process")
 
-        purchase = await self.__update_purchase(db_session, purchase, {"status": "review"})
-        
-        buyer_notifications = user_notification_manager.sse_managers.get(purchase.buyer_id)
+        purchase = await self.__update_purchase(
+            db_session, purchase, {"status": "review"}
+        )
+
+        buyer_notifications = user_notification_manager.sse_managers.get(
+            purchase.buyer_id
+        )
         seller_notifications = user_notification_manager.sse_managers.get(seller_id)
-        
+
         # Предполагается, что уже есть чатик (создаётся при создании покупки)
         dialog_data = await message_manager.get_dialog_id_by_user_id(
             db_session, seller_id, purchase.buyer_id
         )
         status_change_event = f"Продавец ({seller_id}) выполнил заказ ({purchase.id}) пользователя ({purchase.buyer_id}) и просит подтверждения.."
-        
+
         system_message = SystemMessageCreate(
             chat_id=dialog_data["chat_id"],
             content=status_change_event,
@@ -197,23 +202,23 @@ class PurchaseManager:
         await message_connection_manager.send_and_create_system_message(
             db_session, system_message, [seller_id, purchase.buyer_id]
         )
-        
+
         if buyer_notifications:
             await buyer_notifications.create_event(
                 event="new_purchase_status",
                 data=purchase.to_dict(),
-                comment=status_change_event
+                comment=status_change_event,
             )
-        
+
         if seller_notifications:
             await seller_notifications.create_event(
                 event="new_purchase_status",
                 data=purchase.to_dict(),
-                comment=status_change_event
-            )  
+                comment=status_change_event,
+            )
 
         return purchase
-    
+
     async def change_confirmation_request_status(
         self,
         db_session: AsyncSession,
@@ -226,13 +231,15 @@ class PurchaseManager:
          можно как одобрить так и запретить
         Метод для пользователя
         """
-        
-        purchase = await self.get_purchase(db_session, purchase_id, buyer_id, (selectinload, models_p.Purchase.offer))
+
+        purchase = await self.get_purchase(
+            db_session, purchase_id, buyer_id, (selectinload, models_p.Purchase.offer)
+        )
         seller_id = purchase.offer.user_id
-        
+
         if not purchase:
             raise HTTPException(404, "Purchase not found")
-        
+
         if purchase.status != "review":
             raise HTTPException(403, "Purchase status not in review")
 
@@ -241,15 +248,17 @@ class PurchaseManager:
             db_session, purchase, {"status": status}
         )
 
-        buyer_notifications = user_notification_manager.sse_managers.get(purchase.buyer_id)
+        buyer_notifications = user_notification_manager.sse_managers.get(
+            purchase.buyer_id
+        )
         seller_notifications = user_notification_manager.sse_managers.get(seller_id)
-        
+
         # Предполагается, что уже есть чатик (создаётся при создании покупки)
         dialog_data = await message_manager.get_dialog_id_by_user_id(
             db_session, seller_id, purchase.buyer_id
         )
         status_change_event = f"Покупатель ({purchase.buyer_id}) подтвердил выполнение заказа ({purchase.id}) продавца ({seller_id}) ..."
-        
+
         system_message = SystemMessageCreate(
             chat_id=dialog_data["chat_id"],
             content=status_change_event,
@@ -257,23 +266,23 @@ class PurchaseManager:
         await message_connection_manager.send_and_create_system_message(
             db_session, system_message, [seller_id, purchase.buyer_id]
         )
-        
+
         if buyer_notifications:
             await buyer_notifications.create_event(
                 event="new_purchase_status",
                 data=purchase.to_dict(),
-                comment=status_change_event
+                comment=status_change_event,
             )
-        
+
         if seller_notifications:
             await seller_notifications.create_event(
                 event="new_purchase_status",
                 data=purchase.to_dict(),
-                comment=status_change_event
-            )  
+                comment=status_change_event,
+            )
 
         return purchase
-    
+
     async def change_purchase_status(
         self,
         db_session: AsyncSession,
@@ -284,15 +293,17 @@ class PurchaseManager:
             "completed",
             "dispute",
             "refund",
-        ]
+        ],
     ):
-        str_ = cleandoc("""
+        str_ = cleandoc(
+            """
         Метод для смены статусов, много накладных расходов на упрощение 
         Легче дублировать часть кода (мне просто лень прописывать доп условия)
-        """)
+        """
+        )
 
         raise NotImplementedError(str_)
-        
+
     async def get_purchase(
         self,
         db_session: AsyncSession,
@@ -305,13 +316,13 @@ class PurchaseManager:
             .where(models_p.Purchase.id == purchase_id)
             .where(models_p.Purchase.buyer_id == buyer_id)
         )
-        
+
         if options:
             stmt = stmt.options(options[0](options[1]))
-        
+
         result = await db_session.execute(stmt)
         return result.scalar_one_or_none()
-    
+
     async def get_sale(
         self,
         db_session: AsyncSession,
@@ -356,11 +367,21 @@ class PurchaseManager:
         db_session: AsyncSession,
         user_id: int,
     ):
-        
+
         raise NotImplementedError("Просто не юзается (заглушка)")
 
     async def get_all_purchases(
-        self, db_session: AsyncSession, buyer_id: int, offset: int, limit: int
+        self,
+        db_session: AsyncSession,
+        buyer_id: int,
+        offset: int,
+        limit: int,
+        by_last_udpate: bool = False,
+        search_query: str = None,
+        is_reviewed: bool = None,
+        statuses: list[
+            Literal["process", "review", "completed", "dispute", "refund"]
+        ] = ["process", "review", "completed", "dispute", "refund"],
     ):
         _result = []
 
@@ -378,9 +399,22 @@ class PurchaseManager:
             .join(models_f.Offer, models_f.Offer.id == models_p.Purchase.offer_id)
             .join(models_u.User, models_u.User.id == models_f.Offer.user_id)
             .where(models_p.Purchase.buyer_id == buyer_id)
+            .where(models_p.Purchase.status.in_(statuses))
+            .order_by(
+                desc(models_p.Purchase.updated_at)
+                if by_last_udpate
+                else desc(models_p.Purchase.created_at)
+            )
             .offset(offset)
             .limit(limit)
         )
+
+        if search_query:
+            stmt = stmt.where(models_p.Purchase.name.ilike(f"%{search_query}%"))
+        
+        if is_reviewed is not None:
+            stmt = stmt.where(models_p.Purchase.is_reviewed == is_reviewed)
+        
         rows = await db_session.execute(stmt)
 
         for row in rows:
@@ -404,7 +438,7 @@ class PurchaseManager:
             _result.append(purchase_dict)
 
         return _result
-        
+
     async def get_all_sells(
         self,
         offset: int,
@@ -442,7 +476,6 @@ class PurchaseManager:
         )
         query = await db_session.execute(stmt)
         return query.scalars().all()
-
 
 
 purchase_manager = PurchaseManager()
