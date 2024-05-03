@@ -100,9 +100,10 @@ class PurchaseManager:
                     purchase_id=purchase.id, value=delivery_value
                 )
                 await db_session.execute(create_parcel_stmt)
-                await self.__update_purchase(
-                    db_session, purchase, {"status": "completed"}
-                )
+            
+            await self.__update_purchase(
+                db_session, purchase, {"status": "review"}
+            )
 
         buyer_notifications = user_notification_manager.sse_managers.get(
             purchase.buyer_id
@@ -233,9 +234,8 @@ class PurchaseManager:
         """
 
         purchase = await self.get_purchase(
-            db_session, purchase_id, buyer_id, (selectinload, models_p.Purchase.offer)
+            db_session, purchase_id, buyer_id, (selectinload, models_p.Purchase.offer.user_id)
         )
-        seller_id = purchase.offer.user_id
 
         if not purchase:
             raise HTTPException(404, "Purchase not found")
@@ -243,6 +243,7 @@ class PurchaseManager:
         if purchase.status != "review":
             raise HTTPException(403, "Purchase status not in review")
 
+        seller_id = purchase.offer.user_id
         status = "completed" if purchase_completed else "dispute"
         purchase = await self.__update_purchase(
             db_session, purchase, {"status": status}
@@ -414,7 +415,7 @@ class PurchaseManager:
         
         if is_reviewed is not None:
             stmt = stmt.where(models_p.Purchase.is_reviewed == is_reviewed)
-        
+
         rows = await db_session.execute(stmt)
 
         for row in rows:
@@ -476,6 +477,34 @@ class PurchaseManager:
         )
         query = await db_session.execute(stmt)
         return query.scalars().all()
+    
+    async def create_review(
+        self,
+        buyer_id: int,
+        review_data: schemas_p.ReviewCreate,
+        db_session: AsyncSession,
+    ):
+        purchase = await self.get_purchase(db_session, review_data.purchase_id, buyer_id)
+        if not purchase:
+            raise HTTPException(404, "Purchase not found")
+        
+        # Тоже не знаю нужны ли ревьюшки в refund статусе
+        if purchase.status not in ("completed", "refund"):
+            raise HTTPException(403, "Purchase status must be equal to completed or refund")
+        
+        create_review_stmt = (
+            insert(models_p.Review)
+            .values(
+                purchase_id=review_data.purchase_id,
+                offer_id=purchase.offer_id,
+                rating=review_data.rating,
+                value=review_data.value,
+            )
+            .returning(models_p.Review)
+        )
+        q = await db_session.execute(create_review_stmt)
+
+        return q.scalar_one_or_none()
 
 
 purchase_manager = PurchaseManager()

@@ -133,6 +133,18 @@ async def confirm_purchase(
 
 
 @router.post("/me/createreview")
-async def create_review():
+async def create_review(
+    review_data: schemas.ReviewCreate,
+    db_session: AsyncSession = Depends(get_session),
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        base_session
+    ),
+):
+    token_data, user_context = current_session
+    user = await user_context.get_current_active_user(db_session, token_data)
 
-    ...
+    review = await purchase_manager.create_review(user.id, review_data, db_session)
+    if not review:
+        raise HTTPException(404)
+    
+    return review

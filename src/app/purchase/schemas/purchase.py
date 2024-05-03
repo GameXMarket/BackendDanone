@@ -1,6 +1,6 @@
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import Field, BaseModel
 from ..models import Purchase
 
 from core.settings import config
@@ -33,3 +33,9 @@ class PurchaseCreate(BaseModel):
     else:
         offer_id: int
         count: int
+
+
+class ReviewCreate(BaseModel):
+    purchase_id: int
+    rating: int = Field(..., ge=1, le=5)  
+    value: str = Field(None, max_length=4096) 
