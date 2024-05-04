@@ -16,6 +16,14 @@
         "description": "Delivery base endpoints"
     },
     {
+        "name": "purchase",
+        "description": "Purchase base endpoints"
+    },
+    {
+        "name": "sales",
+        "description": "Sales base endpoints"
+    },
+    {
         "name": "chat",
         "description": "Chat base endpoints"
     },

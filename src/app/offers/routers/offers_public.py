@@ -15,7 +15,7 @@ from core.depends import depends as deps
 from app.users import models as models_u
 
 logger = logging.getLogger("uvicorn")
-router = APIRouter(responses={200: {"model": schemas_f.OfferPreDB}})
+router = APIRouter()
 
 
 @router.get(
@@ -51,18 +51,12 @@ async def test_get_mini_with_offset_limit(
     return offers
 
 
-@router.get(
-    path="/{offer_id}/",
-    responses={
-        200: {"model": schemas_f.OfferPreDB},
-        404: {"model": schemas_f.OfferError},
-    },
-)
+@router.get(path="/{offer_id}/")
 async def get_by_id(
     offer_id: int,
     db_session: AsyncSession = Depends(get_session),
 ):
-    offer = await services_f.get_by_offer_id(db_session, id=offer_id)
+    offer = await services_f.get_offer_by_id(db_session, id=offer_id)
 
     if not offer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)

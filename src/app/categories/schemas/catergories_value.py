@@ -4,7 +4,7 @@ from pydantic import BaseModel
 class BaseValue(BaseModel):
     value: str
     next_carcass_id: int | None = None
-
+    is_offer_with_delivery: bool = False
 
 class ValueInDB(BaseValue):
     id: int

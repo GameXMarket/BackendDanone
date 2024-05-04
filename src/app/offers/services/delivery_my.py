@@ -14,7 +14,7 @@ async def get_deliveries_by_offer_id(
 ) -> list:
     stmt = select(models_f.Delivery).filter_by(
         offer_id=offer_id
-    ).offset(offset).limit(limit)
+    ).order_by(models_f.Delivery.created_at).offset(offset).limit(limit)
     result = await db_session.execute(stmt)
     deliveries = list(map(lambda delivery: delivery.to_dict(), result.scalars()))
 

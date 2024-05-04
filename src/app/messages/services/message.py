@@ -303,8 +303,8 @@ class BaseMessageManager(BaseChatMemberManager):
             await db_session.commit()
             return message
     
-    async def create_system_message(self, db_session: AsyncSession, chat_id: int, content: str):
-        new_message = models_m.SystemMessage(chat_id=chat_id, content=content)
+    async def create_system_message(self, db_session: AsyncSession, message: schemas_m.SystemMessageCreate):
+        new_message = models_m.SystemMessage(chat_id=message.chat_id, content=message.content)
         db_session.add(new_message)
         await db_session.commit()
         await db_session.refresh(new_message)
@@ -403,11 +403,21 @@ class BaseMessageManager(BaseChatMemberManager):
         if not dialog_data:
             return None
         
-        context_manager = user_notification_manager.sse_managers.get(interlocutor_id)
-        if context_manager:
-            await context_manager.create_event(
+        interlocutor_notification = user_notification_manager.sse_managers.get(interlocutor_id)
+        user_notification = user_notification_manager.sse_managers.get(user_id)
+        event_data = json.dumps(dialog_data).replace("\n", " ")
+        
+        if interlocutor_notification:
+            await interlocutor_notification.create_event(
                 event="new_chat",
-                data=json.dumps(dialog_data).replace("\n", " "),
+                data=event_data,
+                comment="new chat with you created"
+            )
+        
+        if user_notification:
+            await user_notification.create_event(
+                event="new_chat",
+                data=event_data,
                 comment="new chat with you created"
             )
         
@@ -482,7 +492,7 @@ class ChatConnectionManager:
             del self.ws_connections[conn_context.user_id]
 
     async def broadcast(
-        self, message: schemas_m.MessageBroadcast, target_users_ids: list[int | bytes]
+        self, message: schemas_m.MessageBroadcast | Any, target_users_ids: list[int | bytes]
     ):
         for user_id in target_users_ids:
             if not (user_websockets := self.ws_connections.get(int(user_id))):
@@ -545,7 +555,16 @@ class ChatConnectionManager:
         # Ещё один костыль 😭
         if not conn_context.websocket:
             return message_broadcast
-            
+    
+    async def send_and_create_system_message(
+        self,
+        db_session: AsyncSession,
+        message: schemas_m.SystemMessageCreate,
+        users_ids_broadcast: list[int | bytes],
+    ):
+        broadcast_message = message.get_message_broadcast()
+        await message_manager.create_system_message(db_session, message)
+        await self.broadcast(broadcast_message, users_ids_broadcast)
 
     async def start_listening(self, conn_context: ConnectionContext) -> NoReturn:
         while True:

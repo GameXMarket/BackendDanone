@@ -40,7 +40,7 @@ class PostgreListener:
         if not self.__started:
             raise ValueError
 
-        await self.__connection.add_listener(channel, callback)
+        await self.__connection.remove_listener(channel, callback)
         self.__listeners.remove(channel)
         self.__logger.info(
             f"Deleted pg listener: channel: {channel}; callback: {callback.__name__}"
