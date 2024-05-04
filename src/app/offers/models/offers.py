@@ -32,6 +32,7 @@ class Offer(Base):
         default="hidden",
     )
     is_autogive_enabled = Column(Boolean, nullable=True, default=None)
+    is_autoup_enabled = Column(Boolean, nullable=True, default=False)
     upped_at = Column(Integer, nullable=False, default=int(time.time()))
 
     user: Mapped["User"] = relationship(back_populates="offers", lazy="noload")
