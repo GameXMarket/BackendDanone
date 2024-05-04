@@ -396,6 +396,7 @@ class PurchaseManager:
                 models_p.Purchase.offer_id,
                 models_u.User.id,  # Seller user_id
                 models_u.User.username,
+                models_p.Purchase.id,
             )
             .join(models_f.Offer, models_f.Offer.id == models_p.Purchase.offer_id)
             .join(models_u.User, models_u.User.id == models_f.Offer.user_id)
@@ -426,6 +427,8 @@ class PurchaseManager:
                 db_session, row[5]
             )
             purchase_dict = {
+                "id": row[8],
+                "seller_id": row[6],
                 "name": row[0],
                 "count": row[1],
                 "created_at": row[2],
