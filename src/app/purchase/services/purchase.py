@@ -234,7 +234,7 @@ class PurchaseManager:
         """
 
         purchase = await self.get_purchase(
-            db_session, purchase_id, buyer_id, (selectinload, models_p.Purchase.offer.user_id)
+            db_session, purchase_id, buyer_id, (selectinload, models_p.Purchase.offer)
         )
 
         if not purchase:
