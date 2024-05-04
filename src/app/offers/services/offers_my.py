@@ -1,5 +1,6 @@
 import time
 from typing import List, cast
+from datetime import datetime, timedelta
 
 from fastapi import Depends
 from fastapi.encoders import jsonable_encoder
@@ -329,3 +330,16 @@ async def delete_offer(db_session: AsyncSession, user_id: int, offer_id: int):
     await db_session.commit()
 
     return offer
+
+
+async def up_offer(db_session: AsyncSession, offer: models_f.Offer, interval: float):
+    unix_interval = interval * 60
+    if offer.upped_at + unix_interval <= datetime.now().timestamp():
+        offer.upped_at = datetime.now().timestamp()
+        db_session.add(offer)
+        await db_session.commit()
+        return offer
+    else:
+        wait_seconds = offer.upped_at + unix_interval - datetime.now().timestamp()
+        wait_time = timedelta(seconds=wait_seconds)
+        return f"Wait time to up: {wait_time}"

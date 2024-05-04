@@ -256,3 +256,26 @@ async def delete_offer(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
     return deleted_offer
+
+
+@router.post(
+    path="/my/{offer_id}/up",
+
+)
+async def offer_up(
+    offer_id: int,
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        base_session
+    ),
+    db_session: AsyncSession = Depends(get_session),
+):
+    token_data, user_context = current_session
+    user: models_u.User = await user_context.get_current_active_user(
+        db_session, token_data
+    )
+    offer: models_f.Offer = await services_f.get_raw_offer_by_user_id(db_session=db_session, offer_id=offer_id, user_id=user.id)
+
+    if not offer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    
+    return await services_f.up_offer(db_session=db_session, offer=offer, interval=conf.OFFER_EXP_INTERVAL)
