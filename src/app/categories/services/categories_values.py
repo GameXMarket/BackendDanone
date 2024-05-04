@@ -163,3 +163,16 @@ async def get_all(db_session: AsyncSession):
         models.category_values.CategoryValue
     )
     return (await db_session.execute(stmt)).all()
+
+
+async def is_on_one_branch(db_session: AsyncSession, ids: list[models.category_values.CategoryValue]) -> bool:
+    async def check_branch(category_value):
+        if not category_value.next_carcass:
+            return True
+        
+        next_category_value = await db_session.get(models.category_values.CategoryValue, category_value.next_carcass_id)
+        return next_category_value in ids and await check_branch(next_category_value)
+
+
+    first_category_value = ids[0]
+    return await check_branch(first_category_value)
