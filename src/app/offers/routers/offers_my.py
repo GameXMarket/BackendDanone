@@ -11,6 +11,7 @@ from .. import schemas as schemas_f
 from .. import services as services_f
 from core.database import get_session
 from core.depends import depends as deps
+from core.settings import config
 from app.users import models as models_u
 from app.tokens import schemas as schemas_t
 from app.attachment.services import category_value_attachment_manager
@@ -308,7 +309,7 @@ async def delete_offer(
 
 
 @router.post(
-    path="/my/{offer_id}/up",
+    path="/my/up",
 
 )
 async def offer_up(
@@ -323,8 +324,8 @@ async def offer_up(
         db_session, token_data
     )
     offer: models_f.Offer = await services_f.get_raw_offer_by_user_id(db_session=db_session, offer_id=offer_id, user_id=user.id)
-
     if not offer:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        raise HTTPException(status_code=404)
     
-    return await services_f.up_offer(db_session=db_session, offer=offer, interval=conf.OFFER_EXP_INTERVAL)
+    upped_offer = await services_f.up_offer(db_session=db_session, offer=offer, interval=config.OFFER_EXP_INTERVAL)
+    return upped_offer
