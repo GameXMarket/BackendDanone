@@ -109,3 +109,7 @@ BASE_DEBUG_USER_PASS: str = os.getenv("BASE_DEBUG_USER_PASS")
 TG_LOG_TOKEN: str = os.getenv("TG_LOG_TOKEN")
 TG_ERROR_LOG_CHANNEL: int = os.getenv("TG_ERROR_LOG_CHANNEL")
 TG_INFO_LOG_CHANNEL: int = os.getenv("TG_INFO_LOG_CHANNEL")
+
+# OFFER
+
+OFFER_EXP_INTERVAL: float = float(os.getenv("OFFER_UP_INTERVAL"))
