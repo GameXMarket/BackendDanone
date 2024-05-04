@@ -112,4 +112,5 @@ TG_INFO_LOG_CHANNEL: int = os.getenv("TG_INFO_LOG_CHANNEL")
 
 # OFFER
 
-OFFER_EXP_INTERVAL: float = float(os.getenv("OFFER_UP_INTERVAL"))
+OFFER_UP_INTERVAL: float = float(os.getenv("OFFER_UP_INTERVAL"))
+

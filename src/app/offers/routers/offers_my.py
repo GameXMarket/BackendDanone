@@ -327,5 +327,5 @@ async def offer_up(
     if not offer:
         raise HTTPException(status_code=404)
     
-    upped_offer = await services_f.up_offer(db_session=db_session, offer=offer, interval=config.OFFER_EXP_INTERVAL)
+    upped_offer = await services_f.up_offer(db_session=db_session, offer=offer, interval=config.OFFER_UP_INTERVAL)
     return upped_offer
