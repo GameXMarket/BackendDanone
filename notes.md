@@ -63,6 +63,11 @@ ssh -p2222 127.0.0.1
 
 ```
 
+```shell
+docker exec -it <container_id> psql -U postgres
+docker exec -it <container_id> redis-cli
+```
+
 
 ```shell
 root@lenovo:/etc/systemd/system# cat rtunnel.service
