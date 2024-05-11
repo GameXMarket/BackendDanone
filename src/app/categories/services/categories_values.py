@@ -165,14 +165,10 @@ async def get_all(db_session: AsyncSession):
     return (await db_session.execute(stmt)).all()
 
 
-async def is_on_one_branch(db_session: AsyncSession, ids: list[models.category_values.CategoryValue]) -> bool:
-    async def check_branch(category_value):
-        if not category_value.next_carcass:
-            return True
-        
-        next_category_value = await db_session.get(models.category_values.CategoryValue, category_value.next_carcass_id)
-        return next_category_value in ids and await check_branch(next_category_value)
-
-
-    first_category_value = ids[0]
-    return await check_branch(first_category_value)
+#не передавать одинаковые id. Если id на одной ветке, но между ними есть "пробой" вернет False
+async def is_on_one_branch(db_session: AsyncSession, ids: list[models.category_values.CategoryValue.id]) -> bool:
+    categories = await get_many_by_ids(db_session=db_session, ids=ids)
+    for i in range(0, len(ids) - 1):
+        if categories[i]["next_carcass_id"] != categories[i + 1]["carcass_id"]:
+            return False
+    return True
