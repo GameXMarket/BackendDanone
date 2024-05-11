@@ -163,3 +163,12 @@ async def get_all(db_session: AsyncSession):
         models.category_values.CategoryValue
     )
     return (await db_session.execute(stmt)).all()
+
+
+#не передавать одинаковые id. Если id на одной ветке, но между ними есть "пробой" вернет False
+async def is_on_one_branch(db_session: AsyncSession, ids: list[models.category_values.CategoryValue.id]) -> bool:
+    categories = await get_many_by_ids(db_session=db_session, ids=ids)
+    for i in range(0, len(ids) - 1):
+        if categories[i]["next_carcass_id"] != categories[i + 1]["carcass_id"]:
+            return False
+    return True
