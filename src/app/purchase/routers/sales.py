@@ -51,8 +51,6 @@ async def get_all_my_sales(
         is_reviewed=is_reviewed,
         statuses=statuses,
     )
-    if not sells:
-        raise HTTPException(404)
     
     return sells
 

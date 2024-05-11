@@ -79,8 +79,6 @@ async def get_all_purchases(
         is_reviewed=is_reviewed,
         statuses=statuses,
     )
-    if not purchases:
-        raise HTTPException(404)
 
     return purchases
 
