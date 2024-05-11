@@ -60,7 +60,7 @@ async def get_files_by_attachment_id(
     return files
 
 
-@router.post("/uploadfiles/offer")
+@router.post("/")
 async def create_upload_files_offer(
     files: list[UploadFile],
     offer_id: int,
@@ -77,8 +77,8 @@ async def create_upload_files_offer(
     )
 
 
-@router.delete("/deletefiles/offer")
-async def delete_offer_attachment(
+@router.delete("/")
+async def delete_attachment(
     offer_id: int = Query(alias="id"),
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
         default_session
@@ -90,91 +90,4 @@ async def delete_offer_attachment(
 
     return await services.offer_attachment_manager.delete_attachment_by_offer_id(
         db_session, user.id, offer_id
-    )
-
-
-@router.post("/uploadfiles/user")
-async def create_upload_files_user(
-    file: UploadFile,
-    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
-        default_session
-    ),
-    db_session: AsyncSession = Depends(get_session),
-):
-    token_data, user_context = current_session
-    user = await user_context.get_current_active_user(db_session, token_data)
-
-    attachment_json = await services.user_attachment_manager.create_new_attachment(
-        db_session, file, user.id
-    )
-    
-    return {"user_files": await services.user_attachment_manager.get_only_files(db_session, user.id)}
-
-
-@router.delete("/deletefiles/user")
-async def delete_user_attachment(
-    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
-        default_session
-    ),
-    db_session: AsyncSession = Depends(get_session),
-):
-    token_data, user_context = current_session
-    user = await user_context.get_current_active_user(db_session, token_data)
-
-    return await services.user_attachment_manager.delete_attachment_by_user_id(
-        db_session, user.id
-    )
-
-
-@router.post("/uploadfiles/message")
-async def create_upload_files_message(
-    files: list[UploadFile],
-    message_id: int,
-    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
-        default_session
-    ),
-    db_session: AsyncSession = Depends(get_session),
-):
-    token_data, user_context = current_session
-    user = await user_context.get_current_active_user(db_session, token_data)
-
-    return await services.message_attachment_manager.create_new_attachment(
-        db_session, files, user.id, message_id
-    )
-
-
-@router.post("/uploadfiles/category_value")
-async def create_upload_files_category_value(
-    file: UploadFile,
-    category_value_id: int,
-    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
-        default_session
-    ),
-    db_session: AsyncSession = Depends(get_session),
-):
-    token_data, user_context = current_session
-    user = await user_context.get_current_active_user(db_session, token_data)
-    if not user.is_admin():
-        raise HTTPException(403)
-
-    return await services.category_value_attachment_manager.create_new_attachment(
-        db_session, file, user.id, category_value_id
-    )
-
-
-@router.delete("/deletefiles/category_value")
-async def delete_category_value_attachment(
-    category_value_id: int,
-    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
-        default_session
-    ),
-    db_session: AsyncSession = Depends(get_session),
-):
-    token_data, user_context = current_session
-    user = await user_context.get_current_active_user(db_session, token_data)
-    if not user.is_admin():
-        raise HTTPException(403)
-
-    return await services.category_value_attachment_manager.delete_attachment_by_category_value_id(
-        db_session, category_value_id
     )
