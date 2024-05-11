@@ -444,19 +444,38 @@ class PurchaseManager:
 
     async def get_all_sells(
         self,
+        db_session: AsyncSession,
         offset: int,
         limit: int,
         seller_id: int,
-        db_session: AsyncSession,
+        by_last_udpate: bool = False,
+        search_query: str = None,
+        is_reviewed: bool = None,
+        statuses: list[
+            Literal["process", "review", "completed", "dispute", "refund"]
+        ] = ["process", "review", "completed", "dispute", "refund"],
     ):
         stmt = (
             select(models_p.Purchase)
             .join(models_f.Offer, models_f.Offer.id == models_p.Purchase.offer_id)
             .join(models_u.User, models_u.User.id == models_f.Offer.user_id)
             .where(models_u.User.id == seller_id)
+            .where(models_p.Purchase.status.in_(statuses))
+            .order_by(
+                desc(models_p.Purchase.updated_at)
+                if by_last_udpate
+                else desc(models_p.Purchase.created_at)
+            )
             .offset(offset)
             .limit(limit)
         )
+
+        if search_query:
+            stmt = stmt.where(models_p.Purchase.name.ilike(f"%{search_query}%"))
+        
+        if is_reviewed is not None:
+            stmt = stmt.where(models_p.Purchase.is_reviewed == is_reviewed)
+        
         query = await db_session.execute(stmt)
         return query.scalars().all()
 
