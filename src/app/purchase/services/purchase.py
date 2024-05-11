@@ -119,45 +119,44 @@ class PurchaseManager:
             if not dialog_data:
                 raise HTTPException(404, "User not found, How did you get here?")
 
-            event_data = json.dumps(dialog_data).replace("\n", " ")
-            if buyer_notifications:
-                await buyer_notifications.create_event(
-                    event="new_chat",
-                    data=event_data,
-                    comment="new chat with you created",
-                )
+        event_data = json.dumps(dialog_data).replace("\n", " ")
+        if buyer_notifications:
+            await buyer_notifications.create_event(
+                event="new_chat",
+                data=event_data,
+                comment="new chat with you created",
+            )
 
-            if seller_notifications:
-                await seller_notifications.create_event(
-                    event="new_chat",
-                    data=event_data,
-                    comment="new chat with you created",
-                )
+        if seller_notifications:
+            await seller_notifications.create_event(
+                event="new_chat",
+                data=event_data,
+                comment="new chat with you created",
+            )
 
-        # Todo content fix
         purchase_event = (
             f"{purchase.buyer_id} купил у {offer.user_id} "
             + f"оффер '{offer.name}' в количестве {purchase.count} на сумму {purchase.price * purchase.count}"
         )
+        purchase_dict_data = purchase.to_dict("parcels")
         system_message = SystemMessageCreate(
             chat_id=dialog_data["chat_id"],
-            content=purchase_event,
+            content=json.dumps(purchase_dict_data),
         )
         await message_connection_manager.send_and_create_system_message(
             db_session, system_message, [purchase.buyer_id, offer.user_id]
         )
 
-        # Не уверен нужны ли тут такие уведомления
         if buyer_notifications:
             await buyer_notifications.create_event(
-                event="new_purchase", data=purchase.to_dict(), comment=purchase_event
+                event="new_purchase", data=purchase_dict_data, comment=purchase_event
             )
 
         if seller_notifications:
             await seller_notifications.create_event(
-                event="new_purchase", data=purchase.to_dict(), comment=purchase_event
+                event="new_purchase", data=purchase_dict_data, comment=purchase_event
             )
-
+        
         await db_session.commit()
         await db_session.refresh(purchase)
 

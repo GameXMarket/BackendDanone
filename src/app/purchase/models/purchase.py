@@ -34,6 +34,28 @@ class Purchase(Base):
     review: Mapped["Review"] = relationship(back_populates="purchase", lazy="noload")
     buyer: Mapped["User"] = relationship(lazy="noload")
     offer: Mapped["Offer"] = relationship(lazy="noload")
+    
+    def to_dict(self, *args):
+        """
+        args ~ "parcels" or "review" or "buyer" or "offer"
+        """
+        base_dict = {}
+        lazy_load_v = ["parcels", "review", "buyer", "offer"]
+        for var_name in args:
+            if var_name is None:
+                continue
+
+            var_value = getattr(self, var_name)
+            base_dict[var_name] = (
+                list(map(lambda v: v.to_dict(), var_value))
+                if isinstance(var_value, list)
+                else var_value.to_dict()
+                if var_name in lazy_load_v
+                else var_value
+            )
+
+        return super().to_dict(base_dict)
+
 
 
 class Parcel(Base):
