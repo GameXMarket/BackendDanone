@@ -1,5 +1,7 @@
 import logging
+from typing import Literal
 
+import fastapi
 from fastapi import Depends, APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +22,14 @@ purchase_manager = services.PurchaseManager()
 async def get_all_my_sales(
     offset: int = 0,
     limit: int = 10,
+    by_last_udpate: bool = False,
+    search_query: str = None,
+    is_reviewed: bool = None,
+    statuses: list[
+        Literal["process", "review", "completed", "dispute", "refund"]
+    ] = fastapi.Query(
+        default=["process", "review", "completed", "dispute", "refund"], alias="status"
+    ),
     db_session: AsyncSession = Depends(get_session),
     current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
         base_session
@@ -31,9 +41,16 @@ async def get_all_my_sales(
     token_data, user_context = current_session
     user = await user_context.get_current_active_user(db_session, token_data)
 
-    sells = await purchase_manager.get_all_sells(offset, limit, user.id, db_session)
-    if not sells:
-        raise HTTPException(404)
+    sells = await purchase_manager.get_all_sells(
+        db_session=db_session, 
+        offset=offset, 
+        limit=limit, 
+        seller_id=user.id,
+        by_last_udpate=by_last_udpate,
+        search_query=search_query,
+        is_reviewed=is_reviewed,
+        statuses=statuses,
+    )
     
     return sells
 
