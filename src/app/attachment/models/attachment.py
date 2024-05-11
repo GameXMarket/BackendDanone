@@ -43,74 +43,8 @@ class Attachment(Base):
     __tablename__ = "base_attachment"
     id = Column(Integer, primary_key=True)
     author_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"))
-    entity_type = Column(
-        Enum(
-            "base_attachment",
-            "user_attachment",
-            "message_attachment",
-            "offer_attachment",
-            "conflict_attachment",
-            "category_value_attachment",
-            name="attachment_types",
-        )
-    )
 
     files: Mapped[list["File"]] = relationship(lazy="selectin")
-
-    __mapper_args__ = {
-        "polymorphic_identity": "base_attachment",
-        "polymorphic_on": entity_type,
-    }
-
-
-class OfferAttachment(Attachment):
-    __tablename__ = "offer_attachment"
-    id = Column(
-        Integer, ForeignKey("base_attachment.id", ondelete="CASCADE"), primary_key=True
-    )
-    offer_id = Column(Integer, ForeignKey("offer.id", ondelete="CASCADE"), unique=True, nullable=False)
-
-    __mapper_args__ = {
-        "polymorphic_identity": "offer_attachment",
-    }
-
-
-class UserAttachment(Attachment):
-    __tablename__ = "user_attachment"
-    id = Column(
-        Integer, ForeignKey("base_attachment.id", ondelete="CASCADE"), primary_key=True
-    )
-    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), unique=True, nullable=False)
-
-    __mapper_args__ = {
-        "polymorphic_identity": "user_attachment",
-    }
-
-
-class MessageAttachment(Attachment):
-    __tablename__ = "message_attachment"
-    id = Column(
-        Integer, ForeignKey("base_attachment.id", ondelete="CASCADE"), primary_key=True
-    )
-    message_id = Column(
-        Integer, ForeignKey("message.id", ondelete="CASCADE"), unique=True, nullable=False
-    )
-
-    __mapper_args__ = {
-        "polymorphic_identity": "message_attachment",
-    }
-
-
-class CategoryValueAttachemnt(Attachment):
-    __tablename__ = "category_value_attachment"
-    id = Column(
-        Integer, ForeignKey("base_attachment.id", ondelete="CASCADE"), primary_key=True
-    )
-    category_value_id = Column(Integer, ForeignKey("category_value.id", ondelete="CASCADE"), unique=True, nullable=False)
-
-    __mapper_args__ = {
-        "polymorphic_identity": "category_value_attachment",
-    }
 
 
 class File(Base):
@@ -125,7 +59,6 @@ class File(Base):
     hash = Column(String)
     name = Column(String)
     type = Column(String)
-    created_at = Column(Integer)
 
 
 class DeletedFile(Base):
@@ -190,42 +123,6 @@ def create_attachment_trigger(
     target: Attachment.__table__, connection: sqlalchemy.engine.base.Connection, **kw
 ):
     connection.execute(text(create_deleted_file_sql_func))
-
-
-@event.listens_for(OfferAttachment.__table__, "after_create")
-def create_offer_attachment_trigger(
-    target: OfferAttachment.__table__,
-    connection: sqlalchemy.engine.base.Connection,
-    **kw,
-):
-    __create_trigger(connection, "offer_attachment_after_delete", "offer_attachment", "delete_from_base_attachment")
-
-
-@event.listens_for(UserAttachment.__table__, "after_create")
-def create_user_attachment_trigger(
-    target: UserAttachment.__table__,
-    connection: sqlalchemy.engine.base.Connection,
-    **kw,
-):
-    __create_trigger(connection, "user_attachment_after_delete", "user_attachment", "delete_from_base_attachment")
-
-
-@event.listens_for(MessageAttachment.__table__, "after_create")
-def create_message_attachment_trigger(
-    target: MessageAttachment.__table__,
-    connection: sqlalchemy.engine.base.Connection,
-    **kw,
-):
-    __create_trigger(connection, "message_attachment_after_delete", "message_attachment", "delete_from_base_attachment")
-
-
-@event.listens_for(CategoryValueAttachemnt.__table__, "after_create")
-def create_message_attachment_trigger(
-    target: CategoryValueAttachemnt.__table__,
-    connection: sqlalchemy.engine.base.Connection,
-    **kw,
-):
-    __create_trigger(connection, "category_value_attachment_after_delete", "category_value_attachment", "delete_from_base_attachment")
 
 
 @event.listens_for(File.__table__, "after_create")
