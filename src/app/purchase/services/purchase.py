@@ -104,6 +104,8 @@ class PurchaseManager:
             await self.__update_purchase(
                 db_session, purchase, {"status": "review"}
             )
+        
+        await db_session.refresh(purchase)
 
         buyer_notifications = user_notification_manager.sse_managers.get(
             purchase.buyer_id
@@ -138,6 +140,7 @@ class PurchaseManager:
             f"{purchase.buyer_id} купил у {offer.user_id} "
             + f"оффер '{offer.name}' в количестве {purchase.count} на сумму {purchase.price * purchase.count}"
         )
+        
         purchase_dict_data = purchase.to_dict("parcels")
         system_message = SystemMessageCreate(
             chat_id=dialog_data["chat_id"],
@@ -158,8 +161,6 @@ class PurchaseManager:
             )
         
         await db_session.commit()
-        await db_session.refresh(purchase)
-
         return purchase
 
     async def create_confirmation_request(

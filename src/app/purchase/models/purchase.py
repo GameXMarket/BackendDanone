@@ -44,7 +44,7 @@ class Purchase(Base):
         for var_name in args:
             if var_name is None:
                 continue
-
+                        
             var_value = getattr(self, var_name)
             base_dict[var_name] = (
                 list(map(lambda v: v.to_dict(), var_value))
