@@ -13,9 +13,12 @@ from core import settings as conf
 from core.database import get_session
 from core.depends import depends as deps
 from app.users import models as models_u
+from app.tokens import schemas as schemas_t
+
 
 logger = logging.getLogger("uvicorn")
 router = APIRouter()
+base_session = deps.UserSession()
 
 
 @router.get(
@@ -49,6 +52,28 @@ async def test_get_mini_with_offset_limit(
     )
 
     return offers
+
+
+@router.get(path="/withstatus")
+async def get_with_purchase_data(
+    offer_id: int,
+    current_session: tuple[schemas_t.JwtPayload, deps.UserSession] = Depends(
+        base_session
+    ),
+    db_session: AsyncSession = Depends(get_session),
+):
+    token_data, user_context = current_session
+    user: models_u.User = await user_context.get_current_active_user(
+        db_session, token_data
+    )
+
+    offer = await services_f.get_offer_by_id_with_purchase_data(
+        db_session, offer_id=offer_id, buyer_id=user.id
+    )
+    if not offer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    return offer
 
 
 @router.get(path="/{offer_id}/")

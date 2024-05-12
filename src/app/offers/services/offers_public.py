@@ -9,7 +9,6 @@ from sqlalchemy.orm import selectinload
 
 from .. import models as models_f
 from .. import schemas as schemas_f
-from app.users import models as models_u
 from . import __offer_category_value as __ocv
 import app.categories.models as models_c
 from app.attachment.services import offer_attachment_manager
@@ -65,6 +64,40 @@ async def get_offer_by_id(
     offer["category_values"] = category_value
 
     return offer
+
+
+async def get_offer_by_id_with_purchase_data(
+    db_session: AsyncSession, offer_id: int, buyer_id: int,
+):
+    # TODO фикс этого чуда
+    # нужно было срочно написать, циркуляр импорт
+    from app.purchase.models.purchase import Purchase
+    
+    stmt = (
+        select(
+            models_f.Offer.id,
+            models_f.Offer.is_autogive_enabled,
+            Purchase.id,
+            Purchase.status,
+        )
+        .join(Purchase, Purchase.offer_id == models_f.Offer.id)
+        .where(models_f.Offer.id == offer_id)
+        .where(Purchase.buyer_id == buyer_id)
+    )
+    
+    rows = await db_session.execute(stmt)
+
+    result = []
+    for offer_id, is_autogive_enabled, purchase_id, status in rows:
+        data = {
+            "offer_id": offer_id,
+            "offer_is_autogive_enabled": is_autogive_enabled,
+            "purchase_id": purchase_id,
+            "purchase_status": status,
+        }
+        result.append(data)
+    
+    return result
 
 
 async def get_mini_by_offset_limit(
