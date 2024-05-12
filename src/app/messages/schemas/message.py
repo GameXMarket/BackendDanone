@@ -53,7 +53,7 @@ class MessageCreate(BaseModel):
 
 class SystemMessageCreate(BaseModel):
     chat_id: int
-    content: str
+    content: str | dict
     
     def get_message_broadcast(self):
         return SystemMessageBroadcast(

@@ -304,6 +304,9 @@ class BaseMessageManager(BaseChatMemberManager):
             return message
     
     async def create_system_message(self, db_session: AsyncSession, message: schemas_m.SystemMessageCreate):
+        if isinstance(message.content, dict):
+            message.content = json.dumps(message.content)
+            
         new_message = models_m.SystemMessage(chat_id=message.chat_id, content=message.content)
         db_session.add(new_message)
         await db_session.commit()
@@ -351,6 +354,12 @@ class BaseMessageManager(BaseChatMemberManager):
         
         result = []
         for id, content, created_at, user_id_ in rows:
+            if user_id_ < 0:
+                try:
+                    content = json.loads(content)
+                except json.decoder.JSONDecodeError:
+                    pass
+            
             data = {
                 "content": content,
                 "created_at": created_at,

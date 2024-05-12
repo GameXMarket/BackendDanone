@@ -144,7 +144,7 @@ class PurchaseManager:
         purchase_dict_data = purchase.to_dict("parcels")
         system_message = SystemMessageCreate(
             chat_id=dialog_data["chat_id"],
-            content=json.dumps(purchase_dict_data),
+            content=purchase_dict_data,
         )
         await message_connection_manager.send_and_create_system_message(
             db_session, system_message, [purchase.buyer_id, offer.user_id]
