@@ -192,3 +192,14 @@ async def delete_value(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
     return deleted_value
+
+
+@router.get(path="/test_is_on_one_branch")
+async def test_categories_on_one_branch(
+    value_ids: list[int] = Query(default=[1, 2]),
+    db_session: AsyncSession = Depends(get_session),
+):
+    if not isinstance(value_ids, list):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY)
+    
+    return await services.categories_values.is_on_one_branch(db_session=db_session, ids=value_ids)

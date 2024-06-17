@@ -2,7 +2,7 @@ import time
 from typing import List, Literal, cast
 from datetime import datetime, timedelta
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, aliased, make_transient
@@ -14,7 +14,7 @@ from app.users import models as models_u
 from . import __offer_category_value as __ocv
 from app.categories.models import CategoryCarcass, CategoryValue
 from app.categories.services.categories_carcass import get_carcass_names
-from app.categories.services.categories_values import get_many_by_ids
+from app.categories.services.categories_values import get_many_by_ids, is_on_one_branch
 from app.categories.services.categories_values import (
     get_value_ids_by_carcass,
     get_root_values,
@@ -273,7 +273,9 @@ async def create_offer(
 ) -> models_f.Offer:
     js_obj = obj_in.model_dump(exclude_unset=True)
     category_ids = js_obj.pop("category_value_ids")
-    # todo Сюда проверку на то все ли категории по дереву идут
+
+    if not await is_on_one_branch(db_session, category_ids):
+        raise HTTPException(403, "Category value must be on one branch")
     
     is_offer_with_delivery_stmt = select(
         exists(CategoryValue.is_offer_with_delivery)
@@ -318,6 +320,10 @@ async def update_offer(
         update_data = obj_in
     else:
         update_data = obj_in.model_dump(exclude_unset=True)
+
+    category_value_ids = update_data.get("category_value_ids")
+    if not await is_on_one_branch(db_session, category_value_ids):
+        raise HTTPException(403, "Category value must be on one branch")
     
     for field in obj_data:
         if field in update_data:
